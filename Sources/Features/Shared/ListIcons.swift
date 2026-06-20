@@ -1,0 +1,36 @@
+import Foundation
+
+public enum ListIcons {
+    public static let curated: [String] = [
+        "list.bullet",
+        "suitcase.fill",
+        "backpack.fill",
+        "bag.fill",
+        "cart.fill",
+        "airplane",
+        "car.fill",
+        "tent.fill",
+        "house.fill",
+        "building.2.fill",
+        "fork.knife",
+        "cup.and.saucer.fill",
+        "birthday.cake.fill",
+        "gift.fill",
+        "book.fill",
+        "graduationcap.fill",
+        "stethoscope",
+        "heart.fill",
+        "pawprint.fill",
+        "leaf.fill",
+        "camera.fill",
+        "paintbrush.fill",
+        "wrench.and.screwdriver.fill",
+        "hammer.fill",
+        "laptopcomputer",
+        "gamecontroller.fill",
+        "music.note",
+        "star.fill",
+        "flag.fill",
+        "checklist",
+    ]
+}

@@ -1,0 +1,479 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		04D73B890EB765A6881B7365 /* Persistence in Frameworks */ = {isa = PBXBuildFile; productRef = F1D39B35E5B78D7039B7946C /* Persistence */; };
+		2B3F5E9CDDF2664F3C8C13BA /* ListsurfApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 381BB974398C3B1771AC6076 /* ListsurfApp.swift */; };
+		387B386B50AD3FF3A2D18E2F /* ListsurfApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 381BB974398C3B1771AC6076 /* ListsurfApp.swift */; };
+		4FD8A8185A90100AC9BA72BD /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E596D00A45E2A16387F9EBBA /* Assets.xcassets */; };
+		77789F2FB1C9230335FBEF72 /* Domain in Frameworks */ = {isa = PBXBuildFile; productRef = BCE6AF1EC704498F1C09F7A6 /* Domain */; };
+		C18AB7AA988149D102942319 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E596D00A45E2A16387F9EBBA /* Assets.xcassets */; };
+		D2BE1E360A276E8D91FA6339 /* Features in Frameworks */ = {isa = PBXBuildFile; productRef = EC2DEADB41298DF100C18397 /* Features */; };
+		D62EBE8307D37ECE74897052 /* Features in Frameworks */ = {isa = PBXBuildFile; productRef = 74D3E44A8AB016EAD31E55B4 /* Features */; };
+		DF012DBA6E76A1B0016B569D /* Persistence in Frameworks */ = {isa = PBXBuildFile; productRef = 47ABA88EB97275BFA6257FC4 /* Persistence */; };
+		F9FE080FF103C37461C4160B /* Domain in Frameworks */ = {isa = PBXBuildFile; productRef = 3330C307246A95A02800DF07 /* Domain */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		381BB974398C3B1771AC6076 /* ListsurfApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListsurfApp.swift; sourceTree = "<group>"; };
+		6E66F8E41A2C38C6BAAC47A9 /* Listsurf.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Listsurf.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		9B4ED75FAE369D28532E3998 /* listsurf */ = {isa = PBXFileReference; lastKnownFileType = folder; name = listsurf; path = .; sourceTree = SOURCE_ROOT; };
+		D44A2C096FC174F53C7FDAD4 /* Listsurf.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Listsurf.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E596D00A45E2A16387F9EBBA /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		9EB09369F338F6B44D39B23B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D2BE1E360A276E8D91FA6339 /* Features in Frameworks */,
+				77789F2FB1C9230335FBEF72 /* Domain in Frameworks */,
+				DF012DBA6E76A1B0016B569D /* Persistence in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FC160DB07E09C72F590BEF97 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D62EBE8307D37ECE74897052 /* Features in Frameworks */,
+				F9FE080FF103C37461C4160B /* Domain in Frameworks */,
+				04D73B890EB765A6881B7365 /* Persistence in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		16E000DFFAC1188B813F4574 = {
+			isa = PBXGroup;
+			children = (
+				2CCF868C3E7D611435267A0A /* App */,
+				968FA7395B6015387FFDD8C6 /* Packages */,
+				7FE7990AF7649E4D59228D93 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		2CCF868C3E7D611435267A0A /* App */ = {
+			isa = PBXGroup;
+			children = (
+				E596D00A45E2A16387F9EBBA /* Assets.xcassets */,
+				381BB974398C3B1771AC6076 /* ListsurfApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		7FE7990AF7649E4D59228D93 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				6E66F8E41A2C38C6BAAC47A9 /* Listsurf.app */,
+				D44A2C096FC174F53C7FDAD4 /* Listsurf.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		968FA7395B6015387FFDD8C6 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				9B4ED75FAE369D28532E3998 /* listsurf */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		D86EAE2EF6BC0A1393BBFDD3 /* Listsurf_macOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 95FCED017E50EF7400CAD417 /* Build configuration list for PBXNativeTarget "Listsurf_macOS" */;
+			buildPhases = (
+				C253B4E261FE4FAFCBAD445B /* Sources */,
+				9BDF5D3B2E468EAD4346AD42 /* Resources */,
+				FC160DB07E09C72F590BEF97 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Listsurf_macOS;
+			packageProductDependencies = (
+				74D3E44A8AB016EAD31E55B4 /* Features */,
+				3330C307246A95A02800DF07 /* Domain */,
+				F1D39B35E5B78D7039B7946C /* Persistence */,
+			);
+			productName = Listsurf_macOS;
+			productReference = D44A2C096FC174F53C7FDAD4 /* Listsurf.app */;
+			productType = "com.apple.product-type.application";
+		};
+		EEDD7F1DFF04B1A1CBADA0BD /* Listsurf_iOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D29D751AB88A3A6497C6B13A /* Build configuration list for PBXNativeTarget "Listsurf_iOS" */;
+			buildPhases = (
+				9FCCD39A7B84D80A8C747FD2 /* Sources */,
+				6CCE2A49CB3351A7E91682FA /* Resources */,
+				9EB09369F338F6B44D39B23B /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Listsurf_iOS;
+			packageProductDependencies = (
+				EC2DEADB41298DF100C18397 /* Features */,
+				BCE6AF1EC704498F1C09F7A6 /* Domain */,
+				47ABA88EB97275BFA6257FC4 /* Persistence */,
+			);
+			productName = Listsurf_iOS;
+			productReference = 6E66F8E41A2C38C6BAAC47A9 /* Listsurf.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		1DB703B63C48DF0C8E3F8BAC /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 2650;
+				TargetAttributes = {
+				};
+			};
+			buildConfigurationList = B44902698240F048146AE4CB /* Build configuration list for PBXProject "Listsurf" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 16E000DFFAC1188B813F4574;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				DB0FBC4EEEA960AAD68476B5 /* XCLocalSwiftPackageReference "." */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 7FE7990AF7649E4D59228D93 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				EEDD7F1DFF04B1A1CBADA0BD /* Listsurf_iOS */,
+				D86EAE2EF6BC0A1393BBFDD3 /* Listsurf_macOS */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		6CCE2A49CB3351A7E91682FA /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C18AB7AA988149D102942319 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9BDF5D3B2E468EAD4346AD42 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4FD8A8185A90100AC9BA72BD /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		9FCCD39A7B84D80A8C747FD2 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				387B386B50AD3FF3A2D18E2F /* ListsurfApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C253B4E261FE4FAFCBAD445B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2B3F5E9CDDF2664F3C8C13BA /* ListsurfApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		01010E978FE2E43CB90C5399 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = App/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Listsurf;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.listsurf.app;
+				PRODUCT_NAME = Listsurf;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		27EAFDBFD5B20A87D971A4A2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		6EE47F35DFBB303DD913D3C2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = App/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Listsurf;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.listsurf.app;
+				PRODUCT_NAME = Listsurf;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		8DA309EDA2BCA51986823805 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		C049F8DA0D86308A3B299F96 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = App/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Listsurf;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.listsurf.app;
+				PRODUCT_NAME = Listsurf;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		F56016A9A752A9D151B2EF3E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = App/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Listsurf;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.listsurf.app;
+				PRODUCT_NAME = Listsurf;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		95FCED017E50EF7400CAD417 /* Build configuration list for PBXNativeTarget "Listsurf_macOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C049F8DA0D86308A3B299F96 /* Debug */,
+				01010E978FE2E43CB90C5399 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		B44902698240F048146AE4CB /* Build configuration list for PBXProject "Listsurf" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8DA309EDA2BCA51986823805 /* Debug */,
+				27EAFDBFD5B20A87D971A4A2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		D29D751AB88A3A6497C6B13A /* Build configuration list for PBXNativeTarget "Listsurf_iOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F56016A9A752A9D151B2EF3E /* Debug */,
+				6EE47F35DFBB303DD913D3C2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		DB0FBC4EEEA960AAD68476B5 /* XCLocalSwiftPackageReference "." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = .;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		3330C307246A95A02800DF07 /* Domain */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Domain;
+		};
+		47ABA88EB97275BFA6257FC4 /* Persistence */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Persistence;
+		};
+		74D3E44A8AB016EAD31E55B4 /* Features */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Features;
+		};
+		BCE6AF1EC704498F1C09F7A6 /* Domain */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Domain;
+		};
+		EC2DEADB41298DF100C18397 /* Features */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Features;
+		};
+		F1D39B35E5B78D7039B7946C /* Persistence */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Persistence;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 1DB703B63C48DF0C8E3F8BAC /* Project object */;
+}
