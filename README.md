@@ -9,13 +9,12 @@ Listsurf deliberately stays out of the "daily task manager" space (that's what A
 ## Core Concepts
 
 - **Lists** — long-lived containers for structured information
-- **Sections** — grouping within a list
-- **Items** — checkable rows with notes, quantity, categories, and metadata
-- **Templates** — reusable master structures
-- **Runs** — event-specific instances (so using a template for a trip doesn't mutate the original)
-- **Archive** — historical runs
+- **Items** — nestable, checkable rows; any item can parent other items
+- **Check mode** — a presentation layer for checking items off, not separate data
+- **Duplication** — copies a list with new UUIDs and optionally clears checks; replaces templates
+- **Archive** — completed or inactive lists
 
-The key idea is separating durable structure from temporary checked state.
+Durable structure stays in the library; duplicate-and-reset handles reuse without mutating the original.
 
 ## Goals
 
@@ -29,16 +28,17 @@ The key idea is separating durable structure from temporary checked state.
 
 Early exploration / V1 planning.
 
-See the current direction and detailed thinking in:
+See the current implementation plan and earlier exploration:
 
-- [docs/grok-listsurf-V1-plan.md](docs/grok-listsurf-V1-plan.md)
+- [docs/CC-listsurf-V1-plan.md](docs/CC-listsurf-V1-plan.md) — current V1 plan
+- [docs/grok-listsurf-V1-plan.md](docs/grok-listsurf-V1-plan.md) — initial exploration (historical)
 
 ## Tech (V1)
 
 - SwiftUI (universal macOS + iOS app)
-- Local persistence (SQLite via GRDB or SwiftData)
+- Local persistence (Core Data with local SQLite-backed store)
 - No server dependency in the first version
-- Future possibility: iCloud/CloudKit for personal multi-device sync
+- CloudKit personal sync planned for V1.1
 
 ## Getting Started
 

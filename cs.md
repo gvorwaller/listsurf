@@ -43,11 +43,12 @@ A focused tool for durable, structured personal lists — packing lists, travel 
 
 ### Core Concepts
 - **Lists** — long-lived containers for structured information
-- **Sections** — grouping within a list
-- **Items** — checkable rows with notes, quantity, categories, metadata
-- **Templates** — reusable master structures
-- **Runs** — event-specific instances (using a template doesn't mutate the original)
-- **Archive** — historical runs
+- **Items** — nestable, checkable rows; any item can parent other items (no separate Section entity)
+- **Check mode** — a presentation layer over the same data, not separate run/state entities
+- **Duplication** — copies a list with new UUIDs and optionally clears checks; replaces templates
+- **Archive** — completed or inactive lists
+
+> Templates, Runs, and dedicated Section entities are intentionally deferred. Duplication + reset covers the core reuse workflow for V1.
 
 ---
 
@@ -55,7 +56,7 @@ A focused tool for durable, structured personal lists — packing lists, travel 
 
 - **Language**: Swift
 - **UI**: SwiftUI (universal macOS + iOS app)
-- **Persistence**: SQLite via GRDB or SwiftData (TBD)
+- **Persistence**: Core Data (local SQLite-backed store), CloudKit mirroring deferred to V1.1
 - **No server dependency** — everything runs on-device
 - **Future possibility**: iCloud/CloudKit for personal multi-device sync
 - **Build**: Xcode, Swift Package Manager for dependencies
@@ -71,12 +72,14 @@ A focused tool for durable, structured personal lists — packing lists, travel 
 - Prefer value types (structs) over reference types (classes) unless identity semantics are needed
 - Use SwiftUI's built-in navigation (NavigationStack/NavigationSplitView), not UIKit bridges
 
-### Persistence
+### Persistence (Core Data)
 - All persistence operations must be transactional where multi-step
 - Never fabricate synthetic IDs, timestamps, or placeholder data
 - Schema migrations go in dedicated migration code, not inline
-- If using GRDB: define record types with `FetchableRecord` + `PersistableRecord`
-- If using SwiftData: use `@Model` classes with explicit schema versioning
+- Use `NSPersistentContainer` for V1; `NSPersistentCloudKitContainer` for V1.1
+- Never access the SQLite file directly — it is Core Data's private implementation detail
+- Use the main context for UI reads and small writes; background contexts for bulk operations (import, duplication, reset, export)
+- Merge background context saves via `NSManagedObjectContextDidSave` notifications
 
 ### Data Integrity
 **NEVER:**

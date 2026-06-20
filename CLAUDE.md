@@ -18,7 +18,7 @@ data integrity rules, UI conventions, and the evidence-based debugging mandate.
 
 ## Tech stack
 - **Swift + SwiftUI** — universal app (iOS + macOS)
-- **Persistence**: SQLite via GRDB or SwiftData (TBD)
+- **Persistence**: Core Data (local SQLite-backed store), CloudKit mirroring deferred to V1.1
 - **No server, no backend** — everything on-device
 - **Dependencies**: Swift Package Manager
 
