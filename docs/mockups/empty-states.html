@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Listsurf — Empty States</title>
+<style>
+  :root {
+    --bg: #000;
+    --card-bg: #1c1c1e;
+    --elevated: #2c2c2e;
+    --text: #f0f0f0;
+    --text-dim: #8e8e93;
+    --text-muted: #636366;
+    --accent: #0a84ff;
+    --green: #30d158;
+    --border: #38383a;
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: var(--font);
+    background: #0a0a0a;
+    color: var(--text);
+    padding: 40px;
+  }
+  h1 {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--text);
+  }
+  .subtitle {
+    font-size: 14px;
+    color: var(--text-dim);
+    margin-bottom: 40px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 32px;
+    max-width: 1200px;
+  }
+  .card {
+    background: var(--card-bg);
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .card-header {
+    padding: 12px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(10,132,255,0.05);
+  }
+  .card-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 32px;
+    text-align: center;
+    min-height: 300px;
+  }
+  .empty-icon {
+    font-size: 56px;
+    margin-bottom: 16px;
+    opacity: 0.4;
+  }
+  .empty-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+  .empty-desc {
+    font-size: 14px;
+    color: var(--text-dim);
+    max-width: 260px;
+    line-height: 1.5;
+    margin-bottom: 20px;
+  }
+  .empty-btn {
+    padding: 10px 24px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: var(--font);
+  }
+  .empty-btn:hover { opacity: 0.9; }
+  .empty-btn-secondary {
+    padding: 8px 20px;
+    background: var(--elevated);
+    color: var(--accent);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: var(--font);
+    margin-top: 10px;
+  }
+  .empty-link {
+    color: var(--accent);
+    font-size: 14px;
+    margin-top: 12px;
+    cursor: pointer;
+    text-decoration: none;
+  }
+  .success-ring {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    border: 3px solid var(--green);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    margin-bottom: 16px;
+  }
+  .search-chip {
+    display: inline-block;
+    background: var(--elevated);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 14px;
+    font-family: ui-monospace, monospace;
+    color: var(--text);
+    margin-bottom: 12px;
+  }
+  .hint {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 8px;
+    font-style: italic;
+  }
+</style>
+</head>
+<body>
+<h1>Listsurf — Empty States</h1>
+<p class="subtitle">ContentUnavailableView patterns for every blank screen</p>
+
+<div class="grid">
+
+  <!-- Empty Library -->
+  <div class="card">
+    <div class="card-header">Empty Library (First Launch)</div>
+    <div class="card-body">
+      <div class="empty-icon">&#x1F4CB;</div>
+      <div class="empty-title">No Lists Yet</div>
+      <div class="empty-desc">Create your first list to start organizing packing, trips, inventories, and more.</div>
+      <button class="empty-btn">Create List</button>
+      <div class="hint">Or paste a text outline to get started instantly</div>
+    </div>
+  </div>
+
+  <!-- Empty List -->
+  <div class="card">
+    <div class="card-header">Empty List (New List Created)</div>
+    <div class="card-body">
+      <div class="empty-icon">&#x270F;</div>
+      <div class="empty-title">Add Your First Item</div>
+      <div class="empty-desc">Tap + to add items one at a time, or paste an indented outline to create a full hierarchy.</div>
+      <button class="empty-btn">+ Add Item</button>
+      <button class="empty-btn-secondary">Paste Outline</button>
+    </div>
+  </div>
+
+  <!-- No Search Results -->
+  <div class="card">
+    <div class="card-header">No Search Results</div>
+    <div class="card-body">
+      <div class="empty-icon">&#128270;</div>
+      <div class="empty-title">No Results</div>
+      <div class="search-chip">"adaptr"</div>
+      <div class="empty-desc">No items match your search. Check the spelling or try different keywords.</div>
+      <button class="empty-btn-secondary">Clear Search</button>
+    </div>
+  </div>
+
+  <!-- Empty Archive -->
+  <div class="card">
+    <div class="card-header">Empty Archive</div>
+    <div class="card-body">
+      <div class="empty-icon">&#128451;</div>
+      <div class="empty-title">No Archived Lists</div>
+      <div class="empty-desc">When you're done with a list, archive it to keep your library tidy. Archived lists can always be restored.</div>
+    </div>
+  </div>
+
+  <!-- All Checked -->
+  <div class="card">
+    <div class="card-header">All Items Checked (Unchecked Filter Active)</div>
+    <div class="card-body">
+      <div class="success-ring">
+        <span style="color: var(--green)">&#10003;</span>
+      </div>
+      <div class="empty-title" style="color: var(--green)">All Done!</div>
+      <div class="empty-desc" style="margin-bottom: 8px;">
+        <span style="font-size: 24px; font-weight: 700; font-family: ui-monospace, monospace; color: var(--text);">42/42</span>
+        <br>items checked
+      </div>
+      <button class="empty-btn-secondary">Show All Items</button>
+    </div>
+  </div>
+
+  <!-- Import Error -->
+  <div class="card">
+    <div class="card-header">Import Result (Partial Success)</div>
+    <div class="card-body" style="align-items: flex-start; text-align: left; padding: 24px;">
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
+        <span style="font-size: 28px;">&#9888;</span>
+        <div class="empty-title" style="margin-bottom: 0; color: var(--text)">Import Complete</div>
+      </div>
+      <div style="font-size: 14px; color: var(--text-dim); line-height: 1.6; margin-bottom: 16px;">
+        <div style="color: var(--green); margin-bottom: 4px;">&#10003; 47 items imported successfully</div>
+        <div style="color: #ff9f0a; margin-bottom: 4px;">&#9888; 3 items placed at root level (parent items not found)</div>
+        <div style="color: var(--text-dim); margin-top: 8px; font-size: 13px;">
+          Affected items were moved to the list root because their parent references could not be resolved. Review "Beach Trip" for details.
+        </div>
+      </div>
+      <div style="display: flex; gap: 8px; width: 100%;">
+        <button class="empty-btn" style="flex: 1; font-size: 14px; padding: 8px;">Keep Import</button>
+        <button class="empty-btn-secondary" style="flex: 1; margin-top: 0;">Discard All</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

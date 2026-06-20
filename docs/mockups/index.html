@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Listsurf — UI/UX Mockups</title>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --card: #1c1c1e;
+    --border: #38383a;
+    --text: #f0f0f0;
+    --text-dim: #8e8e93;
+    --accent: #0a84ff;
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    padding: 48px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  h1 {
+    font-size: 36px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .subtitle {
+    font-size: 16px;
+    color: var(--text-dim);
+    margin-bottom: 40px;
+    line-height: 1.5;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: transform 0.15s, border-color 0.15s;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+  }
+  .card:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent);
+  }
+  .card-preview {
+    height: 180px;
+    background: #151515;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+    opacity: 0.6;
+    border-bottom: 1px solid var(--border);
+  }
+  .card-info {
+    padding: 16px;
+  }
+  .card-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .card-desc {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.4;
+  }
+  .tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-top: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .tag-mac { background: rgba(10,132,255,0.15); color: #0a84ff; }
+  .tag-iphone { background: rgba(48,209,88,0.15); color: #30d158; }
+  .tag-system { background: rgba(191,90,242,0.15); color: #bf5af2; }
+  .full-width { grid-column: 1 / -1; }
+  .footer {
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+  .footer a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<h1>Listsurf UI/UX Mockups</h1>
+<p class="subtitle">
+  HTML mockups for the V1 implementation plan. These show key screens across
+  Mac, iPhone, and system states. Open each in a browser to see the full mockup.
+</p>
+
+<div class="grid">
+
+  <a class="card" href="mac-editor.html">
+    <div class="card-preview">&#128187;</div>
+    <div class="card-info">
+      <div class="card-title">Mac — Edit Mode</div>
+      <div class="card-desc">
+        Three-pane layout: sidebar library with icon/color identity,
+        nested outline editor with disclosure triangles and drag indicators,
+        and trailing inspector panel.
+      </div>
+      <span class="tag tag-mac">macOS</span>
+    </div>
+  </a>
+
+  <a class="card" href="mac-check-mode.html">
+    <div class="card-preview">&#9745;</div>
+    <div class="card-info">
+      <div class="card-title">Mac — Check Mode</div>
+      <div class="card-desc">
+        Same sidebar, switched toolbar with filter pills and progress.
+        Large circular progress, section-level progress bars,
+        unchecked filter active showing remaining items only.
+      </div>
+      <span class="tag tag-mac">macOS</span>
+    </div>
+  </a>
+
+  <a class="card" href="iphone-library.html">
+    <div class="card-preview">&#128241;</div>
+    <div class="card-info">
+      <div class="card-title">iPhone — Library</div>
+      <div class="card-desc">
+        Large title navigation with search. List cards showing icon,
+        color-coded progress bars, item counts. Archive section below.
+        Tab bar with Lists / Archive / Settings.
+      </div>
+      <span class="tag tag-iphone">iPhone</span>
+    </div>
+  </a>
+
+  <a class="card" href="iphone-check-mode.html">
+    <div class="card-preview">&#127939;</div>
+    <div class="card-info">
+      <div class="card-title">iPhone — Check Mode</div>
+      <div class="card-desc">
+        Large tap targets for one-handed checking. Circular progress ring,
+        filter pills (All / Unchecked / Checked), section headers with
+        progress bars, notes shown inline below items.
+      </div>
+      <span class="tag tag-iphone">iPhone</span>
+    </div>
+  </a>
+
+  <a class="card full-width" href="empty-states.html">
+    <div class="card-preview" style="height: 140px;">&#x1F4AD;</div>
+    <div class="card-info">
+      <div class="card-title">Empty States & Error Handling</div>
+      <div class="card-desc">
+        ContentUnavailableView patterns for: empty library (first launch),
+        empty list, no search results, empty archive, all-checked celebration,
+        and import result with partial success/error summary.
+      </div>
+      <span class="tag tag-system">System</span>
+    </div>
+  </a>
+
+</div>
+
+<div class="footer">
+  Reference: <a href="../CC-listsurf-V1-plan.md">CC-listsurf-V1-plan.md</a>
+  &middot; These mockups illustrate the plan's UI/UX sections — not pixel-perfect designs.
+  Native SwiftUI implementation will use system components, Dynamic Type, and platform idioms.
+</div>
+
+</body>
+</html>

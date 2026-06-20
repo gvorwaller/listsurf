@@ -1,0 +1,26 @@
+# macOS
+.DS_Store
+
+# Claude Code local state
+.todos/
+.claude/settings.local.json
+
+# MCP config (contains local paths)
+.mcp.json
+
+# Xcode
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+DerivedData/
+build/
+*.pbxuser
+*.perspectivev3
+xcuserdata/
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Packages/
+
+# CocoaPods (if ever used)
+Pods/

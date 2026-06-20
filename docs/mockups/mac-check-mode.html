@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Listsurf — Mac Check Mode</title>
+<style>
+  :root {
+    --bg: #1e1e1e;
+    --sidebar-bg: #252526;
+    --editor-bg: #1e1e1e;
+    --toolbar-bg: #2d2d2d;
+    --border: #3e3e3e;
+    --text: #e0e0e0;
+    --text-dim: #888;
+    --text-muted: #666;
+    --accent: #0a84ff;
+    --accent-dim: rgba(10, 132, 255, 0.15);
+    --green: #30d158;
+    --orange: #ff9f0a;
+    --red: #ff453a;
+    --purple: #bf5af2;
+    --teal: #64d2ff;
+    --row-hover: rgba(255,255,255,0.04);
+    --row-selected: rgba(10, 132, 255, 0.2);
+    --progress-bg: rgba(255,255,255,0.08);
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    --mono: "SF Mono", ui-monospace, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.4;
+    height: 100vh;
+    overflow: hidden;
+  }
+  .window {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    border: 1px solid var(--border);
+  }
+  .titlebar {
+    height: 38px;
+    background: var(--toolbar-bg);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    gap: 8px;
+  }
+  .traffic-lights { display: flex; gap: 6px; }
+  .traffic-light { width: 12px; height: 12px; border-radius: 50%; }
+  .tl-close { background: #ff5f57; }
+  .tl-minimize { background: #febc2e; }
+  .tl-maximize { background: #28c840; }
+  .titlebar-text {
+    flex: 1;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  /* Check mode toolbar */
+  .toolbar {
+    height: 40px;
+    background: var(--toolbar-bg);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    gap: 4px;
+  }
+  .toolbar-group { display: flex; align-items: center; gap: 2px; }
+  .toolbar-sep { width: 1px; height: 20px; background: var(--border); margin: 0 8px; }
+  .toolbar-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 28px;
+    padding: 0 10px;
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: var(--font);
+    font-weight: 500;
+    gap: 4px;
+  }
+  .toolbar-btn:hover { background: rgba(255,255,255,0.08); color: var(--text); }
+  .toolbar-btn.active { background: var(--accent-dim); color: var(--accent); }
+  .toolbar-btn.danger { color: var(--red); }
+  .toolbar-btn.danger:hover { background: rgba(255,69,58,0.15); }
+  .toolbar-spacer { flex: 1; }
+  .mode-toggle {
+    display: flex;
+    background: rgba(255,255,255,0.06);
+    border-radius: 5px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .mode-toggle-btn {
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 500;
+    border: none;
+    background: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-family: var(--font);
+  }
+  .mode-toggle-btn.active { background: var(--accent); color: white; }
+
+  /* Filter pills */
+  .filter-pills { display: flex; gap: 2px; }
+  .filter-pill {
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 500;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-family: var(--font);
+  }
+  .filter-pill.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+
+  /* Progress badge in toolbar */
+  .progress-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-dim);
+    font-weight: 500;
+  }
+  .progress-badge .bar {
+    width: 60px;
+    height: 4px;
+    background: var(--progress-bg);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .progress-badge .fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--accent);
+  }
+
+  .main { display: flex; flex: 1; overflow: hidden; }
+
+  /* Sidebar (same as editor) */
+  .sidebar {
+    width: 220px;
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .sidebar-header {
+    padding: 10px 12px 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .sidebar-header .add-btn {
+    width: 18px; height: 18px; border-radius: 4px;
+    border: none; background: transparent; color: var(--accent);
+    font-size: 16px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .sidebar-list { flex: 1; overflow-y: auto; padding: 0 4px; }
+  .sidebar-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 8px; border-radius: 5px; cursor: pointer;
+  }
+  .sidebar-item:hover { background: var(--row-hover); }
+  .sidebar-item.selected { background: var(--row-selected); }
+  .sidebar-item .icon { font-size: 16px; width: 20px; text-align: center; }
+  .sidebar-item .info { flex: 1; min-width: 0; }
+  .sidebar-item .name {
+    font-size: 13px; font-weight: 500;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .sidebar-item .meta { font-size: 10px; color: var(--text-dim); display: flex; align-items: center; gap: 6px; }
+  .progress-bar { width: 40px; height: 3px; background: var(--progress-bg); border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 2px; }
+  .sidebar-section {
+    padding: 10px 12px 4px; font-size: 10px; font-weight: 600;
+    color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;
+    border-top: 1px solid var(--border); margin-top: 4px;
+  }
+
+  /* Check mode content */
+  .check-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .check-header {
+    padding: 16px 24px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .check-title {
+    font-size: 20px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .check-title .icon { font-size: 20px; }
+
+  /* Progress overview */
+  .progress-overview {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 24px;
+    background: rgba(10,132,255,0.05);
+    border-bottom: 1px solid var(--border);
+  }
+  .progress-ring {
+    width: 56px; height: 56px; position: relative; flex-shrink: 0;
+  }
+  .progress-ring svg { width: 56px; height: 56px; transform: rotate(-90deg); }
+  .progress-ring circle { fill: none; stroke-width: 4; }
+  .progress-ring .bg { stroke: var(--progress-bg); }
+  .progress-ring .fg { stroke: var(--accent); stroke-linecap: round; }
+  .progress-ring .label {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; font-family: var(--mono);
+  }
+  .progress-stats { display: flex; gap: 24px; }
+  .progress-stat {}
+  .progress-stat-value {
+    font-size: 20px; font-weight: 700; font-family: var(--mono);
+  }
+  .progress-stat-label { font-size: 11px; color: var(--text-dim); }
+
+  /* Check list */
+  .check-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 24px;
+  }
+  .check-section {
+    margin-bottom: 16px;
+  }
+  .section-head {
+    display: flex;
+    align-items: center;
+    padding: 8px 0 4px;
+    gap: 8px;
+    cursor: pointer;
+  }
+  .section-head:hover { opacity: 0.8; }
+  .section-disc {
+    width: 16px;
+    color: var(--text-dim);
+    font-size: 10px;
+    text-align: center;
+  }
+  .section-name {
+    font-size: 14px;
+    font-weight: 600;
+    flex: 1;
+  }
+  .section-count {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-family: var(--mono);
+  }
+  .section-progress-bar {
+    height: 2px;
+    background: var(--progress-bg);
+    border-radius: 1px;
+    margin: 4px 0 8px 24px;
+    overflow: hidden;
+  }
+  .section-progress-fill {
+    height: 100%;
+    border-radius: 1px;
+    transition: width 0.3s;
+  }
+  .check-row {
+    display: flex;
+    align-items: center;
+    padding: 6px 0 6px 24px;
+    gap: 10px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .check-row:hover { background: var(--row-hover); }
+  .check-box {
+    width: 22px; height: 22px;
+    border: 2px solid var(--text-dim);
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+  .check-box.checked {
+    background: var(--green);
+    border-color: var(--green);
+  }
+  .check-box.checked::after {
+    content: "\2713";
+    color: white;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .check-box.mixed { border-color: var(--orange); }
+  .check-box.mixed::after {
+    content: "\2014";
+    color: var(--orange);
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .check-row-title {
+    flex: 1;
+    font-size: 14px;
+  }
+  .check-row-title.done {
+    color: var(--text-dim);
+    text-decoration: line-through;
+    text-decoration-color: var(--text-muted);
+  }
+  .check-row-qty {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-family: var(--mono);
+    background: rgba(255,255,255,0.06);
+    padding: 1px 6px;
+    border-radius: 3px;
+  }
+  .check-row-note {
+    font-size: 11px;
+    color: var(--text-muted);
+    padding: 0 0 4px 56px;
+  }
+
+  /* Sub-section (nested parent) */
+  .sub-section-head {
+    display: flex;
+    align-items: center;
+    padding: 6px 0 2px 24px;
+    gap: 8px;
+    cursor: pointer;
+    margin-top: 4px;
+  }
+  .sub-section-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-dim);
+    flex: 1;
+  }
+  .sub-check-row {
+    padding-left: 48px;
+  }
+</style>
+</head>
+<body>
+<div class="window">
+  <div class="titlebar">
+    <div class="traffic-lights">
+      <div class="traffic-light tl-close"></div>
+      <div class="traffic-light tl-minimize"></div>
+      <div class="traffic-light tl-maximize"></div>
+    </div>
+    <div class="titlebar-text">Listsurf</div>
+  </div>
+
+  <!-- Check mode toolbar -->
+  <div class="toolbar">
+    <div class="filter-pills">
+      <button class="filter-pill">All</button>
+      <button class="filter-pill active">Unchecked</button>
+      <button class="filter-pill">Checked</button>
+    </div>
+    <div class="toolbar-sep"></div>
+    <div class="progress-badge">
+      <span>18/42</span>
+      <div class="bar"><div class="fill" style="width: 43%"></div></div>
+      <span>43%</span>
+    </div>
+    <div class="toolbar-spacer"></div>
+    <button class="toolbar-btn danger">Reset...</button>
+    <div class="toolbar-sep"></div>
+    <div class="mode-toggle">
+      <button class="mode-toggle-btn">Edit</button>
+      <button class="mode-toggle-btn active">Check</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        Lists
+        <button class="add-btn">+</button>
+      </div>
+      <div class="sidebar-list">
+        <div class="sidebar-item selected">
+          <div class="icon" style="color: var(--accent)">&#x1F9F3;</div>
+          <div class="info">
+            <div class="name">Italy Trip Jun 2026</div>
+            <div class="meta">
+              <span>18/42</span>
+              <div class="progress-bar"><div class="progress-fill" style="width: 43%; background: var(--accent)"></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="sidebar-item">
+          <div class="icon" style="color: var(--orange)">&#x1F3D6;</div>
+          <div class="info">
+            <div class="name">TPL: Beach Trip</div>
+            <div class="meta"><span>0/35</span></div>
+          </div>
+        </div>
+        <div class="sidebar-item">
+          <div class="icon" style="color: var(--green)">&#x1F3E0;</div>
+          <div class="info">
+            <div class="name">Home Inventory</div>
+            <div class="meta"><span>12/12</span></div>
+          </div>
+        </div>
+        <div class="sidebar-item">
+          <div class="icon" style="color: var(--purple)">&#x1F6E0;</div>
+          <div class="info">
+            <div class="name">Camping Gear</div>
+            <div class="meta"><span>0/28</span></div>
+          </div>
+        </div>
+        <div class="sidebar-section">Archive</div>
+        <div class="sidebar-item">
+          <div class="icon" style="color: var(--text-muted)">&#x1F9F3;</div>
+          <div class="info">
+            <div class="name" style="color: var(--text-dim)">Colorado Ski 2025</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Check content -->
+    <div class="check-content">
+      <div class="check-header">
+        <div class="check-title">
+          <span class="icon" style="color: var(--accent)">&#x1F9F3;</span>
+          Italy Trip Jun 2026
+        </div>
+      </div>
+
+      <!-- Progress overview -->
+      <div class="progress-overview">
+        <div class="progress-ring">
+          <svg viewBox="0 0 56 56">
+            <circle class="bg" cx="28" cy="28" r="24"/>
+            <circle class="fg" cx="28" cy="28" r="24"
+              stroke-dasharray="150.8"
+              stroke-dashoffset="85.96"/>
+          </svg>
+          <div class="label">43%</div>
+        </div>
+        <div class="progress-stats">
+          <div class="progress-stat">
+            <div class="progress-stat-value" style="color: var(--green)">18</div>
+            <div class="progress-stat-label">Checked</div>
+          </div>
+          <div class="progress-stat">
+            <div class="progress-stat-value" style="color: var(--orange)">24</div>
+            <div class="progress-stat-label">Remaining</div>
+          </div>
+          <div class="progress-stat">
+            <div class="progress-stat-value">42</div>
+            <div class="progress-stat-label">Total Items</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Check list (showing unchecked filter) -->
+      <div class="check-list">
+
+        <!-- Clothing -->
+        <div class="check-section">
+          <div class="section-head">
+            <div class="section-disc">&#9660;</div>
+            <div class="section-name">Clothing</div>
+            <div class="section-count">4/8</div>
+          </div>
+          <div class="section-progress-bar">
+            <div class="section-progress-fill" style="width: 50%; background: var(--orange)"></div>
+          </div>
+
+          <!-- Bottoms sub-section -->
+          <div class="sub-section-head">
+            <div class="section-disc">&#9660;</div>
+            <div class="sub-section-name">Bottoms</div>
+            <div class="section-count">1/3</div>
+          </div>
+
+          <div class="check-row sub-check-row">
+            <div class="check-box"></div>
+            <span class="check-row-title">Lightweight pants</span>
+            <span class="check-row-qty">x2</span>
+          </div>
+          <div class="check-row-note">Linen or quick-dry</div>
+          <div class="check-row sub-check-row">
+            <div class="check-box"></div>
+            <span class="check-row-title">Swim trunks</span>
+          </div>
+
+          <!-- Footwear sub-section -->
+          <div class="sub-section-head">
+            <div class="section-disc">&#9660;</div>
+            <div class="sub-section-name">Footwear</div>
+            <div class="section-count">0/2</div>
+          </div>
+          <div class="check-row sub-check-row">
+            <div class="check-box"></div>
+            <span class="check-row-title">Walking shoes</span>
+          </div>
+          <div class="check-row sub-check-row">
+            <div class="check-box"></div>
+            <span class="check-row-title">Sandals</span>
+          </div>
+        </div>
+
+        <!-- Electronics -->
+        <div class="check-section">
+          <div class="section-head">
+            <div class="section-disc">&#9660;</div>
+            <div class="section-name">Electronics</div>
+            <div class="section-count">0/5</div>
+          </div>
+          <div class="section-progress-bar">
+            <div class="section-progress-fill" style="width: 0%"></div>
+          </div>
+          <div class="check-row">
+            <div class="check-box"></div>
+            <span class="check-row-title">Phone charger + cable</span>
+          </div>
+          <div class="check-row">
+            <div class="check-box"></div>
+            <span class="check-row-title">Power adapter (EU)</span>
+          </div>
+          <div class="check-row-note">Type C plug, universal adapter in drawer</div>
+          <div class="check-row">
+            <div class="check-box"></div>
+            <span class="check-row-title">Camera + SD cards</span>
+          </div>
+          <div class="check-row">
+            <div class="check-box"></div>
+            <span class="check-row-title">AirPods</span>
+          </div>
+          <div class="check-row">
+            <div class="check-box"></div>
+            <span class="check-row-title">Kindle</span>
+          </div>
+        </div>
+
+        <!-- Toiletries -->
+        <div class="check-section">
+          <div class="section-head">
+            <div class="section-disc">&#9660;</div>
+            <div class="section-name">Toiletries</div>
+            <div class="section-count">6/9</div>
+          </div>
+          <div class="section-progress-bar">
+            <div class="section-progress-fill" style="width: 67%; background: var(--accent)"></div>
+          </div>
+          <div class="check-row">
+            <div class="check-box"></div>
+            <span class="check-row-title">Sunscreen</span>
+          </div>
+          <div class="check-row">
+            <div class="check-box"></div>
+            <span class="check-row-title">Razor</span>
+          </div>
+          <div class="check-row">
+            <div class="check-box"></div>
+            <span class="check-row-title">Deodorant</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Listsurf — iPhone Library</title>
+<style>
+  :root {
+    --bg: #000;
+    --card-bg: #1c1c1e;
+    --elevated: #2c2c2e;
+    --text: #f0f0f0;
+    --text-dim: #8e8e93;
+    --text-muted: #636366;
+    --accent: #0a84ff;
+    --green: #30d158;
+    --orange: #ff9f0a;
+    --red: #ff453a;
+    --purple: #bf5af2;
+    --teal: #64d2ff;
+    --border: #38383a;
+    --progress-bg: rgba(255,255,255,0.08);
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    --mono: "SF Mono", ui-monospace, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: var(--font);
+    background: #111;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+  }
+
+  .phone {
+    width: 390px;
+    height: 844px;
+    background: var(--bg);
+    border-radius: 47px;
+    border: 3px solid #333;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+  .dynamic-island {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 126px;
+    height: 36px;
+    background: #000;
+    border-radius: 20px;
+    z-index: 10;
+  }
+  .status-bar {
+    height: 54px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding: 0 32px 8px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .status-time { color: var(--text); }
+  .status-icons { color: var(--text); font-size: 12px; }
+
+  /* Large title nav */
+  .nav-large {
+    padding: 8px 16px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .nav-large-title {
+    font-size: 34px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .nav-actions {
+    display: flex;
+    gap: 16px;
+  }
+  .nav-action {
+    font-size: 22px;
+    color: var(--accent);
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+
+  /* Search */
+  .search-bar {
+    margin: 8px 16px 12px;
+    height: 36px;
+    background: var(--elevated);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    gap: 6px;
+  }
+  .search-icon { color: var(--text-muted); font-size: 14px; }
+  .search-input {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--text);
+    font-size: 16px;
+    font-family: var(--font);
+    outline: none;
+  }
+  .search-input::placeholder { color: var(--text-muted); }
+
+  /* Sort control */
+  .sort-bar {
+    display: flex;
+    align-items: center;
+    padding: 0 16px 8px;
+    gap: 8px;
+  }
+  .sort-label {
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+  .sort-value {
+    font-size: 13px;
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  /* List items */
+  .list-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 16px;
+  }
+  .list-card {
+    display: flex;
+    align-items: center;
+    padding: 14px 0;
+    border-bottom: 0.5px solid var(--border);
+    gap: 12px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .list-card:active { opacity: 0.7; }
+  .list-card:last-child { border-bottom: none; }
+
+  .list-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+  .list-card-info { flex: 1; min-width: 0; }
+  .list-card-title {
+    font-size: 17px;
+    font-weight: 500;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .list-card-meta {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .list-card-progress {
+    width: 50px;
+    height: 4px;
+    background: var(--progress-bg);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .list-card-progress-fill {
+    height: 100%;
+    border-radius: 2px;
+  }
+  .list-card-chevron {
+    color: var(--text-muted);
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  /* Section headers */
+  .section-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+    padding: 16px 0 8px;
+  }
+  .section-divider {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 20px 0 8px;
+    border-top: 0.5px solid var(--border);
+    margin-top: 4px;
+  }
+
+  /* Tab bar */
+  .tab-bar {
+    height: 83px;
+    padding-bottom: 34px;
+    background: rgba(28, 28, 30, 0.9);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    border-top: 0.5px solid var(--border);
+    display: flex;
+    align-items: flex-start;
+    padding-top: 6px;
+    justify-content: space-around;
+  }
+  .tab-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    color: var(--text-muted);
+    font-size: 10px;
+    cursor: pointer;
+    border: none;
+    background: none;
+    font-family: var(--font);
+  }
+  .tab-item.active { color: var(--accent); }
+  .tab-icon { font-size: 22px; }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="dynamic-island"></div>
+  <div class="status-bar">
+    <span class="status-time">9:41</span>
+    <span class="status-icons">&#9679; &#9679; &#9679;</span>
+  </div>
+
+  <!-- Large title -->
+  <div class="nav-large">
+    <div class="nav-large-title">Lists</div>
+    <div class="nav-actions">
+      <button class="nav-action" title="Settings">&#9881;</button>
+      <button class="nav-action" title="New List">&#43;</button>
+    </div>
+  </div>
+
+  <!-- Search -->
+  <div class="search-bar">
+    <span class="search-icon">&#128269;</span>
+    <input class="search-input" type="text" placeholder="Search lists and items">
+  </div>
+
+  <!-- List -->
+  <div class="list-scroll">
+
+    <!-- Active Lists -->
+    <div class="list-card">
+      <div class="list-icon" style="background: rgba(10,132,255,0.15)">
+        <span style="color: var(--accent)">&#x1F9F3;</span>
+      </div>
+      <div class="list-card-info">
+        <div class="list-card-title">Italy Trip Jun 2026</div>
+        <div class="list-card-meta">
+          <span>18/42 packed</span>
+          <div class="list-card-progress">
+            <div class="list-card-progress-fill" style="width: 43%; background: var(--accent)"></div>
+          </div>
+        </div>
+      </div>
+      <div class="list-card-chevron">&#8250;</div>
+    </div>
+
+    <div class="list-card">
+      <div class="list-icon" style="background: rgba(255,159,10,0.15)">
+        <span style="color: var(--orange)">&#x1F3D6;</span>
+      </div>
+      <div class="list-card-info">
+        <div class="list-card-title">TPL: Beach Trip</div>
+        <div class="list-card-meta">
+          <span>35 items</span>
+          <div class="list-card-progress">
+            <div class="list-card-progress-fill" style="width: 0%"></div>
+          </div>
+        </div>
+      </div>
+      <div class="list-card-chevron">&#8250;</div>
+    </div>
+
+    <div class="list-card">
+      <div class="list-icon" style="background: rgba(48,209,88,0.15)">
+        <span style="color: var(--green)">&#x1F3E0;</span>
+      </div>
+      <div class="list-card-info">
+        <div class="list-card-title">Home Inventory</div>
+        <div class="list-card-meta">
+          <span>12/12 complete</span>
+          <div class="list-card-progress">
+            <div class="list-card-progress-fill" style="width: 100%; background: var(--green)"></div>
+          </div>
+        </div>
+      </div>
+      <div class="list-card-chevron">&#8250;</div>
+    </div>
+
+    <div class="list-card">
+      <div class="list-icon" style="background: rgba(191,90,242,0.15)">
+        <span style="color: var(--purple)">&#x1F6E0;</span>
+      </div>
+      <div class="list-card-info">
+        <div class="list-card-title">Camping Gear</div>
+        <div class="list-card-meta">
+          <span>28 items</span>
+          <div class="list-card-progress">
+            <div class="list-card-progress-fill" style="width: 0%"></div>
+          </div>
+        </div>
+      </div>
+      <div class="list-card-chevron">&#8250;</div>
+    </div>
+
+    <div class="list-card">
+      <div class="list-icon" style="background: rgba(100,210,255,0.15)">
+        <span style="color: var(--teal)">&#x1F4BC;</span>
+      </div>
+      <div class="list-card-info">
+        <div class="list-card-title">TPL: Work Travel</div>
+        <div class="list-card-meta">
+          <span>22 items</span>
+          <div class="list-card-progress">
+            <div class="list-card-progress-fill" style="width: 0%"></div>
+          </div>
+        </div>
+      </div>
+      <div class="list-card-chevron">&#8250;</div>
+    </div>
+
+    <div class="list-card">
+      <div class="list-icon" style="background: rgba(255,69,58,0.15)">
+        <span style="color: var(--red)">&#x2764;</span>
+      </div>
+      <div class="list-card-info">
+        <div class="list-card-title">Emergency Kit</div>
+        <div class="list-card-meta">
+          <span>15/15 complete</span>
+          <div class="list-card-progress">
+            <div class="list-card-progress-fill" style="width: 100%; background: var(--green)"></div>
+          </div>
+        </div>
+      </div>
+      <div class="list-card-chevron">&#8250;</div>
+    </div>
+
+    <!-- Archive -->
+    <div class="section-divider">Archive</div>
+
+    <div class="list-card">
+      <div class="list-icon" style="background: rgba(99,99,102,0.15)">
+        <span style="color: var(--text-muted)">&#x1F9F3;</span>
+      </div>
+      <div class="list-card-info">
+        <div class="list-card-title" style="color: var(--text-dim)">Colorado Ski 2025</div>
+        <div class="list-card-meta">
+          <span>38/38 &middot; Dec 2025</span>
+        </div>
+      </div>
+      <div class="list-card-chevron">&#8250;</div>
+    </div>
+
+    <div class="list-card">
+      <div class="list-icon" style="background: rgba(99,99,102,0.15)">
+        <span style="color: var(--text-muted)">&#x1F3D6;</span>
+      </div>
+      <div class="list-card-info">
+        <div class="list-card-title" style="color: var(--text-dim)">Hawaii Dec 2025</div>
+        <div class="list-card-meta">
+          <span>42/42 &middot; Dec 2025</span>
+        </div>
+      </div>
+      <div class="list-card-chevron">&#8250;</div>
+    </div>
+  </div>
+
+  <!-- Tab bar -->
+  <div class="tab-bar">
+    <button class="tab-item active">
+      <span class="tab-icon">&#9776;</span>
+      <span>Lists</span>
+    </button>
+    <button class="tab-item">
+      <span class="tab-icon">&#128451;</span>
+      <span>Archive</span>
+    </button>
+    <button class="tab-item">
+      <span class="tab-icon">&#9881;</span>
+      <span>Settings</span>
+    </button>
+  </div>
+</div>
+</body>
+</html>
