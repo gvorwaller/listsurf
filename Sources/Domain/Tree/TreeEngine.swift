@@ -264,6 +264,233 @@ public struct TreeEngine: Sendable {
         return (newList, newItems)
     }
 
+    // MARK: - Siblings helper
+
+    public func siblings(of itemID: UUID, in items: [OutlineItem]) -> [OutlineItem] {
+        let itemMap = Dictionary(uniqueKeysWithValues: items.map { ($0.id, $0) })
+        guard let item = itemMap[itemID] else { return [] }
+        return items
+            .filter { $0.parentID == item.parentID && $0.id != itemID }
+            .sorted { a, b in
+                if a.position != b.position { return a.position < b.position }
+                return a.id.uuidString < b.id.uuidString
+            }
+    }
+
+    public func sortedSiblingGroup(of itemID: UUID, in items: [OutlineItem]) -> [OutlineItem] {
+        let itemMap = Dictionary(uniqueKeysWithValues: items.map { ($0.id, $0) })
+        guard let item = itemMap[itemID] else { return [] }
+        return items
+            .filter { $0.parentID == item.parentID }
+            .sorted { a, b in
+                if a.position != b.position { return a.position < b.position }
+                return a.id.uuidString < b.id.uuidString
+            }
+    }
+
+    // MARK: - Move among siblings
+
+    public func moveUp(itemID: UUID, in items: [OutlineItem]) -> [OutlineItem]? {
+        let group = sortedSiblingGroup(of: itemID, in: items)
+        guard let idx = group.firstIndex(where: { $0.id == itemID }), idx > 0 else { return nil }
+
+        let above = group[idx - 1]
+        let now = Date()
+
+        return items.map { i in
+            if i.id == itemID {
+                var u = i; u.position = above.position - 0.5; u.updatedAt = now; return u
+            }
+            return i
+        }
+    }
+
+    public func moveDown(itemID: UUID, in items: [OutlineItem]) -> [OutlineItem]? {
+        let group = sortedSiblingGroup(of: itemID, in: items)
+        guard let idx = group.firstIndex(where: { $0.id == itemID }), idx < group.count - 1 else { return nil }
+
+        let below = group[idx + 1]
+        let now = Date()
+
+        return items.map { i in
+            if i.id == itemID {
+                var u = i; u.position = below.position + 0.5; u.updatedAt = now; return u
+            }
+            return i
+        }
+    }
+
+    // MARK: - Indent / Outdent
+
+    public func indent(itemID: UUID, in items: [OutlineItem]) throws -> [OutlineItem] {
+        let group = sortedSiblingGroup(of: itemID, in: items)
+        guard let idx = group.firstIndex(where: { $0.id == itemID }), idx > 0 else {
+            throw TreeError.itemNotFound(itemID)
+        }
+
+        let newParent = group[idx - 1]
+        try validateReparent(itemID: itemID, newParentID: newParent.id, items: items)
+
+        let childrenOfNewParent = items.filter { $0.parentID == newParent.id }
+        let newPosition = nextPosition(among: childrenOfNewParent)
+        let now = Date()
+
+        return items.map { i in
+            if i.id == itemID {
+                var u = i; u.parentID = newParent.id; u.position = newPosition; u.updatedAt = now; return u
+            }
+            return i
+        }
+    }
+
+    public func outdent(itemID: UUID, in items: [OutlineItem]) throws -> [OutlineItem] {
+        let itemMap = Dictionary(uniqueKeysWithValues: items.map { ($0.id, $0) })
+        guard let item = itemMap[itemID] else {
+            throw TreeError.itemNotFound(itemID)
+        }
+        guard let currentParentID = item.parentID else {
+            throw TreeError.itemNotFound(itemID)
+        }
+        guard let currentParent = itemMap[currentParentID] else {
+            throw TreeError.itemNotFound(currentParentID)
+        }
+
+        let newParentID = currentParent.parentID
+        if let newParentID {
+            try validateReparent(itemID: itemID, newParentID: newParentID, items: items)
+        }
+
+        let newSiblings = items.filter { $0.parentID == newParentID }
+        let parentPosition = currentParent.position
+        let siblingsAfterParent = newSiblings.filter { $0.position > parentPosition }
+        let insertPosition: Double
+        if let nextSibling = siblingsAfterParent.min(by: { $0.position < $1.position }) {
+            insertPosition = midpoint(parentPosition, nextSibling.position)
+        } else {
+            insertPosition = parentPosition + 1.0
+        }
+
+        let now = Date()
+        return items.map { i in
+            if i.id == itemID {
+                var u = i; u.parentID = newParentID; u.position = insertPosition; u.updatedAt = now; return u
+            }
+            return i
+        }
+    }
+
+    // MARK: - Insert
+
+    public func insertAbove(
+        referenceID: UUID,
+        newItem: OutlineItem,
+        in items: [OutlineItem]
+    ) -> [OutlineItem] {
+        let itemMap = Dictionary(uniqueKeysWithValues: items.map { ($0.id, $0) })
+        guard let reference = itemMap[referenceID] else { return items + [newItem] }
+
+        let group = sortedSiblingGroup(of: referenceID, in: items)
+        guard let idx = group.firstIndex(where: { $0.id == referenceID }) else { return items + [newItem] }
+
+        let insertPosition: Double
+        if idx == 0 {
+            insertPosition = reference.position - 1.0
+        } else {
+            insertPosition = midpoint(group[idx - 1].position, reference.position)
+        }
+
+        var positioned = newItem
+        positioned.parentID = reference.parentID
+        positioned.position = insertPosition
+        positioned.listID = reference.listID
+        return items + [positioned]
+    }
+
+    public func insertBelow(
+        referenceID: UUID,
+        newItem: OutlineItem,
+        in items: [OutlineItem]
+    ) -> [OutlineItem] {
+        let itemMap = Dictionary(uniqueKeysWithValues: items.map { ($0.id, $0) })
+        guard let reference = itemMap[referenceID] else { return items + [newItem] }
+
+        let group = sortedSiblingGroup(of: referenceID, in: items)
+        guard let idx = group.firstIndex(where: { $0.id == referenceID }) else { return items + [newItem] }
+
+        let insertPosition: Double
+        if idx == group.count - 1 {
+            insertPosition = reference.position + 1.0
+        } else {
+            insertPosition = midpoint(reference.position, group[idx + 1].position)
+        }
+
+        var positioned = newItem
+        positioned.parentID = reference.parentID
+        positioned.position = insertPosition
+        positioned.listID = reference.listID
+        return items + [positioned]
+    }
+
+    public func insertChild(
+        parentID: UUID,
+        newItem: OutlineItem,
+        in items: [OutlineItem]
+    ) -> [OutlineItem] {
+        let children = items.filter { $0.parentID == parentID }
+        let position = nextPosition(among: children)
+
+        let itemMap = Dictionary(uniqueKeysWithValues: items.map { ($0.id, $0) })
+        let listID = itemMap[parentID]?.listID ?? newItem.listID
+
+        var positioned = newItem
+        positioned.parentID = parentID
+        positioned.position = position
+        positioned.listID = listID
+        return items + [positioned]
+    }
+
+    // MARK: - Delete subtree
+
+    public func deleteSubtree(itemID: UUID, in items: [OutlineItem]) -> (remaining: [OutlineItem], deleted: [OutlineItem]) {
+        let descIDs = Set(descendants(of: itemID, in: items).map(\.id))
+        let allDeletedIDs = descIDs.union([itemID])
+        let remaining = items.filter { !allDeletedIDs.contains($0.id) }
+        let deleted = items.filter { allDeletedIDs.contains($0.id) }
+        return (remaining, deleted)
+    }
+
+    // MARK: - Subtree reset
+
+    public func resetChecks(subtreeOf itemID: UUID, in items: [OutlineItem]) -> [OutlineItem] {
+        let descIDs = Set(descendants(of: itemID, in: items).map(\.id))
+        let affectedIDs = descIDs.union([itemID])
+        let now = Date()
+        return items.map { item in
+            guard affectedIDs.contains(item.id), item.isChecked else { return item }
+            var updated = item
+            updated.isChecked = false
+            updated.updatedAt = now
+            return updated
+        }
+    }
+
+    // MARK: - Orphan repair
+
+    public func repairOrphans(in items: [OutlineItem]) -> (repaired: [OutlineItem], orphanCount: Int) {
+        let itemIDs = Set(items.map(\.id))
+        var orphanCount = 0
+        let now = Date()
+        let repaired = items.map { item in
+            guard let parentID = item.parentID, !itemIDs.contains(parentID) else { return item }
+            orphanCount += 1
+            var fixed = item
+            fixed.parentID = nil
+            fixed.updatedAt = now
+            return fixed
+        }
+        return (repaired, orphanCount)
+    }
+
     // MARK: - Check operations
 
     public func setChecked(
