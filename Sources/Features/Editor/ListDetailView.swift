@@ -53,6 +53,7 @@ struct ListDetailView: View {
                         systemImage: store.isCheckMode ? "list.bullet.indent" : "checklist"
                     )
                 }
+                .accessibilityIdentifier("detail.toggleMode")
                 .help(store.isCheckMode ? "Switch to Edit Mode" : "Switch to Check Mode")
 
                 Button {
@@ -82,6 +83,7 @@ struct ListDetailView: View {
         } label: {
             Label("Add Item", systemImage: "plus")
         }
+        .accessibilityIdentifier("editor.addItem")
         .help("Add a new item")
 
         Button {

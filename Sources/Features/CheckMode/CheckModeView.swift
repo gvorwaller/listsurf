@@ -84,3 +84,12 @@ struct CheckModeView: View {
         }
     }
 }
+
+#if DEBUG
+#Preview("Check Mode") {
+    NavigationStack {
+        CheckModeView(store: PreviewFixtures.listStore(checkMode: true))
+            .navigationTitle("Weekend Packing")
+    }
+}
+#endif

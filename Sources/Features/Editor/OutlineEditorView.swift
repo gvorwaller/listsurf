@@ -41,6 +41,7 @@ struct OutlineEditorView: View {
                 beginAdding(afterID: nil)
             }
             .buttonStyle(.borderedProminent)
+            .accessibilityIdentifier("editor.addFirstItem")
         }
     }
 
@@ -86,6 +87,7 @@ struct OutlineEditorView: View {
             Image(systemName: "plus.circle.fill")
                 .foregroundStyle(.green)
             TextField("New item", text: $newItemText)
+                .accessibilityIdentifier("editor.newItem")
                 .focused($addFieldFocused)
                 .onSubmit { commitNewItem() }
                 .onKeyPress(.escape) {
@@ -198,3 +200,23 @@ struct OutlineEditorView: View {
         }
     }
 }
+
+#if DEBUG
+private struct OutlineEditorPreview: View {
+    @State private var inspectorItemID: UUID?
+    @State private var triggerAddItem = false
+    @State private var store = PreviewFixtures.listStore()
+
+    var body: some View {
+        OutlineEditorView(
+            store: store,
+            inspectorItemID: $inspectorItemID,
+            triggerAddItem: $triggerAddItem
+        )
+    }
+}
+
+#Preview("Outline Editor") {
+    OutlineEditorPreview()
+}
+#endif

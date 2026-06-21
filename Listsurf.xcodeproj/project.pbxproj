@@ -7,6 +7,18 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AB0000000000000000000001 /* ExportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000001 /* ExportTests.swift */; };
+		AB0000000000000000000002 /* TreeEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000002 /* TreeEngineTests.swift */; };
+		AB0000000000000000000003 /* PersistenceStackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000003 /* PersistenceStackTests.swift */; };
+		AB0000000000000000000004 /* ExportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000001 /* ExportTests.swift */; };
+		AB0000000000000000000005 /* TreeEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000002 /* TreeEngineTests.swift */; };
+		AB0000000000000000000006 /* PersistenceStackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000003 /* PersistenceStackTests.swift */; };
+		AB0000000000000000000007 /* Listsurf_iOSUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000004 /* Listsurf_iOSUITests.swift */; };
+		AB0000000000000000000008 /* Listsurf_macOSUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000005 /* Listsurf_macOSUITests.swift */; };
+		AB0000000000000000000009 /* Domain in Frameworks */ = {isa = PBXBuildFile; productRef = BCE6AF1EC704498F1C09F7A6 /* Domain */; };
+		AB000000000000000000000A /* Persistence in Frameworks */ = {isa = PBXBuildFile; productRef = 47ABA88EB97275BFA6257FC4 /* Persistence */; };
+		AB000000000000000000000B /* Domain in Frameworks */ = {isa = PBXBuildFile; productRef = 3330C307246A95A02800DF07 /* Domain */; };
+		AB000000000000000000000C /* Persistence in Frameworks */ = {isa = PBXBuildFile; productRef = F1D39B35E5B78D7039B7946C /* Persistence */; };
 		04D73B890EB765A6881B7365 /* Persistence in Frameworks */ = {isa = PBXBuildFile; productRef = F1D39B35E5B78D7039B7946C /* Persistence */; };
 		2B3F5E9CDDF2664F3C8C13BA /* ListsurfApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 381BB974398C3B1771AC6076 /* ListsurfApp.swift */; };
 		387B386B50AD3FF3A2D18E2F /* ListsurfApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 381BB974398C3B1771AC6076 /* ListsurfApp.swift */; };
@@ -19,7 +31,33 @@
 		F9FE080FF103C37461C4160B /* Domain in Frameworks */ = {isa = PBXBuildFile; productRef = 3330C307246A95A02800DF07 /* Domain */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		A10000000000000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1DB703B63C48DF0C8E3F8BAC /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = EEDD7F1DFF04B1A1CBADA0BD;
+			remoteInfo = Listsurf_iOS;
+		};
+		A10000000000000000000002 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1DB703B63C48DF0C8E3F8BAC /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D86EAE2EF6BC0A1393BBFDD3;
+			remoteInfo = Listsurf_macOS;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
+		AA0000000000000000000001 /* ExportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainTests/ExportTests.swift; sourceTree = "<group>"; };
+		AA0000000000000000000002 /* TreeEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainTests/TreeEngineTests.swift; sourceTree = "<group>"; };
+		AA0000000000000000000003 /* PersistenceStackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceTests/PersistenceStackTests.swift; sourceTree = "<group>"; };
+		AA0000000000000000000004 /* Listsurf_iOSUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iOSUITests/Listsurf_iOSUITests.swift; sourceTree = "<group>"; };
+		AA0000000000000000000005 /* Listsurf_macOSUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macOSUITests/Listsurf_macOSUITests.swift; sourceTree = "<group>"; };
+		AA0000000000000000000011 /* Listsurf_iOSLogicTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Listsurf_iOSLogicTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA0000000000000000000012 /* Listsurf_macOSLogicTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Listsurf_macOSLogicTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA0000000000000000000013 /* Listsurf_iOSUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Listsurf_iOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA0000000000000000000014 /* Listsurf_macOSUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Listsurf_macOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		381BB974398C3B1771AC6076 /* ListsurfApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListsurfApp.swift; sourceTree = "<group>"; };
 		6E66F8E41A2C38C6BAAC47A9 /* Listsurf.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Listsurf.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9B4ED75FAE369D28532E3998 /* listsurf */ = {isa = PBXFileReference; lastKnownFileType = folder; name = listsurf; path = .; sourceTree = SOURCE_ROOT; };
@@ -29,6 +67,38 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		AC0000000000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AB0000000000000000000009 /* Domain in Frameworks */,
+				AB000000000000000000000A /* Persistence in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AC0000000000000000000002 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AB000000000000000000000B /* Domain in Frameworks */,
+				AB000000000000000000000C /* Persistence in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AC0000000000000000000003 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AC0000000000000000000004 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		9EB09369F338F6B44D39B23B /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -56,6 +126,7 @@
 			isa = PBXGroup;
 			children = (
 				2CCF868C3E7D611435267A0A /* App */,
+				AA0000000000000000000020 /* Tests */,
 				968FA7395B6015387FFDD8C6 /* Packages */,
 				7FE7990AF7649E4D59228D93 /* Products */,
 			);
@@ -76,6 +147,10 @@
 			children = (
 				6E66F8E41A2C38C6BAAC47A9 /* Listsurf.app */,
 				D44A2C096FC174F53C7FDAD4 /* Listsurf.app */,
+				AA0000000000000000000011 /* Listsurf_iOSLogicTests.xctest */,
+				AA0000000000000000000012 /* Listsurf_macOSLogicTests.xctest */,
+				AA0000000000000000000013 /* Listsurf_iOSUITests.xctest */,
+				AA0000000000000000000014 /* Listsurf_macOSUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -88,9 +163,99 @@
 			name = Packages;
 			sourceTree = "<group>";
 		};
+		AA0000000000000000000020 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000001 /* ExportTests.swift */,
+				AA0000000000000000000002 /* TreeEngineTests.swift */,
+				AA0000000000000000000003 /* PersistenceStackTests.swift */,
+				AA0000000000000000000004 /* Listsurf_iOSUITests.swift */,
+				AA0000000000000000000005 /* Listsurf_macOSUITests.swift */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		AF0000000000000000000001 /* Listsurf_iOSLogicTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AE0000000000000000000001 /* Build configuration list for PBXNativeTarget "Listsurf_iOSLogicTests" */;
+			buildPhases = (
+				AC0000000000000000000011 /* Sources */,
+				AC0000000000000000000001 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Listsurf_iOSLogicTests;
+			packageProductDependencies = (
+				BCE6AF1EC704498F1C09F7A6 /* Domain */,
+				47ABA88EB97275BFA6257FC4 /* Persistence */,
+			);
+			productName = Listsurf_iOSLogicTests;
+			productReference = AA0000000000000000000011 /* Listsurf_iOSLogicTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		AF0000000000000000000002 /* Listsurf_macOSLogicTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AE0000000000000000000002 /* Build configuration list for PBXNativeTarget "Listsurf_macOSLogicTests" */;
+			buildPhases = (
+				AC0000000000000000000012 /* Sources */,
+				AC0000000000000000000002 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Listsurf_macOSLogicTests;
+			packageProductDependencies = (
+				3330C307246A95A02800DF07 /* Domain */,
+				F1D39B35E5B78D7039B7946C /* Persistence */,
+			);
+			productName = Listsurf_macOSLogicTests;
+			productReference = AA0000000000000000000012 /* Listsurf_macOSLogicTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		AF0000000000000000000003 /* Listsurf_iOSUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AE0000000000000000000003 /* Build configuration list for PBXNativeTarget "Listsurf_iOSUITests" */;
+			buildPhases = (
+				AC0000000000000000000013 /* Sources */,
+				AC0000000000000000000003 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A10000000000000000000011 /* PBXTargetDependency */,
+			);
+			name = Listsurf_iOSUITests;
+			packageProductDependencies = (
+			);
+			productName = Listsurf_iOSUITests;
+			productReference = AA0000000000000000000013 /* Listsurf_iOSUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		AF0000000000000000000004 /* Listsurf_macOSUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AE0000000000000000000004 /* Build configuration list for PBXNativeTarget "Listsurf_macOSUITests" */;
+			buildPhases = (
+				AC0000000000000000000014 /* Sources */,
+				AC0000000000000000000004 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A10000000000000000000012 /* PBXTargetDependency */,
+			);
+			name = Listsurf_macOSUITests;
+			packageProductDependencies = (
+			);
+			productName = Listsurf_macOSUITests;
+			productReference = AA0000000000000000000014 /* Listsurf_macOSUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 		D86EAE2EF6BC0A1393BBFDD3 /* Listsurf_macOS */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 95FCED017E50EF7400CAD417 /* Build configuration list for PBXNativeTarget "Listsurf_macOS" */;
@@ -144,6 +309,20 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 2650;
 				TargetAttributes = {
+					AF0000000000000000000001 = {
+						CreatedOnToolsVersion = 26.5;
+					};
+					AF0000000000000000000002 = {
+						CreatedOnToolsVersion = 26.5;
+					};
+					AF0000000000000000000003 = {
+						CreatedOnToolsVersion = 26.5;
+						TestTargetID = EEDD7F1DFF04B1A1CBADA0BD;
+					};
+					AF0000000000000000000004 = {
+						CreatedOnToolsVersion = 26.5;
+						TestTargetID = D86EAE2EF6BC0A1393BBFDD3;
+					};
 				};
 			};
 			buildConfigurationList = B44902698240F048146AE4CB /* Build configuration list for PBXProject "Listsurf" */;
@@ -165,6 +344,10 @@
 			targets = (
 				EEDD7F1DFF04B1A1CBADA0BD /* Listsurf_iOS */,
 				D86EAE2EF6BC0A1393BBFDD3 /* Listsurf_macOS */,
+				AF0000000000000000000001 /* Listsurf_iOSLogicTests */,
+				AF0000000000000000000002 /* Listsurf_macOSLogicTests */,
+				AF0000000000000000000003 /* Listsurf_iOSUITests */,
+				AF0000000000000000000004 /* Listsurf_macOSUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -189,6 +372,42 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		AC0000000000000000000011 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AB0000000000000000000001 /* ExportTests.swift in Sources */,
+				AB0000000000000000000002 /* TreeEngineTests.swift in Sources */,
+				AB0000000000000000000003 /* PersistenceStackTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AC0000000000000000000012 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AB0000000000000000000004 /* ExportTests.swift in Sources */,
+				AB0000000000000000000005 /* TreeEngineTests.swift in Sources */,
+				AB0000000000000000000006 /* PersistenceStackTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AC0000000000000000000013 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AB0000000000000000000007 /* Listsurf_iOSUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AC0000000000000000000014 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AB0000000000000000000008 /* Listsurf_macOSUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		9FCCD39A7B84D80A8C747FD2 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -207,7 +426,140 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		A10000000000000000000011 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = EEDD7F1DFF04B1A1CBADA0BD /* Listsurf_iOS */;
+			targetProxy = A10000000000000000000001 /* PBXContainerItemProxy */;
+		};
+		A10000000000000000000012 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D86EAE2EF6BC0A1393BBFDD3 /* Listsurf_macOS */;
+			targetProxy = A10000000000000000000002 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		AD0000000000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.listsurf.tests.ios.logic;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		AD0000000000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.listsurf.tests.ios.logic;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		AD0000000000000000000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.listsurf.tests.macos.logic;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		AD0000000000000000000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.listsurf.tests.macos.logic;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		AD0000000000000000000005 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.listsurf.tests.ios.ui;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Listsurf_iOS;
+			};
+			name = Debug;
+		};
+		AD0000000000000000000006 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.listsurf.tests.ios.ui;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Listsurf_iOS;
+			};
+			name = Release;
+		};
+		AD0000000000000000000007 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.listsurf.tests.macos.ui;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+				TEST_TARGET_NAME = Listsurf_macOS;
+			};
+			name = Debug;
+		};
+		AD0000000000000000000008 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.listsurf.tests.macos.ui;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+				TEST_TARGET_NAME = Listsurf_macOS;
+			};
+			name = Release;
+		};
 		01010E978FE2E43CB90C5399 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -294,6 +646,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = App/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Listsurf;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -399,6 +752,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = App/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Listsurf;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -414,6 +768,42 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		AE0000000000000000000001 /* Build configuration list for PBXNativeTarget "Listsurf_iOSLogicTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AD0000000000000000000001 /* Debug */,
+				AD0000000000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		AE0000000000000000000002 /* Build configuration list for PBXNativeTarget "Listsurf_macOSLogicTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AD0000000000000000000003 /* Debug */,
+				AD0000000000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		AE0000000000000000000003 /* Build configuration list for PBXNativeTarget "Listsurf_iOSUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AD0000000000000000000005 /* Debug */,
+				AD0000000000000000000006 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		AE0000000000000000000004 /* Build configuration list for PBXNativeTarget "Listsurf_macOSUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AD0000000000000000000007 /* Debug */,
+				AD0000000000000000000008 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		95FCED017E50EF7400CAD417 /* Build configuration list for PBXNativeTarget "Listsurf_macOS" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

@@ -1,0 +1,37 @@
+{
+  "configurations" : [
+    {
+      "id" : "10000000-0000-0000-0000-000000000001",
+      "name" : "Default",
+      "options" : {
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "codeCoverage" : true,
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:Listsurf.xcodeproj",
+      "identifier" : "EEDD7F1DFF04B1A1CBADA0BD",
+      "name" : "Listsurf_iOS"
+    }
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : false,
+      "target" : {
+        "containerPath" : "container:Listsurf.xcodeproj",
+        "identifier" : "AF0000000000000000000001",
+        "name" : "Listsurf_iOSLogicTests"
+      }
+    },
+    {
+      "parallelizable" : false,
+      "target" : {
+        "containerPath" : "container:Listsurf.xcodeproj",
+        "identifier" : "AF0000000000000000000003",
+        "name" : "Listsurf_iOSUITests"
+      }
+    }
+  ],
+  "version" : 1
+}

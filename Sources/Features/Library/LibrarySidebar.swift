@@ -32,6 +32,7 @@ struct LibrarySidebar: View {
                 } label: {
                     Label("New List", systemImage: "plus")
                 }
+                .accessibilityIdentifier("library.newList")
                 .help("Create a new list")
 
                 Button {
@@ -44,6 +45,7 @@ struct LibrarySidebar: View {
         }
         .alert("New List", isPresented: $showingNewList) {
             TextField("List name", text: $newListTitle)
+                .accessibilityIdentifier("newList.title")
             Button("Create") {
                 guard !newListTitle.trimmingCharacters(in: .whitespaces).isEmpty else { return }
                 Task {
@@ -51,6 +53,7 @@ struct LibrarySidebar: View {
                     newListTitle = ""
                 }
             }
+            .accessibilityIdentifier("newList.create")
             Button("Cancel", role: .cancel) { newListTitle = "" }
         }
         .sheet(isPresented: $showingArchive) {
@@ -72,6 +75,7 @@ struct LibrarySidebar: View {
         } actions: {
             Button("Create List") { showingNewList = true }
                 .buttonStyle(.borderedProminent)
+                .accessibilityIdentifier("library.createFirstList")
         }
     }
 

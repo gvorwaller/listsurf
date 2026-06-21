@@ -25,3 +25,15 @@ public struct ContentView: View {
         }
     }
 }
+
+#if DEBUG
+#Preview("Library") {
+    ContentView()
+        .environment(PreviewFixtures.appStore())
+}
+
+#Preview("Selected List") {
+    ContentView()
+        .environment(PreviewFixtures.appStore(selected: true))
+}
+#endif

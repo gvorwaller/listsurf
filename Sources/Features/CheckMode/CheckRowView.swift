@@ -26,6 +26,12 @@ struct CheckRowView: View {
                     .contentTransition(.symbolEffect(.replace))
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("check.item.\(row.id.uuidString)")
+            .accessibilityLabel(
+                row.checkState == .checked
+                    ? "Uncheck \(row.item.title)"
+                    : "Check \(row.item.title)"
+            )
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(row.item.title)
