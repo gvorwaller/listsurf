@@ -23,6 +23,7 @@
 		381BB974398C3B1771AC6076 /* ListsurfApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListsurfApp.swift; sourceTree = "<group>"; };
 		6E66F8E41A2C38C6BAAC47A9 /* Listsurf.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Listsurf.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9B4ED75FAE369D28532E3998 /* listsurf */ = {isa = PBXFileReference; lastKnownFileType = folder; name = listsurf; path = .; sourceTree = SOURCE_ROOT; };
+		C0000389AECEE218E691E647 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		D44A2C096FC174F53C7FDAD4 /* Listsurf.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Listsurf.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E596D00A45E2A16387F9EBBA /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -64,6 +65,7 @@
 			isa = PBXGroup;
 			children = (
 				E596D00A45E2A16387F9EBBA /* Assets.xcassets */,
+				C0000389AECEE218E691E647 /* Info.plist */,
 				381BB974398C3B1771AC6076 /* ListsurfApp.swift */,
 			);
 			path = App;

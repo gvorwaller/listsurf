@@ -32,12 +32,14 @@ struct LibrarySidebar: View {
                 } label: {
                     Label("New List", systemImage: "plus")
                 }
+                .help("Create a new list")
 
                 Button {
                     showingArchive = true
                 } label: {
                     Label("Archive", systemImage: "archivebox")
                 }
+                .help("View archived lists")
             }
         }
         .alert("New List", isPresented: $showingNewList) {

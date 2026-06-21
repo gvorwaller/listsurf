@@ -4,21 +4,29 @@ import Domain
 struct OutlineEditorView: View {
     @Bindable var store: ListStore
     @Binding var inspectorItemID: UUID?
+    @Binding var triggerAddItem: Bool
     @Environment(\.undoManager) private var undoManager
     @State private var editingItemID: UUID?
     @State private var editingText = ""
+    @State private var showingAddField = false
     @State private var addingAfterID: UUID?
     @State private var newItemText = ""
     @FocusState private var addFieldFocused: Bool
 
     var body: some View {
         Group {
-            if store.filteredRows.isEmpty && store.searchText.isEmpty {
+            if store.filteredRows.isEmpty && !showingAddField && store.searchText.isEmpty {
                 emptyState
-            } else if store.filteredRows.isEmpty {
+            } else if store.filteredRows.isEmpty && !showingAddField {
                 ContentUnavailableView.search(text: store.searchText)
             } else {
                 outlineList
+            }
+        }
+        .onChange(of: triggerAddItem) { _, newValue in
+            if newValue {
+                triggerAddItem = false
+                beginAdding(afterID: nil)
             }
         }
     }
@@ -30,9 +38,7 @@ struct OutlineEditorView: View {
             Text("Add your first item, or paste multiple lines.")
         } actions: {
             Button("Add Item") {
-                addingAfterID = nil
-                newItemText = ""
-                addFieldFocused = true
+                beginAdding(afterID: nil)
             }
             .buttonStyle(.borderedProminent)
         }
@@ -60,14 +66,14 @@ struct OutlineEditorView: View {
                 .contextMenu { rowContextMenu(row) }
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                     Button(role: .destructive) {
-                        Task { await store.deleteItem(id: row.id, undoManager: undoManager) }
+                        store.deleteItem(id: row.id, undoManager: undoManager)
                     } label: {
                         Label("Delete", systemImage: "trash")
                     }
                 }
             }
 
-            if addingAfterID != nil || (store.filteredRows.isEmpty && store.searchText.isEmpty) {
+            if showingAddField {
                 addItemField
             }
         }
@@ -78,12 +84,28 @@ struct OutlineEditorView: View {
     private var addItemField: some View {
         HStack {
             Image(systemName: "plus.circle.fill")
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.green)
             TextField("New item", text: $newItemText)
                 .focused($addFieldFocused)
                 .onSubmit { commitNewItem() }
+                .onKeyPress(.escape) {
+                    cancelAdding()
+                    return .handled
+                }
         }
-        .padding(.leading, addingAfterID != nil ? 16 : 0)
+    }
+
+    private func beginAdding(afterID: UUID?) {
+        addingAfterID = afterID
+        newItemText = ""
+        showingAddField = true
+        addFieldFocused = true
+    }
+
+    private func cancelAdding() {
+        showingAddField = false
+        addingAfterID = nil
+        newItemText = ""
     }
 
     private func startEdit(_ row: FlatRow) {
@@ -95,42 +117,36 @@ struct OutlineEditorView: View {
         let text = editingText.trimmingCharacters(in: .whitespaces)
         editingItemID = nil
         guard !text.isEmpty else { return }
-        Task { await store.updateItemTitle(id: id, title: text, undoManager: undoManager) }
+        store.updateItemTitle(id: id, title: text, undoManager: undoManager)
     }
 
     private func commitNewItem() {
         let text = newItemText.trimmingCharacters(in: .whitespaces)
         guard !text.isEmpty else {
-            addingAfterID = nil
+            cancelAdding()
             return
         }
-        let afterID = addingAfterID
+        store.addItem(title: text, afterItemID: addingAfterID, undoManager: undoManager)
         newItemText = ""
-
-        Task {
-            await store.addItem(title: text, afterItemID: afterID, undoManager: undoManager)
-            addFieldFocused = true
-        }
+        addFieldFocused = true
     }
 
     @ViewBuilder
     private func rowContextMenu(_ row: FlatRow) -> some View {
         Button {
-            addingAfterID = row.id
-            newItemText = ""
-            addFieldFocused = true
+            beginAdding(afterID: row.id)
         } label: {
             Label("Add Below", systemImage: "plus")
         }
 
         Button {
-            Task { await store.insertAbove(referenceID: row.id, title: "", undoManager: undoManager) }
+            store.insertAbove(referenceID: row.id, title: "New Item", undoManager: undoManager)
         } label: {
             Label("Add Above", systemImage: "arrow.up")
         }
 
         Button {
-            Task { await store.addChild(parentID: row.id, title: "", undoManager: undoManager) }
+            store.addChild(parentID: row.id, title: "New Item", undoManager: undoManager)
         } label: {
             Label("Add Child", systemImage: "arrow.turn.down.right")
         }
@@ -138,14 +154,13 @@ struct OutlineEditorView: View {
         Divider()
 
         Button {
-            Task { await store.indent(itemID: row.id, undoManager: undoManager) }
+            store.indent(itemID: row.id, undoManager: undoManager)
         } label: {
             Label("Indent", systemImage: "increase.indent")
         }
-        .keyboardShortcut(.tab, modifiers: [])
 
         Button {
-            Task { await store.outdent(itemID: row.id, undoManager: undoManager) }
+            store.outdent(itemID: row.id, undoManager: undoManager)
         } label: {
             Label("Outdent", systemImage: "decrease.indent")
         }
@@ -153,35 +168,31 @@ struct OutlineEditorView: View {
         Divider()
 
         Button {
-            Task { await store.moveUp(itemID: row.id, undoManager: undoManager) }
+            store.moveUp(itemID: row.id, undoManager: undoManager)
         } label: {
             Label("Move Up", systemImage: "arrow.up")
         }
 
         Button {
-            Task { await store.moveDown(itemID: row.id, undoManager: undoManager) }
+            store.moveDown(itemID: row.id, undoManager: undoManager)
         } label: {
             Label("Move Down", systemImage: "arrow.down")
         }
 
         Divider()
 
-        Button {
-            startEdit(row)
-        } label: {
+        Button { startEdit(row) } label: {
             Label("Rename", systemImage: "pencil")
         }
 
-        Button {
-            inspectorItemID = row.id
-        } label: {
+        Button { inspectorItemID = row.id } label: {
             Label("Details", systemImage: "info.circle")
         }
 
         Divider()
 
         Button(role: .destructive) {
-            Task { await store.deleteItem(id: row.id, undoManager: undoManager) }
+            store.deleteItem(id: row.id, undoManager: undoManager)
         } label: {
             Label("Delete", systemImage: "trash")
         }

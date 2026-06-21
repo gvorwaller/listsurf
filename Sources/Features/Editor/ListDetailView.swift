@@ -7,6 +7,7 @@ struct ListDetailView: View {
     @State private var listStore: ListStore?
     @State private var showInspector = false
     @State private var inspectorItemID: UUID?
+    @State private var triggerAddItem = false
     @Environment(\.undoManager) private var undoManager
 
     var body: some View {
@@ -15,7 +16,11 @@ struct ListDetailView: View {
                 if store.isCheckMode {
                     CheckModeView(store: store)
                 } else {
-                    OutlineEditorView(store: store, inspectorItemID: $inspectorItemID)
+                    OutlineEditorView(
+                        store: store,
+                        inspectorItemID: $inspectorItemID,
+                        triggerAddItem: $triggerAddItem
+                    )
                 }
             } else {
                 ProgressView()
@@ -34,14 +39,6 @@ struct ListDetailView: View {
             listStore = store
             await store.load()
         }
-        .searchable(text: searchBinding, prompt: "Search Items")
-    }
-
-    private var searchBinding: Binding<String> {
-        Binding(
-            get: { listStore?.searchText ?? "" },
-            set: { listStore?.searchText = $0 }
-        )
     }
 
     @ToolbarContentBuilder
@@ -56,12 +53,14 @@ struct ListDetailView: View {
                         systemImage: store.isCheckMode ? "list.bullet.indent" : "checklist"
                     )
                 }
+                .help(store.isCheckMode ? "Switch to Edit Mode" : "Switch to Check Mode")
 
                 Button {
                     showInspector.toggle()
                 } label: {
                     Label("Inspector", systemImage: "info.circle")
                 }
+                .help("Toggle Inspector")
             }
         }
 
@@ -79,22 +78,25 @@ struct ListDetailView: View {
     @ViewBuilder
     private func editModeToolbar(_ store: ListStore) -> some View {
         Button {
-            Task { await store.addItem(title: "", undoManager: undoManager) }
+            triggerAddItem = true
         } label: {
             Label("Add Item", systemImage: "plus")
         }
+        .help("Add a new item")
 
         Button {
             store.expandAll()
         } label: {
             Label("Expand All", systemImage: "arrow.down.right.and.arrow.up.left")
         }
+        .help("Expand all branches")
 
         Button {
             store.collapseAll()
         } label: {
             Label("Collapse All", systemImage: "arrow.up.left.and.arrow.down.right")
         }
+        .help("Collapse all branches")
     }
 
     @ViewBuilder
@@ -103,6 +105,7 @@ struct ListDetailView: View {
         Text("\(progress.checked)/\(progress.total)")
             .monospacedDigit()
             .foregroundStyle(.secondary)
+            .help("Items checked / total")
 
         Picker("Filter", selection: filterBinding(store)) {
             ForEach(ListStore.CheckFilter.allCases, id: \.self) { filter in
@@ -110,12 +113,14 @@ struct ListDetailView: View {
             }
         }
         .pickerStyle(.segmented)
+        .help("Filter items by check state")
 
         Button {
-            Task { await store.resetAllChecks(undoManager: undoManager) }
+            store.resetAllChecks(undoManager: undoManager)
         } label: {
             Label("Reset All", systemImage: "arrow.counterclockwise")
         }
+        .help("Uncheck all items")
     }
 
     private func filterBinding(_ store: ListStore) -> Binding<ListStore.CheckFilter> {

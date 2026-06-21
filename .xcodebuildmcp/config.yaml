@@ -1,0 +1,13 @@
+schemaVersion: 1
+enabledWorkflows:
+  - simulator
+  - ui-automation
+  - macos
+sessionDefaults:
+  projectPath: /Users/gaylonvorwaller/listsurf/Listsurf.xcodeproj
+  scheme: Listsurf_iOS
+  configuration: Debug
+  simulatorId: 3A9AD36D-0839-4A74-BF52-5CFD3CCBA593
+  bundleId: com.listsurf.app
+  simulatorName: iPhone 16 Pro
+  simulatorPlatform: iOS Simulator

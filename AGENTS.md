@@ -2,3 +2,4 @@
 
 You must run td usage --new-session at conversation start (or after /clear) to see current work.
 Use td usage -q for subsequent reads.
+- If using XcodeBuildMCP, use the installed XcodeBuildMCP skill before calling XcodeBuildMCP tools.

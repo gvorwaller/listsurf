@@ -84,7 +84,7 @@ struct InspectorView: View {
         Binding(
             get: { item.title },
             set: { newValue in
-                Task { await store.updateItemTitle(id: item.id, title: newValue, undoManager: undoManager) }
+                store.updateItemTitle(id: item.id, title: newValue, undoManager: undoManager)
             }
         )
     }
@@ -93,7 +93,7 @@ struct InspectorView: View {
         Binding(
             get: { item.notes ?? "" },
             set: { newValue in
-                Task { await store.updateItemNotes(id: item.id, notes: newValue.isEmpty ? nil : newValue, undoManager: undoManager) }
+                store.updateItemNotes(id: item.id, notes: newValue.isEmpty ? nil : newValue, undoManager: undoManager)
             }
         )
     }
@@ -102,7 +102,7 @@ struct InspectorView: View {
         Binding(
             get: { item.quantity },
             set: { newValue in
-                Task { await store.updateItemQuantity(id: item.id, quantity: newValue, undoManager: undoManager) }
+                store.updateItemQuantity(id: item.id, quantity: newValue, undoManager: undoManager)
             }
         )
     }

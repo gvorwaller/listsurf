@@ -45,7 +45,7 @@ struct CheckModeView: View {
                 CheckRowView(
                     row: row,
                     onToggle: {
-                        Task { await store.toggleCheck(itemID: row.id, undoManager: undoManager) }
+                        store.toggleCheck(itemID: row.id, undoManager: undoManager)
                     },
                     onToggleExpand: { store.toggleExpanded(row.id) }
                 )
@@ -67,7 +67,7 @@ struct CheckModeView: View {
     @ViewBuilder
     private func checkRowContextMenu(_ row: FlatRow) -> some View {
         Button {
-            Task { await store.toggleCheck(itemID: row.id, undoManager: undoManager) }
+            store.toggleCheck(itemID: row.id, undoManager: undoManager)
         } label: {
             Label(
                 row.item.isChecked ? "Uncheck" : "Check",
@@ -77,7 +77,7 @@ struct CheckModeView: View {
 
         if row.hasChildren {
             Button {
-                Task { await store.resetSubtree(itemID: row.id, undoManager: undoManager) }
+                store.resetSubtree(itemID: row.id, undoManager: undoManager)
             } label: {
                 Label("Reset Branch", systemImage: "arrow.counterclockwise")
             }
