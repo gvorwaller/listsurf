@@ -585,3 +585,52 @@ path needed before any CloudKit/iCloud sync work.
 - Add last-export metadata and a small diagnostics view.
 - Add OPML and Markdown interchange only after JSON recovery is wired into the
   actual UI.
+
+## Progress update — June 22, 2026, Phase 6 native backup UI slice
+
+The JSON recovery path is now exposed through native SwiftUI file import/export
+UI on both iOS and macOS.
+
+### Implemented
+
+- Added a `ListsurfBackupDocument` `FileDocument` wrapper for JSON backup data.
+- Added root-level SwiftUI file dialogs:
+  - `.fileExporter` for full-library JSON backup export;
+  - `.fileImporter` for JSON backup selection;
+  - destructive confirmation before an import replaces the current library.
+- Added File-menu command routing for:
+  - `Import Library Backup…`;
+  - `Export Library Backup…`.
+- Added a visible library toolbar Backups menu so the feature is discoverable
+  without relying on keyboard/menu commands.
+- Added an empty-library `Import Backup…` action for first-run recovery.
+- Added export-failure presentation through `AppError.backupExportFailed`.
+- Fixed the hand-written Xcode project so
+  `AppStoreExportImportTests.swift` is included in both iOS and macOS logic
+  test targets, matching `project.yml` and SwiftPM.
+
+### Verification
+
+- `swift test --quiet`: 95 passed, 0 failed.
+- Xcode macOS `test_macos`: 99 passed, 0 failed.
+- Xcode iOS simulator `test_sim`: 97 passed, 0 failed.
+- Xcode iOS `build_run_sim`: app built and launched successfully.
+- iOS simulator screenshot confirmed the new Backups toolbar control is visible.
+- Xcode macOS `build_run_macos`: app built and launched successfully.
+- macOS accessibility check confirmed the Listsurf window was present.
+
+### Notes
+
+- The SwiftUI file dialogs are not deeply UI-automated yet. The tested coverage
+  is split deliberately:
+  - app/store validation and rollback behavior is covered in logic tests;
+  - platform build/run confirms the new UI compiles and appears;
+  - manual end-to-end file dialog exercise remains useful because native file
+    pickers are brittle under UI automation.
+
+### Remaining Phase 6 work
+
+- Add last-export metadata and a small diagnostics view.
+- Add explicit backup-before-CloudKit activation flow.
+- Add OPML and Markdown interchange after JSON backup/restore gets a manual
+  end-to-end pass.

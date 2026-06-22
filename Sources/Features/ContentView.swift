@@ -1,5 +1,6 @@
 import SwiftUI
 import Domain
+import UniformTypeIdentifiers
 
 public struct ContentView: View {
     @Environment(AppStore.self) private var appStore
@@ -8,6 +9,11 @@ public struct ContentView: View {
     @State private var newListNotes = ""
     @State private var newListIcon = "list.bullet"
     @State private var newListColorName = ListColor.blue.rawValue
+    @State private var showingImporter = false
+    @State private var showingExporter = false
+    @State private var exportDocument = ListsurfBackupDocument()
+    @State private var exportFilename = "Listsurf Backup.json"
+    @State private var pendingImport: PendingLibraryImport?
 
     public init() {}
 
@@ -18,7 +24,11 @@ public struct ContentView: View {
                 StoreRecoveryView(presentation: presentation)
             } else {
                 NavigationSplitView {
-                    LibrarySidebar(onNewList: beginNewList)
+                    LibrarySidebar(
+                        onNewList: beginNewList,
+                        onImportBackup: beginImportBackup,
+                        onExportBackup: beginExportBackup
+                    )
                 } detail: {
                     if let selectedID = appStore.selectedListID {
                         ListDetailView(listID: selectedID)
@@ -54,7 +64,40 @@ public struct ContentView: View {
         }
         .focusedSceneValue(
             \.listsurfAppCommands,
-            ListsurfAppCommandActions(newList: beginNewList)
+            ListsurfAppCommandActions(
+                newList: beginNewList,
+                importBackup: beginImportBackup,
+                exportBackup: beginExportBackup
+            )
+        )
+        .fileImporter(
+            isPresented: $showingImporter,
+            allowedContentTypes: [.json],
+            allowsMultipleSelection: false,
+            onCompletion: handleImportSelection
+        )
+        .confirmationDialog(
+            "Replace Library?",
+            isPresented: isConfirmingImport,
+            titleVisibility: .visible
+        ) {
+            Button("Replace Library", role: .destructive) {
+                importPendingBackup()
+            }
+            Button("Cancel", role: .cancel) {
+                pendingImport = nil
+            }
+        } message: {
+            if let pendingImport {
+                Text("Importing “\(pendingImport.filename)” will replace every current list and item. Export a backup first if you need to preserve the current library.")
+            }
+        }
+        .fileExporter(
+            isPresented: $showingExporter,
+            document: exportDocument,
+            contentType: .json,
+            defaultFilename: exportFilename,
+            onCompletion: handleExportCompletion
         )
         .task {
             if case .storeCorrupted = appStore.errorStore.current?.error {
@@ -70,6 +113,24 @@ public struct ContentView: View {
         newListIcon = "list.bullet"
         newListColorName = ListColor.blue.rawValue
         showingNewList = true
+    }
+
+    private func beginImportBackup() {
+        showingImporter = true
+    }
+
+    private func beginExportBackup() {
+        Task {
+            do {
+                exportDocument = ListsurfBackupDocument(
+                    data: try await appStore.exportLibrary(appVersion: appVersion)
+                )
+                exportFilename = backupFilename()
+                showingExporter = true
+            } catch {
+                // AppStore already presents the export failure through the shared error store.
+            }
+        }
     }
 
     private func createList() {
@@ -98,6 +159,67 @@ public struct ContentView: View {
         newListIcon = "list.bullet"
         newListColorName = ListColor.blue.rawValue
     }
+
+    private var isConfirmingImport: Binding<Bool> {
+        Binding(
+            get: { pendingImport != nil },
+            set: { if !$0 { pendingImport = nil } }
+        )
+    }
+
+    private var appVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+            ?? "0.1.0"
+    }
+
+    private func backupFilename(date: Date = Date()) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd HH.mm.ss"
+        return "Listsurf Backup \(formatter.string(from: date)).json"
+    }
+
+    private func handleImportSelection(_ result: Result<[URL], Error>) {
+        do {
+            guard let url = try result.get().first else { return }
+            let didAccess = url.startAccessingSecurityScopedResource()
+            defer {
+                if didAccess {
+                    url.stopAccessingSecurityScopedResource()
+                }
+            }
+            pendingImport = PendingLibraryImport(
+                filename: url.lastPathComponent,
+                data: try Data(contentsOf: url)
+            )
+        } catch {
+            appStore.errorStore.present(
+                .importValidation(message: error.localizedDescription)
+            )
+        }
+    }
+
+    private func importPendingBackup() {
+        guard let pendingImport else { return }
+        self.pendingImport = nil
+        Task {
+            try await appStore.importLibrary(from: pendingImport.data)
+        }
+    }
+
+    private func handleExportCompletion(_ result: Result<URL, Error>) {
+        if case .failure(let error) = result {
+            appStore.errorStore.present(
+                .backupExportFailed(message: error.localizedDescription)
+            )
+        }
+    }
+}
+
+private struct PendingLibraryImport: Identifiable {
+    let id = UUID()
+    let filename: String
+    let data: Data
 }
 
 private extension String {

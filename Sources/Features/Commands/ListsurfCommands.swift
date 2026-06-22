@@ -15,6 +15,18 @@ public struct ListsurfCommands: Commands {
             .disabled(appCommands == nil)
         }
 
+        CommandGroup(after: .newItem) {
+            Button("Import Library Backup…") {
+                appCommands?.importBackup()
+            }
+            .disabled(appCommands == nil)
+
+            Button("Export Library Backup…") {
+                appCommands?.exportBackup()
+            }
+            .disabled(appCommands == nil)
+        }
+
         CommandMenu("Item") {
             Button("Add Item Below") {
                 listCommands?.addBelow?()

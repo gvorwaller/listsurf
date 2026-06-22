@@ -4,13 +4,21 @@ import Domain
 struct LibrarySidebar: View {
     @Environment(AppStore.self) private var appStore
     let onNewList: () -> Void
+    let onImportBackup: () -> Void
+    let onExportBackup: () -> Void
     @State private var searchText = ""
     @State private var showingArchive = false
     @State private var listPendingDeletion: ListDeletionConfirmation?
     @State private var listBeingEdited: ListItem?
 
-    init(onNewList: @escaping () -> Void = {}) {
+    init(
+        onNewList: @escaping () -> Void = {},
+        onImportBackup: @escaping () -> Void = {},
+        onExportBackup: @escaping () -> Void = {}
+    ) {
         self.onNewList = onNewList
+        self.onImportBackup = onImportBackup
+        self.onExportBackup = onExportBackup
     }
 
     var body: some View {
@@ -46,6 +54,26 @@ struct LibrarySidebar: View {
                     Label("Archive", systemImage: "archivebox")
                 }
                 .help("View archived lists")
+
+                Menu {
+                    Button {
+                        onImportBackup()
+                    } label: {
+                        Label("Import Backup…", systemImage: "square.and.arrow.down")
+                    }
+                    .accessibilityIdentifier("library.importBackup")
+
+                    Button {
+                        onExportBackup()
+                    } label: {
+                        Label("Export Backup…", systemImage: "square.and.arrow.up")
+                    }
+                    .accessibilityIdentifier("library.exportBackup")
+                } label: {
+                    Label("Backups", systemImage: "externaldrive")
+                }
+                .accessibilityIdentifier("library.backupMenu")
+                .help("Import or export a library backup")
             }
         }
         .sheet(isPresented: $showingArchive) {
@@ -121,9 +149,14 @@ struct LibrarySidebar: View {
         } description: {
             Text("Create your first list to get started.")
         } actions: {
-            Button("Create List", action: onNewList)
-                .buttonStyle(.borderedProminent)
-                .accessibilityIdentifier("library.createFirstList")
+            VStack {
+                Button("Create List", action: onNewList)
+                    .buttonStyle(.borderedProminent)
+                    .accessibilityIdentifier("library.createFirstList")
+
+                Button("Import Backup…", action: onImportBackup)
+                    .accessibilityIdentifier("library.importFirstBackup")
+            }
         }
     }
 

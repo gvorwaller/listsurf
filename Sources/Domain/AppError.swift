@@ -6,6 +6,7 @@ public enum AppError: Error, Sendable {
     case migrationFailed(from: Int, to: Int, reason: String)
     case importValidation(message: String)
     case importPartial(imported: Int, failed: Int, details: [String])
+    case backupExportFailed(message: String)
     case orphanRepair(repairedCount: Int, listTitle: String)
     case storeCorrupted(reason: String)
 }
@@ -23,6 +24,8 @@ extension AppError: LocalizedError {
             "Import Could Not Be Validated"
         case .importPartial:
             "Import Was Incomplete"
+        case .backupExportFailed:
+            "Backup Could Not Be Exported"
         case .orphanRepair:
             "Some Items Were Reorganized"
         case .storeCorrupted:
@@ -41,6 +44,8 @@ extension AppError: LocalizedError {
             message
         case .importPartial(let imported, let failed, let details):
             "\(imported) records imported and \(failed) failed. \(details.joined(separator: " "))"
+        case .backupExportFailed(let message):
+            message
         case .orphanRepair(let repairedCount, let listTitle):
             "\(repairedCount) items in “\(listTitle)” were moved to the root because their parent links were invalid."
         case .storeCorrupted(let reason):
