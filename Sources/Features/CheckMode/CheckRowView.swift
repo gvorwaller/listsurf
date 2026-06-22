@@ -13,6 +13,8 @@ struct CheckRowView: View {
                     Image(systemName: "chevron.right")
                         .font(.caption2.bold())
                         .foregroundStyle(.secondary)
+                        .rotationEffect(row.isExpanded ? .degrees(90) : .zero)
+                        .animation(.easeInOut(duration: 0.15), value: row.isExpanded)
                 }
                 .buttonStyle(.plain)
                 .frame(width: 16)

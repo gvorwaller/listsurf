@@ -574,6 +574,30 @@ final class TreeEngineTests: XCTestCase {
         XCTAssertEqual(count, 0)
     }
 
+    func testRepairInvalidParentsPromotesCyclesToRoot() {
+        var a = makeItem(title: "A", position: 1.0)
+        var b = makeItem(title: "B", position: 2.0)
+        a.parentID = b.id
+        b.parentID = a.id
+
+        let repair = engine.repairInvalidParents(in: [a, b])
+
+        XCTAssertEqual(repair.orphanCount, 0)
+        XCTAssertEqual(repair.cycleCount, 2)
+        XCTAssertTrue(repair.repaired.allSatisfy { $0.parentID == nil })
+    }
+
+    func testDescendantsStopAtCycle() {
+        var a = makeItem(title: "A", position: 1.0)
+        var b = makeItem(title: "B", position: 2.0)
+        a.parentID = b.id
+        b.parentID = a.id
+
+        let descendants = engine.descendants(of: a.id, in: [a, b])
+
+        XCTAssertEqual(descendants.map(\.id), [b.id])
+    }
+
     // MARK: - Position
 
     func testRebalancePreservesOrder() {
@@ -610,6 +634,33 @@ final class TreeEngineTests: XCTestCase {
 
     func testNextPositionEmptyList() {
         XCTAssertEqual(engine.nextPosition(among: []), 1.0)
+    }
+
+    func testNormalizeSiblingPositionsRebalancesDuplicatePositions() {
+        let a = makeItem(title: "A", position: 1.0)
+        let b = makeItem(title: "B", position: 1.0)
+        let c = makeItem(title: "C", position: 2.0)
+
+        let result = engine.normalizeSiblingPositions(in: [a, b, c], parentID: nil)
+        let sorted = result.sorted {
+            if $0.position != $1.position { return $0.position < $1.position }
+            return $0.id.uuidString < $1.id.uuidString
+        }
+
+        XCTAssertEqual(sorted.map(\.position), [1.0, 2.0, 3.0])
+    }
+
+    func testInsertBelowNormalizesCollapsedMidpointGap() {
+        let a = makeItem(title: "A", position: 1.0)
+        let b = makeItem(title: "B", position: 1.0 + 1e-12)
+        let newItem = OutlineItem(listID: listID, title: "Inserted")
+
+        let result = engine.insertBelow(referenceID: a.id, newItem: newItem, in: [a, b])
+        let inserted = result.first { $0.id == newItem.id }!
+        let sorted = result.sorted { $0.position < $1.position }
+
+        XCTAssertEqual(sorted.map(\.id), [a.id, inserted.id, b.id])
+        XCTAssertEqual(sorted.map(\.position), [1.0, 2.0, 3.0])
     }
 
     // MARK: - Siblings helper

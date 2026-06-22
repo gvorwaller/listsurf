@@ -3,6 +3,7 @@ import os
 
 public final class PersistenceStack: Sendable {
     public let container: NSPersistentContainer
+    public let storeLoadError: String?
 
     private static let logger = Logger(subsystem: "com.listsurf.app", category: "persistence")
 
@@ -31,13 +32,20 @@ public final class PersistenceStack: Sendable {
             container.persistentStoreDescriptions = [description]
         }
 
+        let loadResult = StoreLoadResult()
+        let loadSemaphore = DispatchSemaphore(value: 0)
         container.loadPersistentStores { description, error in
+            defer { loadSemaphore.signal() }
             if let error {
-                Self.logger.fault("Failed to load persistent store: \(error.localizedDescription)")
-                fatalError("Failed to load persistent store: \(error)")
+                let message = error.localizedDescription
+                loadResult.errorMessage = message
+                Self.logger.fault("Failed to load persistent store: \(message)")
+                return
             }
             Self.logger.info("Persistent store loaded: \(description.type)")
         }
+        loadSemaphore.wait()
+        storeLoadError = loadResult.errorMessage
 
         container.viewContext.automaticallyMergesChangesFromParent = true
         container.viewContext.mergePolicy = NSMergePolicy.mergeByPropertyObjectTrump
@@ -79,4 +87,8 @@ public final class PersistenceStack: Sendable {
             try? fileManager.removeItem(atPath: storeURL.path + suffix)
         }
     }
+}
+
+private final class StoreLoadResult: @unchecked Sendable {
+    var errorMessage: String?
 }

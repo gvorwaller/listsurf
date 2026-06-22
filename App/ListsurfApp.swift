@@ -6,6 +6,7 @@ import Persistence
 @main
 struct ListsurfApp: App {
     @State private var appStore: AppStore
+    @State private var errorStore: AppErrorStore
 
     init() {
         let processInfo = ProcessInfo.processInfo
@@ -18,16 +19,30 @@ struct ListsurfApp: App {
         } else {
             stack = PersistenceStack()
         }
-        self._appStore = State(initialValue: AppStore(
+
+        let errorStore = AppErrorStore()
+        let appStore = AppStore(
             listRepository: CoreDataListRepository(stack: stack),
-            outlineRepository: CoreDataOutlineRepository(stack: stack)
-        ))
+            outlineRepository: CoreDataOutlineRepository(stack: stack),
+            errorStore: errorStore
+        )
+        if let storeLoadError = stack.storeLoadError {
+            errorStore.present(
+                .storeCorrupted(reason: storeLoadError),
+                retryTitle: "Retry Load"
+            ) {
+                Task { await appStore.loadLists() }
+            }
+        }
+        self._errorStore = State(initialValue: errorStore)
+        self._appStore = State(initialValue: appStore)
     }
 
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environment(appStore)
+                .environment(errorStore)
         }
         .commands {
             ListsurfCommands()

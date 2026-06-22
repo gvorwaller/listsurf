@@ -7,14 +7,23 @@ public struct FlatRow: Identifiable, Equatable, Sendable {
     public let hasChildren: Bool
     public let checkState: CheckState
     public let leafProgress: (checked: Int, total: Int)
+    public let isExpanded: Bool
 
-    public init(item: OutlineItem, depth: Int, hasChildren: Bool, checkState: CheckState, leafProgress: (checked: Int, total: Int)) {
+    public init(
+        item: OutlineItem,
+        depth: Int,
+        hasChildren: Bool,
+        checkState: CheckState,
+        leafProgress: (checked: Int, total: Int),
+        isExpanded: Bool
+    ) {
         self.id = item.id
         self.item = item
         self.depth = depth
         self.hasChildren = hasChildren
         self.checkState = checkState
         self.leafProgress = leafProgress
+        self.isExpanded = isExpanded
     }
 
     public static func == (lhs: FlatRow, rhs: FlatRow) -> Bool {
@@ -25,6 +34,7 @@ public struct FlatRow: Identifiable, Equatable, Sendable {
             && lhs.checkState == rhs.checkState
             && lhs.leafProgress.checked == rhs.leafProgress.checked
             && lhs.leafProgress.total == rhs.leafProgress.total
+            && lhs.isExpanded == rhs.isExpanded
     }
 }
 
@@ -65,14 +75,16 @@ public struct TreeEngine: Sendable {
                 let hasChildren = childrenIndex[child.id] != nil
                 let checkState = computeCheckState(for: child.id, childrenIndex: childrenIndex, itemMap: itemMap)
                 let progress = computeLeafProgress(for: child.id, childrenIndex: childrenIndex, itemMap: itemMap)
+                let isExpanded = hasChildren && expandedIDs.contains(child.id)
                 result.append(FlatRow(
                     item: child,
                     depth: depth,
                     hasChildren: hasChildren,
                     checkState: checkState,
-                    leafProgress: progress
+                    leafProgress: progress,
+                    isExpanded: isExpanded
                 ))
-                if hasChildren && expandedIDs.contains(child.id) {
+                if isExpanded {
                     walk(parentID: child.id, depth: depth + 1)
                 }
             }
@@ -89,11 +101,31 @@ public struct TreeEngine: Sendable {
         childrenIndex: [UUID?: [OutlineItem]],
         itemMap: [UUID: OutlineItem]
     ) -> CheckState {
+        computeCheckState(
+            for: itemID,
+            childrenIndex: childrenIndex,
+            itemMap: itemMap,
+            visited: []
+        )
+    }
+
+    private func computeCheckState(
+        for itemID: UUID,
+        childrenIndex: [UUID?: [OutlineItem]],
+        itemMap: [UUID: OutlineItem],
+        visited: Set<UUID>
+    ) -> CheckState {
+        guard !visited.contains(itemID) else {
+            return itemMap[itemID]?.isChecked == true ? .checked : .unchecked
+        }
+        let visited = visited.union([itemID])
         guard let children = childrenIndex[itemID], !children.isEmpty else {
             return itemMap[itemID]?.isChecked == true ? .checked : .unchecked
         }
 
-        let states = children.map { computeCheckState(for: $0.id, childrenIndex: childrenIndex, itemMap: itemMap) }
+        let states = children.map {
+            computeCheckState(for: $0.id, childrenIndex: childrenIndex, itemMap: itemMap, visited: visited)
+        }
         if states.allSatisfy({ $0 == .checked }) { return .checked }
         if states.allSatisfy({ $0 == .unchecked }) { return .unchecked }
         return .mixed
@@ -106,6 +138,25 @@ public struct TreeEngine: Sendable {
         childrenIndex: [UUID?: [OutlineItem]],
         itemMap: [UUID: OutlineItem]
     ) -> (checked: Int, total: Int) {
+        computeLeafProgress(
+            for: itemID,
+            childrenIndex: childrenIndex,
+            itemMap: itemMap,
+            visited: []
+        )
+    }
+
+    private func computeLeafProgress(
+        for itemID: UUID,
+        childrenIndex: [UUID?: [OutlineItem]],
+        itemMap: [UUID: OutlineItem],
+        visited: Set<UUID>
+    ) -> (checked: Int, total: Int) {
+        guard !visited.contains(itemID) else {
+            let checked = itemMap[itemID]?.isChecked == true ? 1 : 0
+            return (checked, 1)
+        }
+        let visited = visited.union([itemID])
         guard let children = childrenIndex[itemID], !children.isEmpty else {
             let checked = itemMap[itemID]?.isChecked == true ? 1 : 0
             return (checked, 1)
@@ -113,7 +164,12 @@ public struct TreeEngine: Sendable {
         var totalChecked = 0
         var totalCount = 0
         for child in children {
-            let sub = computeLeafProgress(for: child.id, childrenIndex: childrenIndex, itemMap: itemMap)
+            let sub = computeLeafProgress(
+                for: child.id,
+                childrenIndex: childrenIndex,
+                itemMap: itemMap,
+                visited: visited
+            )
             totalChecked += sub.checked
             totalCount += sub.total
         }
@@ -140,8 +196,11 @@ public struct TreeEngine: Sendable {
     public func descendants(of itemID: UUID, in items: [OutlineItem]) -> [OutlineItem] {
         let childrenIndex = buildChildrenIndex(items)
         var result: [OutlineItem] = []
+        var visited: Set<UUID> = [itemID]
         func collect(_ parentID: UUID) {
             for child in childrenIndex[parentID] ?? [] {
+                guard !visited.contains(child.id) else { continue }
+                visited.insert(child.id)
                 result.append(child)
                 collect(child.id)
             }
@@ -154,7 +213,10 @@ public struct TreeEngine: Sendable {
         let itemMap = Dictionary(uniqueKeysWithValues: items.map { ($0.id, $0) })
         var result: [UUID] = []
         var current = itemMap[itemID]?.parentID
+        var visited: Set<UUID> = [itemID]
         while let pid = current {
+            guard !visited.contains(pid) else { break }
+            visited.insert(pid)
             result.append(pid)
             current = itemMap[pid]?.parentID
         }
@@ -219,6 +281,50 @@ public struct TreeEngine: Sendable {
             result[item.id] = Double(index + 1)
         }
         return result
+    }
+
+    public func normalizeSiblingPositions(in items: [OutlineItem], parentID: UUID?) -> [OutlineItem] {
+        let siblings = items
+            .filter { $0.parentID == parentID }
+            .sorted { a, b in
+                if a.position != b.position { return a.position < b.position }
+                return a.id.uuidString < b.id.uuidString
+            }
+
+        guard siblingPositionsNeedNormalization(siblings) else {
+            return items
+        }
+
+        let positions = rebalancedPositions(for: siblings)
+        let now = Date()
+        return items.map { item in
+            guard let position = positions[item.id], item.position != position else {
+                return item
+            }
+            var updated = item
+            updated.position = position
+            updated.updatedAt = now
+            return updated
+        }
+    }
+
+    private func siblingPositionsNeedNormalization(_ siblings: [OutlineItem]) -> Bool {
+        guard siblings.count > 1 else { return false }
+
+        let sorted = siblings.sorted { a, b in
+            if a.position != b.position { return a.position < b.position }
+            return a.id.uuidString < b.id.uuidString
+        }
+
+        for index in sorted.indices.dropFirst() {
+            let previous = sorted[sorted.index(before: index)]
+            let current = sorted[index]
+            if previous.position == current.position || needsRebalance(previous.position, current.position) {
+                return true
+            }
+        }
+
+        return false
     }
 
     // MARK: - Duplicate
@@ -297,12 +403,13 @@ public struct TreeEngine: Sendable {
         let above = group[idx - 1]
         let now = Date()
 
-        return items.map { i in
+        let moved = items.map { i in
             if i.id == itemID {
                 var u = i; u.position = above.position - 0.5; u.updatedAt = now; return u
             }
             return i
         }
+        return normalizeSiblingPositions(in: moved, parentID: above.parentID)
     }
 
     public func moveDown(itemID: UUID, in items: [OutlineItem]) -> [OutlineItem]? {
@@ -312,12 +419,13 @@ public struct TreeEngine: Sendable {
         let below = group[idx + 1]
         let now = Date()
 
-        return items.map { i in
+        let moved = items.map { i in
             if i.id == itemID {
                 var u = i; u.position = below.position + 0.5; u.updatedAt = now; return u
             }
             return i
         }
+        return normalizeSiblingPositions(in: moved, parentID: below.parentID)
     }
 
     // MARK: - Indent / Outdent
@@ -335,12 +443,13 @@ public struct TreeEngine: Sendable {
         let newPosition = nextPosition(among: childrenOfNewParent)
         let now = Date()
 
-        return items.map { i in
+        let indented = items.map { i in
             if i.id == itemID {
                 var u = i; u.parentID = newParent.id; u.position = newPosition; u.updatedAt = now; return u
             }
             return i
         }
+        return normalizeSiblingPositions(in: indented, parentID: newParent.id)
     }
 
     public func outdent(itemID: UUID, in items: [OutlineItem]) throws -> [OutlineItem] {
@@ -371,12 +480,13 @@ public struct TreeEngine: Sendable {
         }
 
         let now = Date()
-        return items.map { i in
+        let outdented = items.map { i in
             if i.id == itemID {
                 var u = i; u.parentID = newParentID; u.position = insertPosition; u.updatedAt = now; return u
             }
             return i
         }
+        return normalizeSiblingPositions(in: outdented, parentID: newParentID)
     }
 
     // MARK: - Insert
@@ -403,7 +513,7 @@ public struct TreeEngine: Sendable {
         positioned.parentID = reference.parentID
         positioned.position = insertPosition
         positioned.listID = reference.listID
-        return items + [positioned]
+        return normalizeSiblingPositions(in: items + [positioned], parentID: reference.parentID)
     }
 
     public func insertBelow(
@@ -428,7 +538,7 @@ public struct TreeEngine: Sendable {
         positioned.parentID = reference.parentID
         positioned.position = insertPosition
         positioned.listID = reference.listID
-        return items + [positioned]
+        return normalizeSiblingPositions(in: items + [positioned], parentID: reference.parentID)
     }
 
     public func insertChild(
@@ -446,7 +556,7 @@ public struct TreeEngine: Sendable {
         positioned.parentID = parentID
         positioned.position = position
         positioned.listID = listID
-        return items + [positioned]
+        return normalizeSiblingPositions(in: items + [positioned], parentID: parentID)
     }
 
     // MARK: - Delete subtree
@@ -477,19 +587,62 @@ public struct TreeEngine: Sendable {
     // MARK: - Orphan repair
 
     public func repairOrphans(in items: [OutlineItem]) -> (repaired: [OutlineItem], orphanCount: Int) {
-        let itemIDs = Set(items.map(\.id))
-        var orphanCount = 0
-        let now = Date()
-        let repaired = items.map { item in
-            guard let parentID = item.parentID, !itemIDs.contains(parentID) else { return item }
-            orphanCount += 1
-            var fixed = item
-            fixed.parentID = nil
-            fixed.updatedAt = now
-            return fixed
-        }
-        return (repaired, orphanCount)
+        let result = repairInvalidParents(in: items)
+        return (result.repaired, result.orphanCount)
     }
+
+    public func repairInvalidParents(
+        in items: [OutlineItem]
+    ) -> (repaired: [OutlineItem], orphanCount: Int, cycleCount: Int) {
+        let itemIDs = Set(items.map(\.id))
+        let itemMap = Dictionary(uniqueKeysWithValues: items.map { ($0.id, $0) })
+        var orphanCount = 0
+        var cycleCount = 0
+        let now = Date()
+
+        let repaired = items.map { item in
+            guard let parentID = item.parentID else { return item }
+
+            if !itemIDs.contains(parentID) {
+                orphanCount += 1
+                var fixed = item
+                fixed.parentID = nil
+                fixed.updatedAt = now
+                return fixed
+            }
+
+            if parentID == item.id || hasAncestorCycle(startingAt: item.id, itemMap: itemMap) {
+                cycleCount += 1
+                var fixed = item
+                fixed.parentID = nil
+                fixed.updatedAt = now
+                return fixed
+            }
+
+            return item
+        }
+
+        return (repaired, orphanCount, cycleCount)
+    }
+
+    private func hasAncestorCycle(startingAt itemID: UUID, itemMap: [UUID: OutlineItem]) -> Bool {
+        var visited: Set<UUID> = [itemID]
+        var current = itemMap[itemID]?.parentID
+
+        while let parentID = current {
+            guard let parent = itemMap[parentID] else { return false }
+            if visited.contains(parentID) {
+                return true
+            }
+            visited.insert(parentID)
+            current = parent.parentID
+        }
+
+        return false
+    }
+}
+
+extension TreeEngine {
 
     // MARK: - Check operations
 

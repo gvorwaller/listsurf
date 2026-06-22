@@ -8,16 +8,21 @@ public final class AppStore {
     public var lists: [ListItem] = []
     public var archivedLists: [ListItem] = []
     public var selectedListID: UUID?
-    public var error: AppError?
-    public var showingError = false
+
+    public let errorStore: AppErrorStore
 
     private let listRepo: any ListRepository
     private let outlineRepo: any OutlineRepository
     private let logger = Logger(subsystem: "com.listsurf.app", category: "ui")
 
-    public init(listRepository: any ListRepository, outlineRepository: any OutlineRepository) {
+    public init(
+        listRepository: any ListRepository,
+        outlineRepository: any OutlineRepository,
+        errorStore: AppErrorStore = AppErrorStore()
+    ) {
         self.listRepo = listRepository
         self.outlineRepo = outlineRepository
+        self.errorStore = errorStore
     }
 
     public func loadLists() async {
@@ -25,11 +30,8 @@ public final class AppStore {
             lists = try await listRepo.fetchActive()
                 .sorted { $0.position < $1.position }
             archivedLists = try await listRepo.fetchArchived()
-                .sorted { $0.position < $1.position }
         } catch {
-            logger.error("Failed to load lists: \(error.localizedDescription)")
-            self.error = .persistenceLoad(underlying: error.localizedDescription)
-            showingError = true
+            presentLoadError(error, operation: "load lists")
         }
     }
 
@@ -41,9 +43,7 @@ public final class AppStore {
             await loadLists()
             selectedListID = list.id
         } catch {
-            logger.error("Failed to create list: \(error.localizedDescription)")
-            self.error = .persistenceSave(underlying: error.localizedDescription)
-            showingError = true
+            presentSaveError(error, operation: "create list")
         }
     }
 
@@ -52,23 +52,17 @@ public final class AppStore {
             try await listRepo.save(list)
             await loadLists()
         } catch {
-            logger.error("Failed to update list: \(error.localizedDescription)")
-            self.error = .persistenceSave(underlying: error.localizedDescription)
-            showingError = true
+            presentSaveError(error, operation: "update list")
         }
     }
 
     public func deleteList(id: UUID) async {
         do {
-            let items = try await outlineRepo.fetchItems(forList: id)
-            try await outlineRepo.deleteAll(ids: items.map(\.id))
-            try await listRepo.delete(id: id)
+            try await listRepo.deleteListAndItems(id: id)
             if selectedListID == id { selectedListID = nil }
             await loadLists()
         } catch {
-            logger.error("Failed to delete list: \(error.localizedDescription)")
-            self.error = .persistenceSave(underlying: error.localizedDescription)
-            showingError = true
+            presentSaveError(error, operation: "delete list")
         }
     }
 
@@ -92,21 +86,47 @@ public final class AppStore {
             guard let list = lists.first(where: { $0.id == id }) else { return }
             let items = try await outlineRepo.fetchItems(forList: id)
             let engine = TreeEngine()
-            let (newList, newItems) = engine.duplicateList(list, items: items, clearChecks: clearChecks)
+            let (newList, newItems) = engine.duplicateList(
+                list,
+                items: items,
+                clearChecks: clearChecks
+            )
             var positioned = newList
             positioned.position = (lists.map(\.position).max() ?? 0) + 1.0
-            try await listRepo.save(positioned)
-            try await outlineRepo.saveAll(newItems)
+            try await listRepo.saveListAndItems(positioned, items: newItems)
             await loadLists()
-            selectedListID = newList.id
+            selectedListID = positioned.id
         } catch {
-            logger.error("Failed to duplicate list: \(error.localizedDescription)")
-            self.error = .persistenceSave(underlying: error.localizedDescription)
-            showingError = true
+            presentSaveError(error, operation: "duplicate list")
         }
     }
 
     public func makeListStore(for listID: UUID) -> ListStore {
-        ListStore(listID: listID, outlineRepo: outlineRepo, listRepo: listRepo)
+        ListStore(
+            listID: listID,
+            outlineRepo: outlineRepo,
+            listRepo: listRepo,
+            errorStore: errorStore
+        )
+    }
+
+    private func presentLoadError(_ error: Error, operation: String) {
+        logger.error("Failed to \(operation): \(error.localizedDescription)")
+        errorStore.present(
+            .persistenceLoad(underlying: error.localizedDescription),
+            retryTitle: "Retry Load"
+        ) { [weak self] in
+            Task { await self?.loadLists() }
+        }
+    }
+
+    private func presentSaveError(_ error: Error, operation: String) {
+        logger.error("Failed to \(operation): \(error.localizedDescription)")
+        errorStore.present(
+            .persistenceSave(underlying: error.localizedDescription),
+            retryTitle: "Reload Lists"
+        ) { [weak self] in
+            Task { await self?.loadLists() }
+        }
     }
 }

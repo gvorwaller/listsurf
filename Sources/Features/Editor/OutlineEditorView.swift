@@ -23,6 +23,7 @@ struct OutlineEditorView: View {
                 outlineList
             }
         }
+        .outlineSearch(text: $store.searchText)
         .onChange(of: triggerAddItem) { _, newValue in
             if newValue {
                 triggerAddItem = false
@@ -220,3 +221,15 @@ private struct OutlineEditorPreview: View {
     OutlineEditorPreview()
 }
 #endif
+
+
+private extension View {
+    @ViewBuilder
+    func outlineSearch(text: Binding<String>) -> some View {
+        #if os(macOS)
+        self
+        #else
+        searchable(text: text, prompt: "Search Items")
+        #endif
+    }
+}

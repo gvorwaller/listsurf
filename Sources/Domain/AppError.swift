@@ -9,3 +9,42 @@ public enum AppError: Error, Sendable {
     case orphanRepair(repairedCount: Int, listTitle: String)
     case storeCorrupted(reason: String)
 }
+
+extension AppError: LocalizedError {
+    public var errorDescription: String? {
+        switch self {
+        case .persistenceSave:
+            "Changes Could Not Be Saved"
+        case .persistenceLoad:
+            "Data Could Not Be Loaded"
+        case .migrationFailed:
+            "Database Upgrade Failed"
+        case .importValidation:
+            "Import Could Not Be Validated"
+        case .importPartial:
+            "Import Was Incomplete"
+        case .orphanRepair:
+            "Some Items Were Reorganized"
+        case .storeCorrupted:
+            "The Database Could Not Be Opened"
+        }
+    }
+
+    public var failureReason: String? {
+        switch self {
+        case .persistenceSave(let underlying),
+             .persistenceLoad(let underlying):
+            underlying
+        case .migrationFailed(let from, let to, let reason):
+            "Migration from version \(from) to \(to) failed: \(reason)"
+        case .importValidation(let message):
+            message
+        case .importPartial(let imported, let failed, let details):
+            "\(imported) records imported and \(failed) failed. \(details.joined(separator: " "))"
+        case .orphanRepair(let repairedCount, let listTitle):
+            "\(repairedCount) items in “\(listTitle)” were moved to the root because their parent links were invalid."
+        case .storeCorrupted(let reason):
+            reason
+        }
+    }
+}

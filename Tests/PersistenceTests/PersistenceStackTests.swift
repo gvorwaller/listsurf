@@ -92,4 +92,39 @@ final class PersistenceStackTests: XCTestCase {
         let fetched = try await itemRepo.fetchItems(forList: listID)
         XCTAssertEqual(fetched.count, 10)
     }
+
+    func testAtomicSaveCreatesListAndItems() async throws {
+        let stack = PersistenceStack.inMemory()
+        let listRepo = CoreDataListRepository(stack: stack)
+        let itemRepo = CoreDataOutlineRepository(stack: stack)
+        let list = ListItem(title: "Atomic Duplicate")
+        let parent = OutlineItem(listID: list.id, title: "Parent")
+        let child = OutlineItem(listID: list.id, parentID: parent.id, title: "Child")
+
+        try await listRepo.saveListAndItems(list, items: [parent, child])
+
+        let fetchedList = try await listRepo.fetch(id: list.id)
+        let fetchedItems = try await itemRepo.fetchItems(forList: list.id)
+        XCTAssertEqual(fetchedList?.title, "Atomic Duplicate")
+        XCTAssertEqual(Set(fetchedItems.map(\.id)), Set([parent.id, child.id]))
+    }
+
+    func testAtomicDeleteRemovesListAndAllItems() async throws {
+        let stack = PersistenceStack.inMemory()
+        let listRepo = CoreDataListRepository(stack: stack)
+        let itemRepo = CoreDataOutlineRepository(stack: stack)
+        let list = ListItem(title: "Delete Atomically")
+        let items = [
+            OutlineItem(listID: list.id, title: "One"),
+            OutlineItem(listID: list.id, title: "Two"),
+        ]
+        try await listRepo.saveListAndItems(list, items: items)
+
+        try await listRepo.deleteListAndItems(id: list.id)
+
+        let deletedList = try await listRepo.fetch(id: list.id)
+        let remainingItems = try await itemRepo.fetchItems(forList: list.id)
+        XCTAssertNil(deletedList)
+        XCTAssertTrue(remainingItems.isEmpty)
+    }
 }

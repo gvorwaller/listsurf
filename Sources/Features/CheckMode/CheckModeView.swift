@@ -70,8 +70,8 @@ struct CheckModeView: View {
             store.toggleCheck(itemID: row.id, undoManager: undoManager)
         } label: {
             Label(
-                row.item.isChecked ? "Uncheck" : "Check",
-                systemImage: row.item.isChecked ? "circle" : "checkmark.circle"
+                row.checkState == .checked ? "Uncheck" : "Check",
+                systemImage: row.checkState == .checked ? "circle" : "checkmark.circle"
             )
         }
 

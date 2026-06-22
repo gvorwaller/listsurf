@@ -42,19 +42,15 @@ struct OutlineRowView: View {
                     .font(.caption2.bold())
                     .foregroundStyle(.secondary)
                     .rotationEffect(
-                        row.hasChildren && isExpanded ? .degrees(90) : .zero
+                        row.isExpanded ? .degrees(90) : .zero
                     )
-                    .animation(.easeInOut(duration: 0.15), value: isExpanded)
+                    .animation(.easeInOut(duration: 0.15), value: row.isExpanded)
             }
             .buttonStyle(.plain)
             .frame(width: 16)
         } else {
             Color.clear.frame(width: 16, height: 1)
         }
-    }
-
-    private var isExpanded: Bool {
-        true
     }
 
     @ViewBuilder

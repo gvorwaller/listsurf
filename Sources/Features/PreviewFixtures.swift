@@ -89,7 +89,13 @@ private actor PreviewListRepository: ListRepository {
         lists.removeAll { $0.id == list.id }
         lists.append(list)
     }
+    func saveListAndItems(_ list: ListItem, items: [OutlineItem]) async throws {
+        try await save(list)
+    }
     func delete(id: UUID) async throws { lists.removeAll { $0.id == id } }
+    func deleteListAndItems(id: UUID) async throws {
+        try await delete(id: id)
+    }
 }
 
 private actor PreviewOutlineRepository: OutlineRepository {

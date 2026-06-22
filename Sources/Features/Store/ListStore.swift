@@ -17,8 +17,10 @@ public final class ListStore {
     let listID: UUID
     private let outlineRepo: any OutlineRepository
     private let listRepo: any ListRepository
+    private let errorStore: AppErrorStore
     private let engine = TreeEngine()
     private let logger = Logger(subsystem: "com.listsurf.app", category: "tree")
+    @ObservationIgnored private var persistenceTail: Task<Void, Never>?
 
     public enum CheckFilter: String, CaseIterable {
         case all = "All"
@@ -26,10 +28,16 @@ public final class ListStore {
         case checked = "Checked"
     }
 
-    init(listID: UUID, outlineRepo: any OutlineRepository, listRepo: any ListRepository) {
+    init(
+        listID: UUID,
+        outlineRepo: any OutlineRepository,
+        listRepo: any ListRepository,
+        errorStore: AppErrorStore = AppErrorStore()
+    ) {
         self.listID = listID
         self.outlineRepo = outlineRepo
         self.listRepo = listRepo
+        self.errorStore = errorStore
     }
 
     public var progress: (checked: Int, total: Int) {
@@ -47,16 +55,18 @@ public final class ListStore {
                 let ancestors = engine.ancestorIDs(of: id, in: items)
                 visibleIDs.formUnion(ancestors)
             }
-            rows = rows.filter { visibleIDs.contains($0.id) }
+            rows = engine
+                .flatten(items: items, expandedIDs: expandedIDs.union(visibleIDs))
+                .filter { visibleIDs.contains($0.id) }
         }
 
         if isCheckMode {
             switch checkFilter {
             case .all: break
             case .unchecked:
-                rows = rows.filter { !$0.item.isChecked }
+                rows = rows.filter { $0.checkState != .checked }
             case .checked:
-                rows = rows.filter { $0.item.isChecked }
+                rows = rows.filter { $0.checkState == .checked }
             }
         }
 
@@ -66,10 +76,36 @@ public final class ListStore {
     public func load() async {
         do {
             list = try await listRepo.fetch(id: listID)
-            items = try await outlineRepo.fetchItems(forList: listID)
+            let fetchedItems = try await outlineRepo.fetchItems(forList: listID)
+            let repair = engine.repairInvalidParents(in: fetchedItems)
+            let repairedCount = repair.orphanCount + repair.cycleCount
+            items = repair.repaired
             rebuildRows()
+            if repairedCount > 0 {
+                try await persistRepair(originalItems: fetchedItems, repairedItems: repair.repaired)
+                errorStore.present(.orphanRepair(
+                    repairedCount: repairedCount,
+                    listTitle: list?.title ?? "List"
+                ))
+            }
         } catch {
             logger.error("Failed to load items: \(error.localizedDescription)")
+            errorStore.present(
+                .persistenceLoad(underlying: error.localizedDescription),
+                retryTitle: "Retry Load"
+            ) { [weak self] in
+                Task { await self?.load() }
+            }
+        }
+    }
+
+    private func persistRepair(originalItems: [OutlineItem], repairedItems: [OutlineItem]) async throws {
+        let originalMap = Dictionary(uniqueKeysWithValues: originalItems.map { ($0.id, $0) })
+        let changedItems = repairedItems.filter { item in
+            originalMap[item.id] != item
+        }
+        if !changedItems.isEmpty {
+            try await outlineRepo.saveAll(changedItems)
         }
     }
 
@@ -90,7 +126,10 @@ public final class ListStore {
         }
         let newIDs = Set(newItems.map(\.id))
         let deletedIDs = oldItems.filter { !newIDs.contains($0.id) }.map(\.id)
-        Task { [outlineRepo, logger] in
+        let previous = persistenceTail
+
+        persistenceTail = Task { [outlineRepo, logger, errorStore] in
+            await previous?.value
             do {
                 if !changed.isEmpty {
                     try await outlineRepo.saveAll(changed)
@@ -100,8 +139,18 @@ public final class ListStore {
                 }
             } catch {
                 logger.error("Failed to persist changes: \(error.localizedDescription)")
+                errorStore.present(
+                    .persistenceSave(underlying: error.localizedDescription),
+                    retryTitle: "Reload List"
+                ) { [weak self] in
+                    Task { await self?.load() }
+                }
             }
         }
+    }
+
+    public func waitForPendingPersistence() async {
+        await persistenceTail?.value
     }
 
     // MARK: - Structural commands
@@ -241,9 +290,13 @@ public final class ListStore {
     // MARK: - Check operations
 
     public func toggleCheck(itemID: UUID, undoManager: UndoManager? = nil) {
-        guard let item = items.first(where: { $0.id == itemID }) else { return }
+        guard items.contains(where: { $0.id == itemID }) else { return }
         let oldItems = items
-        let newChecked = !item.isChecked
+        let currentState = flatRows.first(where: { $0.id == itemID })?.checkState
+            ?? engine.flatten(items: items, expandedIDs: Set(items.map(\.id)))
+                .first(where: { $0.id == itemID })?.checkState
+            ?? .unchecked
+        let newChecked = currentState != .checked
         let updated = engine.setChecked(newChecked, itemID: itemID, in: items)
         registerUndo(undoManager: undoManager, oldItems: oldItems)
         applyChanges(to: updated)

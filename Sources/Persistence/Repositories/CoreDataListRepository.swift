@@ -47,14 +47,42 @@ public final class CoreDataListRepository: ListRepository, @unchecked Sendable {
 
     public func save(_ list: ListItem) async throws {
         try await perform { context in
-            let request = NSFetchRequest<ListEntityMO>(entityName: "ListEntity")
-            request.predicate = NSPredicate(format: "id == %@", list.id as CVarArg)
-            request.fetchLimit = 1
-
-            let entity = try context.fetch(request).first
-                ?? ListEntityMO(entity: NSEntityDescription.entity(forEntityName: "ListEntity", in: context)!, insertInto: context)
+            let entity = try self.listEntity(id: list.id, in: context)
             entity.update(from: list)
             try context.save()
+        }
+    }
+
+    public func saveListAndItems(_ list: ListItem, items: [OutlineItem]) async throws {
+        let context = stack.newBackgroundContext()
+        try await context.perform {
+            do {
+                let listEntity = try self.listEntity(id: list.id, in: context)
+                listEntity.update(from: list)
+
+                let itemIDs = items.map(\.id)
+                let request = NSFetchRequest<OutlineItemEntityMO>(entityName: "OutlineItemEntity")
+                request.predicate = NSPredicate(format: "id IN %@", itemIDs)
+                let existing = try context.fetch(request)
+                let existingByID = Dictionary(uniqueKeysWithValues: existing.map { ($0.id, $0) })
+
+                for item in items {
+                    let entity = existingByID[item.id]
+                        ?? OutlineItemEntityMO(
+                            entity: NSEntityDescription.entity(
+                                forEntityName: "OutlineItemEntity",
+                                in: context
+                            )!,
+                            insertInto: context
+                        )
+                    entity.update(from: item)
+                }
+
+                try context.save()
+            } catch {
+                context.rollback()
+                throw error
+            }
         }
     }
 
@@ -69,10 +97,53 @@ public final class CoreDataListRepository: ListRepository, @unchecked Sendable {
         }
     }
 
+    public func deleteListAndItems(id: UUID) async throws {
+        let context = stack.newBackgroundContext()
+        try await context.perform {
+            do {
+                let itemRequest = NSFetchRequest<OutlineItemEntityMO>(
+                    entityName: "OutlineItemEntity"
+                )
+                itemRequest.predicate = NSPredicate(format: "listID == %@", id as CVarArg)
+                for entity in try context.fetch(itemRequest) {
+                    context.delete(entity)
+                }
+
+                let listRequest = NSFetchRequest<ListEntityMO>(entityName: "ListEntity")
+                listRequest.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+                for entity in try context.fetch(listRequest) {
+                    context.delete(entity)
+                }
+
+                try context.save()
+            } catch {
+                context.rollback()
+                throw error
+            }
+        }
+    }
+
     private func perform<T>(_ block: @Sendable @escaping (NSManagedObjectContext) throws -> T) async throws -> T {
         let context = stack.viewContext
         return try await context.perform {
             try block(context)
         }
+    }
+
+    private func listEntity(
+        id: UUID,
+        in context: NSManagedObjectContext
+    ) throws -> ListEntityMO {
+        let request = NSFetchRequest<ListEntityMO>(entityName: "ListEntity")
+        request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+        request.fetchLimit = 1
+        return try context.fetch(request).first
+            ?? ListEntityMO(
+                entity: NSEntityDescription.entity(
+                    forEntityName: "ListEntity",
+                    in: context
+                )!,
+                insertInto: context
+            )
     }
 }
