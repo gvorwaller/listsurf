@@ -3,6 +3,8 @@ import Domain
 
 public struct ContentView: View {
     @Environment(AppStore.self) private var appStore
+    @State private var showingNewList = false
+    @State private var newListTitle = ""
 
     public init() {}
 
@@ -13,7 +15,7 @@ public struct ContentView: View {
                 StoreRecoveryView(presentation: presentation)
             } else {
                 NavigationSplitView {
-                    LibrarySidebar()
+                    LibrarySidebar(onNewList: beginNewList)
                 } detail: {
                     if let selectedID = appStore.selectedListID {
                         ListDetailView(listID: selectedID)
@@ -34,14 +36,45 @@ public struct ContentView: View {
                         }
                     }
                 }
+                .sheet(isPresented: $showingNewList) {
+                    NewListSheet(
+                        title: $newListTitle,
+                        onCreate: createList,
+                        onCancel: cancelNewList
+                    )
+                }
             }
         }
+        .focusedSceneValue(
+            \.listsurfAppCommands,
+            ListsurfAppCommandActions(newList: beginNewList)
+        )
         .task {
             if case .storeCorrupted = appStore.errorStore.current?.error {
                 return
             }
             await appStore.loadLists()
         }
+    }
+
+    private func beginNewList() {
+        newListTitle = ""
+        showingNewList = true
+    }
+
+    private func createList() {
+        let title = newListTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !title.isEmpty else { return }
+        Task {
+            await appStore.createList(title: title)
+            newListTitle = ""
+            showingNewList = false
+        }
+    }
+
+    private func cancelNewList() {
+        newListTitle = ""
+        showingNewList = false
     }
 }
 

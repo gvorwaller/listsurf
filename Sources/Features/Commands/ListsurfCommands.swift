@@ -1,100 +1,100 @@
 import SwiftUI
 
 public struct ListsurfCommands: Commands {
+    @FocusedValue(\.listsurfAppCommands) private var appCommands
+    @FocusedValue(\.listsurfListCommands) private var listCommands
+
     public init() {}
 
     public var body: some Commands {
-        CommandGroup(after: .newItem) {
+        CommandGroup(replacing: .newItem) {
             Button("New List") {
-                NotificationCenter.default.post(name: .listsurfNewList, object: nil)
+                appCommands?.newList()
             }
             .keyboardShortcut("n", modifiers: [.command])
+            .disabled(appCommands == nil)
         }
 
         CommandMenu("Item") {
             Button("Add Item Below") {
-                NotificationCenter.default.post(name: .listsurfAddBelow, object: nil)
+                listCommands?.addBelow?()
             }
             .keyboardShortcut(.return, modifiers: [])
+            .disabled(listCommands?.addBelow == nil)
 
             Button("Add Item Above") {
-                NotificationCenter.default.post(name: .listsurfAddAbove, object: nil)
+                listCommands?.addAbove?()
             }
             .keyboardShortcut(.return, modifiers: [.shift])
+            .disabled(listCommands?.addAbove == nil)
 
             Button("Add Child") {
-                NotificationCenter.default.post(name: .listsurfAddChild, object: nil)
+                listCommands?.addChild?()
             }
             .keyboardShortcut(.return, modifiers: [.command])
+            .disabled(listCommands?.addChild == nil)
 
             Divider()
 
             Button("Indent") {
-                NotificationCenter.default.post(name: .listsurfIndent, object: nil)
+                listCommands?.indent?()
             }
             .keyboardShortcut(.tab, modifiers: [])
+            .disabled(listCommands?.indent == nil)
 
             Button("Outdent") {
-                NotificationCenter.default.post(name: .listsurfOutdent, object: nil)
+                listCommands?.outdent?()
             }
             .keyboardShortcut(.tab, modifiers: [.shift])
+            .disabled(listCommands?.outdent == nil)
 
             Divider()
 
             Button("Move Up") {
-                NotificationCenter.default.post(name: .listsurfMoveUp, object: nil)
+                listCommands?.moveUp?()
             }
             .keyboardShortcut(.upArrow, modifiers: [.command, .option])
+            .disabled(listCommands?.moveUp == nil)
 
             Button("Move Down") {
-                NotificationCenter.default.post(name: .listsurfMoveDown, object: nil)
+                listCommands?.moveDown?()
             }
             .keyboardShortcut(.downArrow, modifiers: [.command, .option])
+            .disabled(listCommands?.moveDown == nil)
 
             Divider()
 
             Button("Delete") {
-                NotificationCenter.default.post(name: .listsurfDelete, object: nil)
+                listCommands?.delete?()
             }
             .keyboardShortcut(.delete, modifiers: [.command])
+            .disabled(listCommands?.delete == nil)
         }
 
         CommandMenu("View") {
             Button("Toggle Check Mode") {
-                NotificationCenter.default.post(name: .listsurfToggleCheckMode, object: nil)
+                listCommands?.toggleCheckMode?()
             }
             .keyboardShortcut("e", modifiers: [.command, .shift])
+            .disabled(listCommands?.toggleCheckMode == nil)
 
             Button("Toggle Inspector") {
-                NotificationCenter.default.post(name: .listsurfToggleInspector, object: nil)
+                listCommands?.toggleInspector?()
             }
             .keyboardShortcut("i", modifiers: [.command, .option])
+            .disabled(listCommands?.toggleInspector == nil)
 
             Divider()
 
             Button("Expand All") {
-                NotificationCenter.default.post(name: .listsurfExpandAll, object: nil)
+                listCommands?.expandAll?()
             }
+            .disabled(listCommands?.expandAll == nil)
 
             Button("Collapse All") {
-                NotificationCenter.default.post(name: .listsurfCollapseAll, object: nil)
+                listCommands?.collapseAll?()
             }
+            .disabled(listCommands?.collapseAll == nil)
         }
     }
-}
-
-extension Notification.Name {
-    static let listsurfNewList = Notification.Name("listsurfNewList")
-    static let listsurfAddBelow = Notification.Name("listsurfAddBelow")
-    static let listsurfAddAbove = Notification.Name("listsurfAddAbove")
-    static let listsurfAddChild = Notification.Name("listsurfAddChild")
-    static let listsurfIndent = Notification.Name("listsurfIndent")
-    static let listsurfOutdent = Notification.Name("listsurfOutdent")
-    static let listsurfMoveUp = Notification.Name("listsurfMoveUp")
-    static let listsurfMoveDown = Notification.Name("listsurfMoveDown")
-    static let listsurfDelete = Notification.Name("listsurfDelete")
-    static let listsurfToggleCheckMode = Notification.Name("listsurfToggleCheckMode")
-    static let listsurfToggleInspector = Notification.Name("listsurfToggleInspector")
-    static let listsurfExpandAll = Notification.Name("listsurfExpandAll")
-    static let listsurfCollapseAll = Notification.Name("listsurfCollapseAll")
 }

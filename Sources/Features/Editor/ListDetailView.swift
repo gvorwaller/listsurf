@@ -7,7 +7,7 @@ struct ListDetailView: View {
     @State private var listStore: ListStore?
     @State private var showInspector = false
     @State private var inspectorItemID: UUID?
-    @State private var triggerAddItem = false
+    @State private var addRequest: OutlineAddRequest?
     @Environment(\.undoManager) private var undoManager
 
     var body: some View {
@@ -19,7 +19,7 @@ struct ListDetailView: View {
                     OutlineEditorView(
                         store: store,
                         inspectorItemID: $inspectorItemID,
-                        triggerAddItem: $triggerAddItem
+                        addRequest: $addRequest
                     )
                 }
             } else {
@@ -34,6 +34,7 @@ struct ListDetailView: View {
         }
         .navigationTitle(listStore?.list?.title ?? "")
         .toolbar { toolbarContent }
+        .focusedSceneValue(\.listsurfListCommands, focusedCommandActions)
         .task(id: listID) {
             let store = appStore.makeListStore(for: listID)
             listStore = store
@@ -79,7 +80,7 @@ struct ListDetailView: View {
     @ViewBuilder
     private func editModeToolbar(_ store: ListStore) -> some View {
         Button {
-            triggerAddItem = true
+            requestAdd(afterID: nil)
         } label: {
             Label("Add Item", systemImage: "plus")
         }
@@ -130,5 +131,57 @@ struct ListDetailView: View {
             get: { store.checkFilter },
             set: { store.checkFilter = $0 }
         )
+    }
+
+    private var focusedCommandActions: ListsurfListCommandActions {
+        guard let store = listStore else { return ListsurfListCommandActions() }
+        let selectedID = singleSelectedItemID(in: store)
+        let hasSelection = !store.selectedItemIDs.isEmpty
+        var actions = ListsurfListCommandActions()
+
+        actions.toggleCheckMode = { store.isCheckMode.toggle() }
+        actions.toggleInspector = { showInspector.toggle() }
+        actions.expandAll = { store.expandAll() }
+        actions.collapseAll = { store.collapseAll() }
+
+        guard !store.isCheckMode else { return actions }
+
+        actions.addBelow = { requestAdd(afterID: selectedID) }
+        if let selectedID {
+            actions.addAbove = {
+                store.insertAbove(referenceID: selectedID, title: "New Item", undoManager: undoManager)
+            }
+            actions.addChild = {
+                store.addChild(parentID: selectedID, title: "New Item", undoManager: undoManager)
+            }
+            actions.indent = {
+                store.indent(itemID: selectedID, undoManager: undoManager)
+            }
+            actions.outdent = {
+                store.outdent(itemID: selectedID, undoManager: undoManager)
+            }
+            actions.moveUp = {
+                store.moveUp(itemID: selectedID, undoManager: undoManager)
+            }
+            actions.moveDown = {
+                store.moveDown(itemID: selectedID, undoManager: undoManager)
+            }
+        }
+        if hasSelection {
+            actions.delete = {
+                store.deleteSelected(undoManager: undoManager)
+            }
+        }
+
+        return actions
+    }
+
+    private func singleSelectedItemID(in store: ListStore) -> UUID? {
+        guard store.selectedItemIDs.count == 1 else { return nil }
+        return store.selectedItemIDs.first
+    }
+
+    private func requestAdd(afterID: UUID?) {
+        addRequest = OutlineAddRequest(afterID: afterID)
     }
 }

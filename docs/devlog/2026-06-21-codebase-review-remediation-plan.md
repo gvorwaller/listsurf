@@ -284,3 +284,45 @@ data-integrity slice was completed.
 - Scene-scoped commands and robust undo are still Phase 3 work.
 - Destructive confirmation flows and broader UX/accessibility polish are still
   Phase 4 work.
+
+## Progress update — June 22, 2026, Phase 3 command-routing slice
+
+The first Phase 3 command-routing slice is complete.
+
+### Implemented
+
+- Replaced global `NotificationCenter` menu-command broadcasts with
+  focused scene command actions.
+- Added separate focused command action models for app-level commands and
+  list/editor-level commands.
+- Replaced the system New command group with Listsurf's scene-routed New List
+  command so Cmd-N opens the app's New List sheet.
+- Moved New List sheet ownership from `LibrarySidebar` to `ContentView` so it is
+  scene-wide instead of sidebar-local.
+- Routed item commands through the focused selected-list scene:
+  - add item below;
+  - add item above;
+  - add child;
+  - indent/outdent;
+  - move up/down;
+  - delete selection;
+  - toggle check mode;
+  - toggle inspector;
+  - expand/collapse all.
+- Changed the editor add trigger from a Boolean to a request carrying the target
+  item ID, so command-driven "Add Item Below" can add beneath the selected row.
+- Added a macOS UI regression proving Cmd-N opens the New List sheet and creates
+  a list through the command path.
+
+### Verification
+
+- `swift test`: 83 passed, 0 failed.
+- Xcode iOS `test_sim`: 85 passed, 0 failed.
+- Xcode macOS `test_macos`: 86 passed, 0 failed.
+
+### Remaining Phase 3 work
+
+- Add focused command coverage for row-level keyboard shortcuts beyond Cmd-N.
+- Tighten command enable/disable semantics for mixed or multi-selection cases.
+- Improve undo grouping for text-field editing; current undo is functional but
+  still coarse.

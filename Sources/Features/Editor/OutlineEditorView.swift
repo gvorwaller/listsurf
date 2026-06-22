@@ -1,10 +1,15 @@
 import SwiftUI
 import Domain
 
+struct OutlineAddRequest: Equatable {
+    let id = UUID()
+    let afterID: UUID?
+}
+
 struct OutlineEditorView: View {
     @Bindable var store: ListStore
     @Binding var inspectorItemID: UUID?
-    @Binding var triggerAddItem: Bool
+    @Binding var addRequest: OutlineAddRequest?
     @Environment(\.undoManager) private var undoManager
     @State private var editingItemID: UUID?
     @State private var editingText = ""
@@ -24,10 +29,10 @@ struct OutlineEditorView: View {
             }
         }
         .outlineSearch(text: $store.searchText)
-        .onChange(of: triggerAddItem) { _, newValue in
-            if newValue {
-                triggerAddItem = false
-                beginAdding(afterID: nil)
+        .onChange(of: addRequest) { _, newValue in
+            if let newValue {
+                addRequest = nil
+                beginAdding(afterID: newValue.afterID)
             }
         }
     }
@@ -205,14 +210,14 @@ struct OutlineEditorView: View {
 #if DEBUG
 private struct OutlineEditorPreview: View {
     @State private var inspectorItemID: UUID?
-    @State private var triggerAddItem = false
+    @State private var addRequest: OutlineAddRequest?
     @State private var store = PreviewFixtures.listStore()
 
     var body: some View {
         OutlineEditorView(
             store: store,
             inspectorItemID: $inspectorItemID,
-            triggerAddItem: $triggerAddItem
+            addRequest: $addRequest
         )
     }
 }

@@ -1,6 +1,16 @@
 import XCTest
 
 final class Listsurf_macOSUITests: XCTestCase {
+    @MainActor func testCommandNOpensNewListSheet() {
+        continueAfterFailure = false
+        let app = launchApp(store: "mac-command-new-list", reset: true)
+
+        app.typeKey("n", modifierFlags: .command)
+        fillNewListSheet(named: "Command Created List", in: app)
+
+        XCTAssertTrue(app.staticTexts["Command Created List"].waitForExistence(timeout: 5))
+    }
+
     @MainActor func testCreateListAndAddItem() {
         continueAfterFailure = false
         let app = launchApp(store: "mac-create-list", reset: true)
@@ -50,7 +60,15 @@ final class Listsurf_macOSUITests: XCTestCase {
         )
         XCTAssertTrue(newList.waitForExistence(timeout: 15))
         newList.click()
+        fillNewListSheet(named: title, in: app)
+        let editor = firstExisting(
+            app.buttons["editor.addFirstItem"],
+            app.buttons["editor.addItem"]
+        )
+        XCTAssertTrue(editor.waitForExistence(timeout: 5))
+    }
 
+    @MainActor private func fillNewListSheet(named title: String, in app: XCUIApplication) {
         let titleField = firstExisting(
             app.textFields["newList.title"],
             app.textFields["List name"],
@@ -66,11 +84,6 @@ final class Listsurf_macOSUITests: XCTestCase {
         )
         XCTAssertTrue(create.waitForExistence(timeout: 5))
         create.click()
-        let editor = firstExisting(
-            app.buttons["editor.addFirstItem"],
-            app.buttons["editor.addItem"]
-        )
-        XCTAssertTrue(editor.waitForExistence(timeout: 5))
     }
 
     @MainActor private func firstExisting(_ elements: XCUIElement...) -> XCUIElement {
