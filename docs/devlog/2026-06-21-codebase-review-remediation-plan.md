@@ -326,3 +326,103 @@ The first Phase 3 command-routing slice is complete.
 - Tighten command enable/disable semantics for mixed or multi-selection cases.
 - Improve undo grouping for text-field editing; current undo is functional but
   still coarse.
+
+## Progress update — June 22, 2026, Phase 4 destructive-action safety slice
+
+The first Phase 4 safety slice is complete.
+
+### Implemented
+
+- Added explicit confirmation before deleting an active list from the library
+  context menu.
+- Added explicit confirmation before permanently deleting an archived list from
+  the archive context menu or swipe action.
+- Disabled full-swipe destructive deletion for archived lists and outline rows.
+- Added explicit confirmation before deleting an outline item from its context
+  menu or swipe action.
+- Routed the focused Command-Delete item command through the same confirmation
+  flow instead of deleting the selection immediately.
+- Added explicit confirmation before resetting all checks in Check Mode.
+- Added explicit confirmation before resetting a checked branch.
+- Disabled Reset All when no items are checked.
+- Disabled Reset Branch for already-unchecked branches.
+- Added a macOS UI regression for Command-Delete to prove the command presents
+  confirmation before deleting the selected item.
+- Refactored the macOS UI test helper for adding an item so destructive-action
+  tests can reuse the same setup path.
+
+### Verification
+
+- `swift test`: 83 passed, 0 failed.
+- Xcode iOS `test_sim`: 85 passed, 0 failed.
+- Xcode macOS `test_macos`: 87 passed, 0 failed.
+
+### Notes
+
+- A direct sandboxed `xcodebuild -list` attempt failed because Xcode needed to
+  write outside the workspace (`~/Library`, CoreSimulator, SwiftPM caches). The
+  verified app-target runs used XcodeBuildMCP session defaults instead.
+- Confirmation dialogs use explicit Boolean bindings rather than
+  `confirmationDialog(item:)` because this project's deployment/toolchain setup
+  did not expose the item-based overload during package compilation.
+
+### Remaining Phase 4 work
+
+- Add targeted confirmation coverage for iOS swipe/context flows where the UI
+  automation is stable enough to justify it.
+- Wire list rename, notes, icon, and color editing through the existing
+  identity editor.
+- Make archive controls more visibly discoverable on macOS and iPad.
+- Improve compact-width archive and inspector presentation.
+- Preserve scroll and edit state when switching Edit/Check mode.
+- Add platform-appropriate iPhone check haptics.
+- Add VoiceOver labels, values, hints, and selected-state announcements for
+  icon/color pickers and structural controls.
+
+## Progress update — June 22, 2026, Phase 4 identity and discoverability slice
+
+The second Phase 4 UX slice is complete.
+
+### Implemented
+
+- Reused the existing `ListIdentityEditor` for both new-list creation and
+  editing existing lists.
+- New-list creation now supports title, notes, icon, and color instead of title
+  only.
+- Added an Edit Details sheet for active lists from the library context menu.
+- Added an Edit Details sheet for archived lists from the archive context menu.
+- Added an Edit List toolbar action in the detail view so list metadata editing
+  is discoverable without relying on sidebar context menus.
+- Synchronized edited list metadata back into the open detail view so the
+  navigation title and list inspector update after saving.
+- Added a visible macOS sidebar Archive button below New List, using a distinct
+  accessibility identifier to avoid ambiguous UI automation targets.
+- Added accessibility labels, values, and identifiers for list icon and color
+  choices.
+- Preserved Return-to-create behavior in the new-list sheet.
+
+### Verification
+
+- `swift test`: 83 passed, 0 failed.
+- Xcode iOS `test_sim`: 85 passed, 0 failed.
+- Xcode macOS `test_macos`: 87 passed, 0 failed.
+
+### Notes
+
+- The first macOS UI run after adding the richer New List sheet exposed an
+  ambiguous `library.newList` target between toolbar/sidebar actions. The
+  sidebar-bottom action now uses `library.newList.sidebar`, leaving
+  `library.newList` for the primary toolbar action.
+- The editor intentionally remains a simple sheet-based flow. More advanced
+  inline title editing and inspector-integrated list metadata editing can wait
+  until command/undo grouping is tightened.
+
+### Remaining Phase 4 work
+
+- Add targeted confirmation coverage for iOS swipe/context flows where the UI
+  automation is stable enough to justify it.
+- Improve compact-width archive and inspector presentation.
+- Preserve scroll and edit state when switching Edit/Check mode.
+- Add platform-appropriate iPhone check haptics.
+- Add more complete VoiceOver hints and selected-state traits for structural
+  controls beyond the list identity icon/color picker.

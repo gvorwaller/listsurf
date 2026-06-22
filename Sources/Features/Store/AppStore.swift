@@ -35,9 +35,20 @@ public final class AppStore {
         }
     }
 
-    public func createList(title: String, icon: String? = nil, colorName: String? = nil) async {
+    public func createList(
+        title: String,
+        notes: String? = nil,
+        icon: String? = nil,
+        colorName: String? = nil
+    ) async {
         let position = (lists.map(\.position).max() ?? 0) + 1.0
-        let list = ListItem(title: title, icon: icon, colorName: colorName, position: position)
+        let list = ListItem(
+            title: title,
+            notes: notes,
+            icon: icon,
+            colorName: colorName,
+            position: position
+        )
         do {
             try await listRepo.save(list)
             await loadLists()

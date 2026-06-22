@@ -16,6 +16,7 @@ struct OutlineEditorView: View {
     @State private var showingAddField = false
     @State private var addingAfterID: UUID?
     @State private var newItemText = ""
+    @State private var itemPendingDeletion: ItemDeletionConfirmation?
     @FocusState private var addFieldFocused: Bool
 
     var body: some View {
@@ -33,6 +34,21 @@ struct OutlineEditorView: View {
             if let newValue {
                 addRequest = nil
                 beginAdding(afterID: newValue.afterID)
+            }
+        }
+        .confirmationDialog(
+            "Delete Item?",
+            isPresented: isConfirmingItemDeletion,
+            titleVisibility: .visible
+        ) {
+            if let confirmation = itemPendingDeletion {
+                Button("Delete Item", role: .destructive) {
+                    store.deleteItem(id: confirmation.id, undoManager: undoManager)
+                }
+            }
+        } message: {
+            if let confirmation = itemPendingDeletion {
+                Text("“\(confirmation.title)” and all of its child items will be deleted.")
             }
         }
     }
@@ -71,9 +87,9 @@ struct OutlineEditorView: View {
                     trailing: 16
                 ))
                 .contextMenu { rowContextMenu(row) }
-                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                     Button(role: .destructive) {
-                        store.deleteItem(id: row.id, undoManager: undoManager)
+                        requestDelete(row)
                     } label: {
                         Label("Delete", systemImage: "trash")
                     }
@@ -200,10 +216,31 @@ struct OutlineEditorView: View {
         Divider()
 
         Button(role: .destructive) {
-            store.deleteItem(id: row.id, undoManager: undoManager)
+            requestDelete(row)
         } label: {
             Label("Delete", systemImage: "trash")
         }
+    }
+
+    private func requestDelete(_ row: FlatRow) {
+        itemPendingDeletion = ItemDeletionConfirmation(row)
+    }
+
+    private var isConfirmingItemDeletion: Binding<Bool> {
+        Binding(
+            get: { itemPendingDeletion != nil },
+            set: { if !$0 { itemPendingDeletion = nil } }
+        )
+    }
+}
+
+private struct ItemDeletionConfirmation: Identifiable {
+    let id: UUID
+    let title: String
+
+    init(_ row: FlatRow) {
+        id = row.id
+        title = row.item.title
     }
 }
 

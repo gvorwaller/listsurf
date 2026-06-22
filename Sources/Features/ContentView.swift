@@ -5,6 +5,9 @@ public struct ContentView: View {
     @Environment(AppStore.self) private var appStore
     @State private var showingNewList = false
     @State private var newListTitle = ""
+    @State private var newListNotes = ""
+    @State private var newListIcon = "list.bullet"
+    @State private var newListColorName = ListColor.blue.rawValue
 
     public init() {}
 
@@ -39,6 +42,9 @@ public struct ContentView: View {
                 .sheet(isPresented: $showingNewList) {
                     NewListSheet(
                         title: $newListTitle,
+                        notes: $newListNotes,
+                        icon: $newListIcon,
+                        colorName: $newListColorName,
                         onCreate: createList,
                         onCancel: cancelNewList
                     )
@@ -59,6 +65,9 @@ public struct ContentView: View {
 
     private func beginNewList() {
         newListTitle = ""
+        newListNotes = ""
+        newListIcon = "list.bullet"
+        newListColorName = ListColor.blue.rawValue
         showingNewList = true
     }
 
@@ -66,15 +75,33 @@ public struct ContentView: View {
         let title = newListTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !title.isEmpty else { return }
         Task {
-            await appStore.createList(title: title)
-            newListTitle = ""
+            await appStore.createList(
+                title: title,
+                notes: newListNotes.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty,
+                icon: newListIcon.nilIfEmpty,
+                colorName: newListColorName.nilIfEmpty
+            )
+            resetNewListDraft()
             showingNewList = false
         }
     }
 
     private func cancelNewList() {
-        newListTitle = ""
+        resetNewListDraft()
         showingNewList = false
+    }
+
+    private func resetNewListDraft() {
+        newListTitle = ""
+        newListNotes = ""
+        newListIcon = "list.bullet"
+        newListColorName = ListColor.blue.rawValue
+    }
+}
+
+private extension String {
+    var nilIfEmpty: String? {
+        isEmpty ? nil : self
     }
 }
 

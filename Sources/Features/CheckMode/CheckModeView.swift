@@ -4,6 +4,7 @@ import Domain
 struct CheckModeView: View {
     @Bindable var store: ListStore
     @Environment(\.undoManager) private var undoManager
+    @State private var branchPendingReset: BranchResetConfirmation?
 
     var body: some View {
         Group {
@@ -17,6 +18,21 @@ struct CheckModeView: View {
                 )
             } else {
                 checkList
+            }
+        }
+        .confirmationDialog(
+            "Reset Branch?",
+            isPresented: isConfirmingBranchReset,
+            titleVisibility: .visible
+        ) {
+            if let confirmation = branchPendingReset {
+                Button("Reset Branch", role: .destructive) {
+                    store.resetSubtree(itemID: confirmation.id, undoManager: undoManager)
+                }
+            }
+        } message: {
+            if let confirmation = branchPendingReset {
+                Text("“\(confirmation.title)” and all of its child items will be unchecked.")
             }
         }
     }
@@ -77,11 +93,29 @@ struct CheckModeView: View {
 
         if row.hasChildren {
             Button {
-                store.resetSubtree(itemID: row.id, undoManager: undoManager)
+                branchPendingReset = BranchResetConfirmation(row)
             } label: {
                 Label("Reset Branch", systemImage: "arrow.counterclockwise")
             }
+            .disabled(row.checkState == .unchecked)
         }
+    }
+
+    private var isConfirmingBranchReset: Binding<Bool> {
+        Binding(
+            get: { branchPendingReset != nil },
+            set: { if !$0 { branchPendingReset = nil } }
+        )
+    }
+}
+
+private struct BranchResetConfirmation: Identifiable {
+    let id: UUID
+    let title: String
+
+    init(_ row: FlatRow) {
+        id = row.id
+        title = row.item.title
     }
 }
 

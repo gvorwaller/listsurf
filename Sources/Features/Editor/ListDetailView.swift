@@ -8,6 +8,9 @@ struct ListDetailView: View {
     @State private var showInspector = false
     @State private var inspectorItemID: UUID?
     @State private var addRequest: OutlineAddRequest?
+    @State private var showingResetAllChecksConfirmation = false
+    @State private var selectedItemsPendingDeletion: SelectedItemsDeletionConfirmation?
+    @State private var listBeingEdited: ListItem?
     @Environment(\.undoManager) private var undoManager
 
     var body: some View {
@@ -35,6 +38,42 @@ struct ListDetailView: View {
         .navigationTitle(listStore?.list?.title ?? "")
         .toolbar { toolbarContent }
         .focusedSceneValue(\.listsurfListCommands, focusedCommandActions)
+        .onChange(of: appStore.lists) { _, lists in
+            syncListMetadata(from: lists)
+        }
+        .sheet(item: $listBeingEdited) { list in
+            ListIdentityEditSheet(list: list) { updated in
+                Task { await appStore.updateList(updated) }
+            }
+        }
+        .confirmationDialog(
+            "Reset All Checks?",
+            isPresented: $showingResetAllChecksConfirmation,
+            titleVisibility: .visible
+        ) {
+            if let store = listStore {
+                Button("Reset All Checks", role: .destructive) {
+                    store.resetAllChecks(undoManager: undoManager)
+                }
+            }
+        } message: {
+            Text("Every checked item in this list will be unchecked.")
+        }
+        .confirmationDialog(
+            "Delete Selected Items?",
+            isPresented: isConfirmingSelectedItemsDeletion,
+            titleVisibility: .visible
+        ) {
+            if let confirmation = selectedItemsPendingDeletion, let store = listStore {
+                Button(confirmation.buttonTitle, role: .destructive) {
+                    store.deleteSelected(undoManager: undoManager)
+                }
+            }
+        } message: {
+            if let confirmation = selectedItemsPendingDeletion {
+                Text(confirmation.message)
+            }
+        }
         .task(id: listID) {
             let store = appStore.makeListStore(for: listID)
             listStore = store
@@ -63,6 +102,14 @@ struct ListDetailView: View {
                     Label("Inspector", systemImage: "info.circle")
                 }
                 .help("Toggle Inspector")
+
+                Button {
+                    listBeingEdited = store.list
+                } label: {
+                    Label("Edit List", systemImage: "pencil")
+                }
+                .disabled(store.list == nil)
+                .help("Edit list title, notes, icon, and color")
             }
         }
 
@@ -119,10 +166,11 @@ struct ListDetailView: View {
         .help("Filter items by check state")
 
         Button {
-            store.resetAllChecks(undoManager: undoManager)
+            showingResetAllChecksConfirmation = true
         } label: {
             Label("Reset All", systemImage: "arrow.counterclockwise")
         }
+        .disabled(progress.checked == 0)
         .help("Uncheck all items")
     }
 
@@ -169,7 +217,9 @@ struct ListDetailView: View {
         }
         if hasSelection {
             actions.delete = {
-                store.deleteSelected(undoManager: undoManager)
+                selectedItemsPendingDeletion = SelectedItemsDeletionConfirmation(
+                    selectedCount: store.selectedItemIDs.count
+                )
             }
         }
 
@@ -183,5 +233,31 @@ struct ListDetailView: View {
 
     private func requestAdd(afterID: UUID?) {
         addRequest = OutlineAddRequest(afterID: afterID)
+    }
+
+    private func syncListMetadata(from lists: [ListItem]) {
+        guard let updated = lists.first(where: { $0.id == listID }) else { return }
+        listStore?.list = updated
+    }
+
+    private var isConfirmingSelectedItemsDeletion: Binding<Bool> {
+        Binding(
+            get: { selectedItemsPendingDeletion != nil },
+            set: { if !$0 { selectedItemsPendingDeletion = nil } }
+        )
+    }
+}
+
+private struct SelectedItemsDeletionConfirmation: Identifiable {
+    let id = UUID()
+    let selectedCount: Int
+
+    var buttonTitle: String {
+        selectedCount == 1 ? "Delete Item" : "Delete Items"
+    }
+
+    var message: String {
+        let subject = selectedCount == 1 ? "The selected item" : "\(selectedCount) selected items"
+        return "\(subject) and any child items will be deleted."
     }
 }

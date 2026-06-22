@@ -16,18 +16,27 @@ final class Listsurf_macOSUITests: XCTestCase {
         let app = launchApp(store: "mac-create-list", reset: true)
         createList(named: "Mac UI Packing List", in: app)
 
-        let addItem = firstExisting(
-            app.buttons["editor.addFirstItem"],
-            app.buttons["editor.addItem"]
-        )
-        XCTAssertTrue(addItem.waitForExistence(timeout: 5))
-        addItem.click()
-
-        let itemField = app.textFields["editor.newItem"]
-        XCTAssertTrue(itemField.waitForExistence(timeout: 5))
-        itemField.click()
-        itemField.typeText("Passport\n")
+        addItem(named: "Passport", in: app)
         XCTAssertTrue(app.staticTexts["Passport"].waitForExistence(timeout: 5))
+    }
+
+    @MainActor func testCommandDeleteRequiresConfirmation() {
+        continueAfterFailure = false
+        let app = launchApp(store: "mac-delete-confirmation", reset: true)
+        createList(named: "Delete Confirmation List", in: app)
+        addItem(named: "Temporary Item", in: app)
+
+        let item = app.staticTexts["Temporary Item"]
+        XCTAssertTrue(item.waitForExistence(timeout: 5))
+        item.click()
+
+        app.typeKey(.delete, modifierFlags: .command)
+        let deleteButton = app.sheets.buttons["Delete Item"].firstMatch
+        XCTAssertTrue(deleteButton.waitForExistence(timeout: 5))
+        XCTAssertTrue(item.exists)
+
+        deleteButton.click()
+        XCTAssertFalse(item.waitForExistence(timeout: 2))
     }
 
     @MainActor func testListPersistsAcrossRelaunch() {
@@ -66,6 +75,20 @@ final class Listsurf_macOSUITests: XCTestCase {
             app.buttons["editor.addItem"]
         )
         XCTAssertTrue(editor.waitForExistence(timeout: 5))
+    }
+
+    @MainActor private func addItem(named title: String, in app: XCUIApplication) {
+        let addItem = firstExisting(
+            app.buttons["editor.addFirstItem"],
+            app.buttons["editor.addItem"]
+        )
+        XCTAssertTrue(addItem.waitForExistence(timeout: 5))
+        addItem.click()
+
+        let itemField = app.textFields["editor.newItem"]
+        XCTAssertTrue(itemField.waitForExistence(timeout: 5))
+        itemField.click()
+        itemField.typeText("\(title)\n")
     }
 
     @MainActor private func fillNewListSheet(named title: String, in app: XCUIApplication) {

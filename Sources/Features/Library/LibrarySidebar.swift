@@ -6,6 +6,8 @@ struct LibrarySidebar: View {
     let onNewList: () -> Void
     @State private var searchText = ""
     @State private var showingArchive = false
+    @State private var listPendingDeletion: ListDeletionConfirmation?
+    @State private var listBeingEdited: ListItem?
 
     init(onNewList: @escaping () -> Void = {}) {
         self.onNewList = onNewList
@@ -49,6 +51,26 @@ struct LibrarySidebar: View {
         .sheet(isPresented: $showingArchive) {
             ArchiveView()
         }
+        .sheet(item: $listBeingEdited) { list in
+            ListIdentityEditSheet(list: list) { updated in
+                Task { await appStore.updateList(updated) }
+            }
+        }
+        .confirmationDialog(
+            "Delete List?",
+            isPresented: isConfirmingListDeletion,
+            titleVisibility: .visible
+        ) {
+            if let confirmation = listPendingDeletion {
+                Button("Delete List", role: .destructive) {
+                    Task { await appStore.deleteList(id: confirmation.id) }
+                }
+            }
+        } message: {
+            if let confirmation = listPendingDeletion {
+                Text("“\(confirmation.title)” and all of its items will be permanently deleted. This cannot be undone.")
+            }
+        }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             #if os(macOS)
             Button {
@@ -60,8 +82,20 @@ struct LibrarySidebar: View {
             .buttonStyle(.borderless)
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .accessibilityIdentifier("library.newList")
+            .accessibilityIdentifier("library.newList.sidebar")
             .help("Create a new list")
+
+            Button {
+                showingArchive = true
+            } label: {
+                Label("Archive", systemImage: "archivebox")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(.borderless)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .accessibilityIdentifier("library.archive.sidebar")
+            .help("View archived lists")
             #endif
         }
     }
@@ -70,6 +104,13 @@ struct LibrarySidebar: View {
         if searchText.isEmpty { return appStore.lists }
         let query = searchText.lowercased()
         return appStore.lists.filter { $0.title.lowercased().contains(query) }
+    }
+
+    private var isConfirmingListDeletion: Binding<Bool> {
+        Binding(
+            get: { listPendingDeletion != nil },
+            set: { if !$0 { listPendingDeletion = nil } }
+        )
     }
 
     private var emptyLibrary: some View {
@@ -91,6 +132,12 @@ struct LibrarySidebar: View {
         }
 
         Divider()
+
+        Button {
+            listBeingEdited = list
+        } label: {
+            Label("Edit Details", systemImage: "pencil")
+        }
 
         Button {
             Task { await appStore.duplicateList(id: list.id, clearChecks: false) }
@@ -115,9 +162,19 @@ struct LibrarySidebar: View {
         Divider()
 
         Button(role: .destructive) {
-            Task { await appStore.deleteList(id: list.id) }
+            listPendingDeletion = ListDeletionConfirmation(list)
         } label: {
             Label("Delete", systemImage: "trash")
         }
+    }
+}
+
+private struct ListDeletionConfirmation: Identifiable {
+    let id: UUID
+    let title: String
+
+    init(_ list: ListItem) {
+        id = list.id
+        title = list.title
     }
 }

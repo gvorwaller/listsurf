@@ -2,34 +2,34 @@ import SwiftUI
 
 struct NewListSheet: View {
     @Binding var title: String
+    @Binding var notes: String
+    @Binding var icon: String
+    @Binding var colorName: String
     let onCreate: () -> Void
     let onCancel: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("New List")
-                .font(.title2.bold())
+        NavigationStack {
+            ListIdentityEditor(
+                title: $title,
+                notes: $notes,
+                icon: $icon,
+                colorName: $colorName
+            )
+            .onSubmit(onCreate)
+            .navigationTitle("New List")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel", role: .cancel, action: onCancel)
+                }
 
-            TextField("List name", text: $title)
-                .textFieldStyle(.roundedBorder)
-                .accessibilityIdentifier("newList.title")
-                .onSubmit(onCreate)
-
-            HStack {
-                Spacer()
-
-                Button("Cancel", role: .cancel, action: onCancel)
-
-                Button("Create", action: onCreate)
-                    .buttonStyle(.borderedProminent)
-                    .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    .accessibilityIdentifier("newList.create")
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Create", action: onCreate)
+                        .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .accessibilityIdentifier("newList.create")
+                }
             }
         }
-        .padding(20)
-        .frame(minWidth: 320)
-        #if os(macOS)
-        .frame(idealWidth: 360)
-        #endif
+        .frame(minWidth: 360, minHeight: 460)
     }
 }
