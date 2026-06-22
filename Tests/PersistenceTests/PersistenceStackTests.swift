@@ -218,6 +218,60 @@ final class PersistenceStackTests: XCTestCase {
         XCTAssertTrue(remainingItems.isEmpty)
     }
 
+    func testReplaceAllListsAndItemsIsFullLibraryRestore() async throws {
+        let stack = PersistenceStack.inMemory()
+        let listRepo = CoreDataListRepository(stack: stack)
+        let itemRepo = CoreDataOutlineRepository(stack: stack)
+        let oldList = ListItem(title: "Old")
+        try await listRepo.saveListAndItems(
+            oldList,
+            items: [OutlineItem(listID: oldList.id, title: "Old Item")]
+        )
+
+        let newList = ListItem(title: "New")
+        let newItem = OutlineItem(listID: newList.id, title: "New Item")
+        try await listRepo.replaceAllListsAndItems(
+            with: LibraryArchive(
+                lists: [ArchivedList(list: newList, items: [newItem])]
+            )
+        )
+
+        let lists = try await listRepo.fetchAll()
+        let deletedOldList = try await listRepo.fetch(id: oldList.id)
+        let oldItems = try await itemRepo.fetchItems(forList: oldList.id)
+        let newItems = try await itemRepo.fetchItems(forList: newList.id)
+        XCTAssertEqual(lists.map(\.id), [newList.id])
+        XCTAssertNil(deletedOldList)
+        XCTAssertEqual(oldItems, [])
+        XCTAssertEqual(newItems.map(\.id), [newItem.id])
+    }
+
+    func testInvalidDecodedImportWritesNothingBeforeRepositoryRestore() async throws {
+        let stack = PersistenceStack.inMemory()
+        let listRepo = CoreDataListRepository(stack: stack)
+        let itemRepo = CoreDataOutlineRepository(stack: stack)
+        let existingList = ListItem(title: "Existing")
+        let existingItem = OutlineItem(listID: existingList.id, title: "Existing Item")
+        try await listRepo.saveListAndItems(existingList, items: [existingItem])
+
+        let service = ExportService()
+        let badItem = OutlineItem(
+            listID: existingList.id,
+            parentID: UUID(),
+            title: "Bad"
+        )
+        let badExport = service.export(
+            lists: [(ListItem(title: "Replacement"), [badItem])],
+            appVersion: "1.0"
+        )
+
+        XCTAssertThrowsError(try service.archive(from: badExport))
+        let lists = try await listRepo.fetchAll()
+        let items = try await itemRepo.fetchItems(forList: existingList.id)
+        XCTAssertEqual(lists.map(\.id), [existingList.id])
+        XCTAssertEqual(items.map(\.id), [existingItem.id])
+    }
+
     private func createV1Store(
         at storeURL: URL,
         list: ListItem,

@@ -215,6 +215,11 @@ private actor StubListRepository: ListRepository {
     func saveListAndItems(_ list: ListItem, items: [OutlineItem]) async throws {
         self.list = list
     }
+    func replaceAllListsAndItems(with archive: LibraryArchive) async throws {
+        if let first = archive.lists.first?.list {
+            list = first
+        }
+    }
     func delete(id: UUID) async throws {}
     func deleteListAndItems(id: UUID) async throws {}
 }

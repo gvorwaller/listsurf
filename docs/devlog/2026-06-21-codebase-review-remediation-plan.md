@@ -521,3 +521,67 @@ The second Phase 5 persistence-hardening slice is complete.
 - Add performance baselines for large edits, search, expansion, and bulk saves.
 - Profile whether additional repository fetch optimizations matter in real
   large-list usage.
+
+## Progress update — June 22, 2026, Phase 6 JSON recovery slice
+
+The first Phase 6 recovery slice is complete. This is the lossless local backup
+path needed before any CloudKit/iCloud sync work.
+
+### Implemented
+
+- Added `LibraryArchive` / `ArchivedList` domain archive types so full-library
+  operations can move complete list-and-item snapshots through repository
+  boundaries without leaking Core Data details.
+- Extended `ExportService` from JSON encode/decode only to validated restore:
+  - verifies export format and schema version;
+  - rejects duplicate list IDs and duplicate item IDs;
+  - rejects empty list/item titles after trimming;
+  - rejects invalid quantities and non-finite positions;
+  - rejects self-parenting, missing parents, and parent cycles;
+  - converts validated JSON back into domain `ListItem` and `OutlineItem`
+    values.
+- Added `AppStore.exportLibrary(appVersion:)`, exporting every active and
+  archived list with items sorted by position.
+- Added `AppStore.importLibrary(from:)`, which decodes and validates the JSON
+  before any persistence mutation, then reloads the library and selects the
+  first active list after restore.
+- Added `ListRepository.replaceAllListsAndItems(with:)` and implemented it in
+  the Core Data repository as a single background-context transaction:
+  - deletes all existing items and lists;
+  - inserts the validated archive;
+  - saves once;
+  - rolls back on error.
+- Routed malformed JSON and validation failures to the import-validation error
+  path instead of presenting them as generic persistence-save failures.
+- Updated preview/test repository doubles for the new repository contract.
+
+### Verification
+
+- `swift test --quiet`: 95 passed, 0 failed.
+- Xcode macOS `test_macos`: 96 passed, 0 failed, including macOS UI tests.
+- Xcode iOS simulator `test_sim`: 94 passed, 0 failed, including iOS UI tests.
+
+### Added regression coverage
+
+- Domain export validation:
+  - archive conversion preserves list and item IDs, hierarchy, quantities, and
+    checked state;
+  - duplicate item IDs are rejected;
+  - missing parent references are rejected.
+- App-level export/import:
+  - full-library export includes active and archived lists in position order;
+  - invalid imports do not call the destructive replace operation;
+  - malformed JSON is reported as import validation failure.
+- Persistence restore:
+  - full-library replace removes old lists/items and writes the replacement
+    archive;
+  - invalid decoded imports are rejected before repository restore, leaving the
+    existing store unchanged.
+
+### Remaining Phase 6 work
+
+- Add native file importer/exporter UI on both platforms.
+- Add explicit “backup before destructive operation / before CloudKit” flows.
+- Add last-export metadata and a small diagnostics view.
+- Add OPML and Markdown interchange only after JSON recovery is wired into the
+  actual UI.

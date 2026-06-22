@@ -92,6 +92,9 @@ private actor PreviewListRepository: ListRepository {
     func saveListAndItems(_ list: ListItem, items: [OutlineItem]) async throws {
         try await save(list)
     }
+    func replaceAllListsAndItems(with archive: LibraryArchive) async throws {
+        lists = archive.lists.map(\.list)
+    }
     func delete(id: UUID) async throws { lists.removeAll { $0.id == id } }
     func deleteListAndItems(id: UUID) async throws {
         try await delete(id: id)

@@ -86,6 +86,52 @@ public final class CoreDataListRepository: ListRepository, @unchecked Sendable {
         }
     }
 
+    public func replaceAllListsAndItems(with archive: LibraryArchive) async throws {
+        let context = stack.newBackgroundContext()
+        try await context.perform {
+            do {
+                let itemRequest = NSFetchRequest<OutlineItemEntityMO>(
+                    entityName: "OutlineItemEntity"
+                )
+                for entity in try context.fetch(itemRequest) {
+                    context.delete(entity)
+                }
+
+                let listRequest = NSFetchRequest<ListEntityMO>(entityName: "ListEntity")
+                for entity in try context.fetch(listRequest) {
+                    context.delete(entity)
+                }
+
+                for archivedList in archive.lists {
+                    let listEntity = ListEntityMO(
+                        entity: NSEntityDescription.entity(
+                            forEntityName: "ListEntity",
+                            in: context
+                        )!,
+                        insertInto: context
+                    )
+                    listEntity.update(from: archivedList.list)
+
+                    for item in archivedList.items {
+                        let itemEntity = OutlineItemEntityMO(
+                            entity: NSEntityDescription.entity(
+                                forEntityName: "OutlineItemEntity",
+                                in: context
+                            )!,
+                            insertInto: context
+                        )
+                        itemEntity.update(from: item)
+                    }
+                }
+
+                try context.save()
+            } catch {
+                context.rollback()
+                throw error
+            }
+        }
+    }
+
     public func delete(id: UUID) async throws {
         try await perform { context in
             let request = NSFetchRequest<ListEntityMO>(entityName: "ListEntity")

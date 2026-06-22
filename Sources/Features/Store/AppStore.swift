@@ -14,6 +14,7 @@ public final class AppStore {
     private let listRepo: any ListRepository
     private let outlineRepo: any OutlineRepository
     private let logger = Logger(subsystem: "com.listsurf.app", category: "ui")
+    private let exportService = ExportService()
 
     public init(
         listRepository: any ListRepository,
@@ -109,6 +110,50 @@ public final class AppStore {
             selectedListID = positioned.id
         } catch {
             presentSaveError(error, operation: "duplicate list")
+        }
+    }
+
+    public func exportLibrary(appVersion: String = "0.1.0") async throws -> Data {
+        do {
+            let lists = try await listRepo.fetchAll()
+                .sorted { $0.position < $1.position }
+            var archivedLists: [ArchivedList] = []
+            for list in lists {
+                let items = try await outlineRepo.fetchItems(forList: list.id)
+                archivedLists.append(
+                    ArchivedList(
+                        list: list,
+                        items: items.sorted { $0.position < $1.position }
+                    )
+                )
+            }
+            let export = exportService.export(
+                archive: LibraryArchive(lists: archivedLists),
+                appVersion: appVersion
+            )
+            return try exportService.encode(export)
+        } catch {
+            presentLoadError(error, operation: "export library")
+            throw error
+        }
+    }
+
+    public func importLibrary(from data: Data) async throws {
+        do {
+            let decoded = try exportService.decode(from: data)
+            let archive = try exportService.archive(from: decoded)
+            try await listRepo.replaceAllListsAndItems(with: archive)
+            await loadLists()
+            selectedListID = lists.first?.id
+        } catch let error as ExportValidationError {
+            errorStore.present(.importValidation(message: error.localizedDescription))
+            throw error
+        } catch let error as DecodingError {
+            errorStore.present(.importValidation(message: error.localizedDescription))
+            throw error
+        } catch {
+            presentSaveError(error, operation: "import library")
+            throw error
         }
     }
 
