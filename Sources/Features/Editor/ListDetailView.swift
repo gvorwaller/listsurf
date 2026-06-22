@@ -33,6 +33,7 @@ struct ListDetailView: View {
             if let store = listStore {
                 InspectorView(store: store, itemID: inspectorItemID)
                     .inspectorColumnWidth(min: 250, ideal: 300, max: 400)
+                    .presentationDetents([.medium, .large])
             }
         }
         .navigationTitle(listStore?.list?.title ?? "")
@@ -45,6 +46,7 @@ struct ListDetailView: View {
             ListIdentityEditSheet(list: list) { updated in
                 Task { await appStore.updateList(updated) }
             }
+            .presentationDetents([.medium, .large])
         }
         .confirmationDialog(
             "Reset All Checks?",

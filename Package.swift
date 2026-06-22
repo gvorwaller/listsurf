@@ -35,7 +35,7 @@ let package = Package(
         // Imports Domain directly; uses Persistence via Domain protocols.
         .target(
             name: "Features",
-            dependencies: ["Domain", "Persistence"],
+            dependencies: ["Domain", "Persistence", "Platform"],
             path: "Sources/Features"
         ),
 

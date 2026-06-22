@@ -1,5 +1,6 @@
 import SwiftUI
 import Domain
+import Platform
 
 struct CheckModeView: View {
     @Bindable var store: ListStore
@@ -62,6 +63,7 @@ struct CheckModeView: View {
                     row: row,
                     onToggle: {
                         store.toggleCheck(itemID: row.id, undoManager: undoManager)
+                        Haptics.checkToggle()
                     },
                     onToggleExpand: { store.toggleExpanded(row.id) }
                 )
@@ -84,6 +86,7 @@ struct CheckModeView: View {
     private func checkRowContextMenu(_ row: FlatRow) -> some View {
         Button {
             store.toggleCheck(itemID: row.id, undoManager: undoManager)
+            Haptics.checkToggle()
         } label: {
             Label(
                 row.checkState == .checked ? "Uncheck" : "Check",

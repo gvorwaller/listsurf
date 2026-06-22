@@ -10,6 +10,24 @@ final class PersistenceStackTests: XCTestCase {
         XCTAssertNotNil(stack.viewContext.persistentStoreCoordinator)
     }
 
+    func testModelDefinesUniquenessConstraintsAndFetchIndexes() throws {
+        let model = CoreDataModel.create()
+
+        let listEntity = try XCTUnwrap(model.entitiesByName["ListEntity"])
+        XCTAssertEqual(listEntity.uniquenessConstraints as? [[String]], [["id"]])
+        XCTAssertEqual(
+            Set(listEntity.indexes.map(\.name)),
+            ["ListEntity_active_position", "ListEntity_archived_position"]
+        )
+
+        let outlineEntity = try XCTUnwrap(model.entitiesByName["OutlineItemEntity"])
+        XCTAssertEqual(outlineEntity.uniquenessConstraints as? [[String]], [["id"]])
+        XCTAssertEqual(
+            Set(outlineEntity.indexes.map(\.name)),
+            ["OutlineItemEntity_list_position", "OutlineItemEntity_list_parent_position"]
+        )
+    }
+
     func testSaveAndFetchList() async throws {
         let stack = PersistenceStack.inMemory()
         let repo = CoreDataListRepository(stack: stack)

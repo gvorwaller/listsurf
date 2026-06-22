@@ -50,11 +50,13 @@ struct LibrarySidebar: View {
         }
         .sheet(isPresented: $showingArchive) {
             ArchiveView()
+                .presentationDetents([.medium, .large])
         }
         .sheet(item: $listBeingEdited) { list in
             ListIdentityEditSheet(list: list) { updated in
                 Task { await appStore.updateList(updated) }
             }
+            .presentationDetents([.medium, .large])
         }
         .confirmationDialog(
             "Delete List?",

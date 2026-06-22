@@ -421,8 +421,64 @@ The second Phase 4 UX slice is complete.
 
 - Add targeted confirmation coverage for iOS swipe/context flows where the UI
   automation is stable enough to justify it.
-- Improve compact-width archive and inspector presentation.
 - Preserve scroll and edit state when switching Edit/Check mode.
-- Add platform-appropriate iPhone check haptics.
 - Add more complete VoiceOver hints and selected-state traits for structural
   controls beyond the list identity icon/color picker.
+
+## Progress update — June 22, 2026, Phase 4 polish and Phase 5 model-hardening slice
+
+Phase 4 polish continued, and the first Phase 5 Core Data hardening slice is
+complete.
+
+### Implemented
+
+- Added a narrow `Platform` target dependency for platform-specific helpers.
+- Added iPhone haptic feedback when check-mode items are toggled.
+- Added VoiceOver labels and hints for check-mode disclosure controls.
+- Added VoiceOver values and hints for check-state buttons, including mixed
+  branch state.
+- Added compact presentation detents for:
+  - the New List sheet;
+  - the Archive sheet;
+  - list identity edit sheets;
+  - compact inspector presentation.
+- Added UUID uniqueness constraints for `ListEntity` and `OutlineItemEntity`.
+- Added Core Data fetch indexes for active/archived list ordering and outline
+  list/parent/position access patterns.
+- Added a persistence model regression test proving the uniqueness constraints
+  and index definitions exist.
+
+### Verification
+
+- `swift test`: 84 passed, 0 failed.
+- Xcode macOS `test_macos`: 88 passed, 0 failed.
+- Xcode iOS `test_sim`: 86 passed, 0 failed.
+- Xcode iOS diagnostics: no warnings after marking the UIKit haptics helper
+  `@MainActor`.
+
+### Notes
+
+- A sandboxed `swift test` run failed before compilation because the current
+  Xcode/SwiftPM toolchain wanted to write compiler caches under `~/.cache` and
+  `~/Library`. The verified `swift test` run used the approved escalated
+  `swift test` prefix.
+- This keeps the programmatic Core Data model for now. A versioned model or an
+  equivalent explicit migration mechanism is still needed before CloudKit.
+
+### Remaining Phase 4 work
+
+- Add targeted confirmation coverage for iOS swipe/context flows where the UI
+  automation is stable enough to justify it.
+- Preserve scroll and edit state when switching Edit/Check mode.
+- Add more complete VoiceOver hints and selected-state traits for structural
+  controls beyond the list identity icon/color picker and check rows.
+
+### Remaining Phase 5 work
+
+- Move from the anonymous programmatic model to a versioned model and committed
+  migration fixtures, or provide an equivalent explicit model-versioning
+  mechanism.
+- Add migration tests that open old stores and verify upgraded data.
+- Replace remaining per-object bulk fetches with set-based fetches keyed by
+  UUID where profiling shows it matters.
+- Add performance baselines for large edits, search, expansion, and bulk saves.

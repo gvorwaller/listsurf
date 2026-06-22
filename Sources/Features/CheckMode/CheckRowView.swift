@@ -18,6 +18,8 @@ struct CheckRowView: View {
                 }
                 .buttonStyle(.plain)
                 .frame(width: 16)
+                .accessibilityLabel(row.isExpanded ? "Collapse \(row.item.title)" : "Expand \(row.item.title)")
+                .accessibilityHint("Shows or hides child items")
             } else {
                 Color.clear.frame(width: 16, height: 1)
             }
@@ -34,6 +36,8 @@ struct CheckRowView: View {
                     ? "Uncheck \(row.item.title)"
                     : "Check \(row.item.title)"
             )
+            .accessibilityValue(checkStateDescription)
+            .accessibilityHint(row.hasChildren ? "Toggles this branch and all child items" : "Toggles this item")
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(row.item.title)
@@ -60,6 +64,7 @@ struct CheckRowView: View {
         }
         .contentShape(Rectangle())
         .onTapGesture { onToggle() }
+        .accessibilityElement(children: .contain)
     }
 
     @ViewBuilder
@@ -74,6 +79,17 @@ struct CheckRowView: View {
         case .mixed:
             Image(systemName: "minus.circle.fill")
                 .foregroundStyle(.orange)
+        }
+    }
+
+    private var checkStateDescription: String {
+        switch row.checkState {
+        case .checked:
+            "Checked"
+        case .unchecked:
+            "Unchecked"
+        case .mixed:
+            "Partially checked"
         }
     }
 }

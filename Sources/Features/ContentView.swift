@@ -48,6 +48,7 @@ public struct ContentView: View {
                         onCreate: createList,
                         onCancel: cancelNewList
                     )
+                    .presentationDetents([.medium, .large])
                 }
             }
         }

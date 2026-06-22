@@ -72,6 +72,7 @@ struct ArchiveView: View {
             ListIdentityEditSheet(list: list) { updated in
                 Task { await appStore.updateList(updated) }
             }
+            .presentationDetents([.medium, .large])
         }
         .confirmationDialog(
             "Delete Archived List?",
