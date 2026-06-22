@@ -40,3 +40,45 @@ targets:
         INFOPLIST_KEY_CFBundleDisplayName: Listsurf
         MARKETING_VERSION: "0.1.0"
         CURRENT_PROJECT_VERSION: "1"
+
+  Listsurf_iOSLogicTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests/DomainTests
+      - path: Tests/PersistenceTests
+      - path: Tests/FeaturesTests
+    dependencies:
+      - package: Listsurf
+        product: Domain
+      - package: Listsurf
+        product: Persistence
+      - package: Listsurf
+        product: Features
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.listsurf.tests.ios.logic
+        GENERATE_INFOPLIST_FILE: true
+        SWIFT_VERSION: "6.0"
+        SWIFT_STRICT_CONCURRENCY: complete
+
+  Listsurf_macOSLogicTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests/DomainTests
+      - path: Tests/PersistenceTests
+      - path: Tests/FeaturesTests
+    dependencies:
+      - package: Listsurf
+        product: Domain
+      - package: Listsurf
+        product: Persistence
+      - package: Listsurf
+        product: Features
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.listsurf.tests.macos.logic
+        GENERATE_INFOPLIST_FILE: true
+        SWIFT_VERSION: "6.0"
+        SWIFT_STRICT_CONCURRENCY: complete

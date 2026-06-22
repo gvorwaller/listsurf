@@ -43,21 +43,30 @@ struct LibrarySidebar: View {
                 .help("View archived lists")
             }
         }
-        .alert("New List", isPresented: $showingNewList) {
-            TextField("List name", text: $newListTitle)
-                .accessibilityIdentifier("newList.title")
-            Button("Create") {
-                guard !newListTitle.trimmingCharacters(in: .whitespaces).isEmpty else { return }
-                Task {
-                    await appStore.createList(title: newListTitle)
-                    newListTitle = ""
-                }
-            }
-            .accessibilityIdentifier("newList.create")
-            Button("Cancel", role: .cancel) { newListTitle = "" }
+        .sheet(isPresented: $showingNewList) {
+            NewListSheet(
+                title: $newListTitle,
+                onCreate: createList,
+                onCancel: cancelNewList
+            )
         }
         .sheet(isPresented: $showingArchive) {
             ArchiveView()
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            #if os(macOS)
+            Button {
+                showingNewList = true
+            } label: {
+                Label("New List", systemImage: "plus")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(.borderless)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .accessibilityIdentifier("library.newList")
+            .help("Create a new list")
+            #endif
         }
     }
 
@@ -114,5 +123,54 @@ struct LibrarySidebar: View {
         } label: {
             Label("Delete", systemImage: "trash")
         }
+    }
+
+    private func createList() {
+        let title = newListTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !title.isEmpty else { return }
+        Task {
+            await appStore.createList(title: title)
+            newListTitle = ""
+            showingNewList = false
+        }
+    }
+
+    private func cancelNewList() {
+        newListTitle = ""
+        showingNewList = false
+    }
+}
+
+private struct NewListSheet: View {
+    @Binding var title: String
+    let onCreate: () -> Void
+    let onCancel: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("New List")
+                .font(.title2.bold())
+
+            TextField("List name", text: $title)
+                .textFieldStyle(.roundedBorder)
+                .accessibilityIdentifier("newList.title")
+                .onSubmit(onCreate)
+
+            HStack {
+                Spacer()
+
+                Button("Cancel", role: .cancel, action: onCancel)
+
+                Button("Create", action: onCreate)
+                    .buttonStyle(.borderedProminent)
+                    .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .accessibilityIdentifier("newList.create")
+            }
+        }
+        .padding(20)
+        .frame(minWidth: 320)
+        #if os(macOS)
+        .frame(idealWidth: 360)
+        #endif
     }
 }

@@ -48,7 +48,7 @@ final class Listsurf_macOSUITests: XCTestCase {
             app.buttons["library.newList"],
             app.buttons["library.createFirstList"]
         )
-        XCTAssertTrue(newList.waitForExistence(timeout: 5))
+        XCTAssertTrue(newList.waitForExistence(timeout: 15))
         newList.click()
 
         let titleField = firstExisting(

@@ -65,6 +65,7 @@ final class Listsurf_iOSUITests: XCTestCase {
             app.alerts.textFields.firstMatch
         )
         XCTAssertTrue(titleField.waitForExistence(timeout: 5))
+        titleField.tap()
         titleField.typeText(title)
 
         let create = firstExisting(

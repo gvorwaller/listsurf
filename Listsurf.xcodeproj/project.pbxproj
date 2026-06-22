@@ -19,6 +19,10 @@
 		AB000000000000000000000A /* Persistence in Frameworks */ = {isa = PBXBuildFile; productRef = 47ABA88EB97275BFA6257FC4 /* Persistence */; };
 		AB000000000000000000000B /* Domain in Frameworks */ = {isa = PBXBuildFile; productRef = 3330C307246A95A02800DF07 /* Domain */; };
 		AB000000000000000000000C /* Persistence in Frameworks */ = {isa = PBXBuildFile; productRef = F1D39B35E5B78D7039B7946C /* Persistence */; };
+		AB000000000000000000000D /* ListStorePersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000006 /* ListStorePersistenceTests.swift */; };
+		AB000000000000000000000E /* ListStorePersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000006 /* ListStorePersistenceTests.swift */; };
+		AB000000000000000000000F /* Features in Frameworks */ = {isa = PBXBuildFile; productRef = EC2DEADB41298DF100C18397 /* Features */; };
+		AB0000000000000000000010 /* Features in Frameworks */ = {isa = PBXBuildFile; productRef = 74D3E44A8AB016EAD31E55B4 /* Features */; };
 		04D73B890EB765A6881B7365 /* Persistence in Frameworks */ = {isa = PBXBuildFile; productRef = F1D39B35E5B78D7039B7946C /* Persistence */; };
 		2B3F5E9CDDF2664F3C8C13BA /* ListsurfApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 381BB974398C3B1771AC6076 /* ListsurfApp.swift */; };
 		387B386B50AD3FF3A2D18E2F /* ListsurfApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 381BB974398C3B1771AC6076 /* ListsurfApp.swift */; };
@@ -54,6 +58,7 @@
 		AA0000000000000000000003 /* PersistenceStackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceTests/PersistenceStackTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000004 /* Listsurf_iOSUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iOSUITests/Listsurf_iOSUITests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000005 /* Listsurf_macOSUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macOSUITests/Listsurf_macOSUITests.swift; sourceTree = "<group>"; };
+		AA0000000000000000000006 /* ListStorePersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeaturesTests/ListStorePersistenceTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000011 /* Listsurf_iOSLogicTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Listsurf_iOSLogicTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA0000000000000000000012 /* Listsurf_macOSLogicTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Listsurf_macOSLogicTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA0000000000000000000013 /* Listsurf_iOSUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Listsurf_iOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -73,6 +78,7 @@
 			files = (
 				AB0000000000000000000009 /* Domain in Frameworks */,
 				AB000000000000000000000A /* Persistence in Frameworks */,
+				AB000000000000000000000F /* Features in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -82,6 +88,7 @@
 			files = (
 				AB000000000000000000000B /* Domain in Frameworks */,
 				AB000000000000000000000C /* Persistence in Frameworks */,
+				AB0000000000000000000010 /* Features in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -169,6 +176,7 @@
 				AA0000000000000000000001 /* ExportTests.swift */,
 				AA0000000000000000000002 /* TreeEngineTests.swift */,
 				AA0000000000000000000003 /* PersistenceStackTests.swift */,
+				AA0000000000000000000006 /* ListStorePersistenceTests.swift */,
 				AA0000000000000000000004 /* Listsurf_iOSUITests.swift */,
 				AA0000000000000000000005 /* Listsurf_macOSUITests.swift */,
 			);
@@ -193,6 +201,7 @@
 			packageProductDependencies = (
 				BCE6AF1EC704498F1C09F7A6 /* Domain */,
 				47ABA88EB97275BFA6257FC4 /* Persistence */,
+				EC2DEADB41298DF100C18397 /* Features */,
 			);
 			productName = Listsurf_iOSLogicTests;
 			productReference = AA0000000000000000000011 /* Listsurf_iOSLogicTests.xctest */;
@@ -213,6 +222,7 @@
 			packageProductDependencies = (
 				3330C307246A95A02800DF07 /* Domain */,
 				F1D39B35E5B78D7039B7946C /* Persistence */,
+				74D3E44A8AB016EAD31E55B4 /* Features */,
 			);
 			productName = Listsurf_macOSLogicTests;
 			productReference = AA0000000000000000000012 /* Listsurf_macOSLogicTests.xctest */;
@@ -379,6 +389,7 @@
 				AB0000000000000000000001 /* ExportTests.swift in Sources */,
 				AB0000000000000000000002 /* TreeEngineTests.swift in Sources */,
 				AB0000000000000000000003 /* PersistenceStackTests.swift in Sources */,
+				AB000000000000000000000D /* ListStorePersistenceTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -389,6 +400,7 @@
 				AB0000000000000000000004 /* ExportTests.swift in Sources */,
 				AB0000000000000000000005 /* TreeEngineTests.swift in Sources */,
 				AB0000000000000000000006 /* PersistenceStackTests.swift in Sources */,
+				AB000000000000000000000E /* ListStorePersistenceTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
