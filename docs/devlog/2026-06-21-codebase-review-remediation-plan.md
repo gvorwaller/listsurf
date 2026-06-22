@@ -475,10 +475,49 @@ complete.
 
 ### Remaining Phase 5 work
 
-- Move from the anonymous programmatic model to a versioned model and committed
-  migration fixtures, or provide an equivalent explicit model-versioning
-  mechanism.
-- Add migration tests that open old stores and verify upgraded data.
-- Replace remaining per-object bulk fetches with set-based fetches keyed by
-  UUID where profiling shows it matters.
 - Add performance baselines for large edits, search, expansion, and bulk saves.
+
+## Progress update — June 22, 2026, Phase 5 migration and bulk-repository slice
+
+The second Phase 5 persistence-hardening slice is complete.
+
+### Implemented
+
+- Added explicit programmatic Core Data model versions:
+  - `ListsurfModel.v1.initial`;
+  - `ListsurfModel.v2.constraints-and-indexes`.
+- Marked the current model version explicitly instead of leaving the model
+  anonymous.
+- Enabled automatic lightweight migration and inferred mapping on persistent
+  store descriptions.
+- Added a real migration fixture test:
+  - creates a SQLite store with the v1 model;
+  - inserts list and item data;
+  - opens the store through the current stack;
+  - verifies list/item data survives migration.
+- Replaced remaining per-item outline `saveAll` fetch loops with a single
+  set-based `id IN` fetch.
+- Replaced outline `deleteAll` per-id fetch loops with a single set-based
+  `id IN` fetch.
+- Added regression coverage proving bulk save updates existing rows instead of
+  duplicating them.
+- Added regression coverage proving bulk delete removes only matching IDs.
+
+### Verification
+
+- `swift test`: 87 passed, 0 failed.
+- Xcode iOS `test_sim`: 89 passed, 0 failed.
+- Xcode macOS `test_macos`: 91 passed, 0 failed.
+
+### Notes
+
+- The project still uses a programmatic model, but it now has an explicit
+  version identity and an old-store migration test. This is enough to catch
+  accidental incompatible model changes while we decide whether to move to a
+  committed `.xcdatamodeld` before CloudKit.
+
+### Remaining Phase 5 work
+
+- Add performance baselines for large edits, search, expansion, and bulk saves.
+- Profile whether additional repository fetch optimizations matter in real
+  large-list usage.

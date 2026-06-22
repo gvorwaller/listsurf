@@ -30,27 +30,24 @@ public final class CoreDataOutlineRepository: OutlineRepository, @unchecked Send
 
     public func save(_ item: OutlineItem) async throws {
         try await perform { context in
-            let request = NSFetchRequest<OutlineItemEntityMO>(entityName: "OutlineItemEntity")
-            request.predicate = NSPredicate(format: "id == %@", item.id as CVarArg)
-            request.fetchLimit = 1
-
-            let entity = try context.fetch(request).first
-                ?? OutlineItemEntityMO(entity: NSEntityDescription.entity(forEntityName: "OutlineItemEntity", in: context)!, insertInto: context)
+            let entity = try self.itemEntity(id: item.id, in: context)
             entity.update(from: item)
             try context.save()
         }
     }
 
     public func saveAll(_ items: [OutlineItem]) async throws {
+        guard !items.isEmpty else { return }
         let context = stack.newBackgroundContext()
         try await context.perform {
-            for item in items {
-                let request = NSFetchRequest<OutlineItemEntityMO>(entityName: "OutlineItemEntity")
-                request.predicate = NSPredicate(format: "id == %@", item.id as CVarArg)
-                request.fetchLimit = 1
+            let existing = try self.fetchExistingItems(
+                ids: items.map(\.id),
+                in: context
+            )
+            let existingByID = Dictionary(uniqueKeysWithValues: existing.map { ($0.id, $0) })
 
-                let entity = try context.fetch(request).first
-                    ?? OutlineItemEntityMO(entity: NSEntityDescription.entity(forEntityName: "OutlineItemEntity", in: context)!, insertInto: context)
+            for item in items {
+                let entity = existingByID[item.id] ?? self.makeItemEntity(in: context)
                 entity.update(from: item)
             }
             try context.save()
@@ -69,14 +66,12 @@ public final class CoreDataOutlineRepository: OutlineRepository, @unchecked Send
     }
 
     public func deleteAll(ids: [UUID]) async throws {
+        guard !ids.isEmpty else { return }
         let context = stack.newBackgroundContext()
         try await context.perform {
-            for id in ids {
-                let request = NSFetchRequest<OutlineItemEntityMO>(entityName: "OutlineItemEntity")
-                request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
-                for entity in try context.fetch(request) {
-                    context.delete(entity)
-                }
+            let existing = try self.fetchExistingItems(ids: ids, in: context)
+            for entity in existing {
+                context.delete(entity)
             }
             try context.save()
         }
@@ -87,5 +82,34 @@ public final class CoreDataOutlineRepository: OutlineRepository, @unchecked Send
         return try await context.perform {
             try block(context)
         }
+    }
+
+    private func itemEntity(
+        id: UUID,
+        in context: NSManagedObjectContext
+    ) throws -> OutlineItemEntityMO {
+        let request = NSFetchRequest<OutlineItemEntityMO>(entityName: "OutlineItemEntity")
+        request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+        request.fetchLimit = 1
+        return try context.fetch(request).first ?? makeItemEntity(in: context)
+    }
+
+    private func fetchExistingItems(
+        ids: [UUID],
+        in context: NSManagedObjectContext
+    ) throws -> [OutlineItemEntityMO] {
+        let request = NSFetchRequest<OutlineItemEntityMO>(entityName: "OutlineItemEntity")
+        request.predicate = NSPredicate(format: "id IN %@", ids)
+        return try context.fetch(request)
+    }
+
+    private func makeItemEntity(in context: NSManagedObjectContext) -> OutlineItemEntityMO {
+        OutlineItemEntityMO(
+            entity: NSEntityDescription.entity(
+                forEntityName: "OutlineItemEntity",
+                in: context
+            )!,
+            insertInto: context
+        )
     }
 }

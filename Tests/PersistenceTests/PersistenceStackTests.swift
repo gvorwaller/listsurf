@@ -12,6 +12,10 @@ final class PersistenceStackTests: XCTestCase {
 
     func testModelDefinesUniquenessConstraintsAndFetchIndexes() throws {
         let model = CoreDataModel.create()
+        XCTAssertEqual(
+            model.versionIdentifiers,
+            [CoreDataModelVersion.v2ConstraintsAndIndexes.rawValue]
+        )
 
         let listEntity = try XCTUnwrap(model.entitiesByName["ListEntity"])
         XCTAssertEqual(listEntity.uniquenessConstraints as? [[String]], [["id"]])
@@ -26,6 +30,41 @@ final class PersistenceStackTests: XCTestCase {
             Set(outlineEntity.indexes.map(\.name)),
             ["OutlineItemEntity_list_position", "OutlineItemEntity_list_parent_position"]
         )
+    }
+
+    func testCurrentStackMigratesV1Store() async throws {
+        let storeURL = try temporaryStoreURL()
+        defer { removeStoreFiles(at: storeURL) }
+
+        let list = ListItem(
+            title: "Migrated List",
+            notes: "Created with v1 model",
+            icon: "suitcase.fill",
+            colorName: "blue"
+        )
+        let item = OutlineItem(
+            listID: list.id,
+            title: "Migrated Item",
+            notes: "Still here",
+            quantity: 2,
+            isChecked: true
+        )
+        try createV1Store(at: storeURL, list: list, items: [item])
+
+        let stack = PersistenceStack(storeURL: storeURL)
+        XCTAssertNil(stack.storeLoadError)
+
+        let listRepo = CoreDataListRepository(stack: stack)
+        let itemRepo = CoreDataOutlineRepository(stack: stack)
+        let migratedList = try await listRepo.fetch(id: list.id)
+        let migratedItems = try await itemRepo.fetchItems(forList: list.id)
+
+        XCTAssertEqual(migratedList?.title, "Migrated List")
+        XCTAssertEqual(migratedList?.notes, "Created with v1 model")
+        XCTAssertEqual(migratedItems.count, 1)
+        XCTAssertEqual(migratedItems.first?.title, "Migrated Item")
+        XCTAssertEqual(migratedItems.first?.quantity, 2)
+        XCTAssertEqual(migratedItems.first?.isChecked, true)
     }
 
     func testSaveAndFetchList() async throws {
@@ -111,6 +150,39 @@ final class PersistenceStackTests: XCTestCase {
         XCTAssertEqual(fetched.count, 10)
     }
 
+    func testBulkSaveUpdatesExistingItems() async throws {
+        let stack = PersistenceStack.inMemory()
+        let itemRepo = CoreDataOutlineRepository(stack: stack)
+        let listID = UUID()
+        let item = OutlineItem(listID: listID, title: "Original", position: 1.0)
+        try await itemRepo.saveAll([item])
+
+        var updated = item
+        updated.title = "Updated"
+        updated.quantity = 4
+        try await itemRepo.saveAll([updated])
+
+        let fetched = try await itemRepo.fetchItems(forList: listID)
+        XCTAssertEqual(fetched.count, 1)
+        XCTAssertEqual(fetched[0].id, item.id)
+        XCTAssertEqual(fetched[0].title, "Updated")
+        XCTAssertEqual(fetched[0].quantity, 4)
+    }
+
+    func testBulkDeleteRemovesOnlyMatchingItems() async throws {
+        let stack = PersistenceStack.inMemory()
+        let itemRepo = CoreDataOutlineRepository(stack: stack)
+        let listID = UUID()
+        let deleted = OutlineItem(listID: listID, title: "Deleted", position: 1.0)
+        let kept = OutlineItem(listID: listID, title: "Kept", position: 2.0)
+        try await itemRepo.saveAll([deleted, kept])
+
+        try await itemRepo.deleteAll(ids: [deleted.id, UUID()])
+
+        let fetched = try await itemRepo.fetchItems(forList: listID)
+        XCTAssertEqual(fetched.map(\.id), [kept.id])
+    }
+
     func testAtomicSaveCreatesListAndItems() async throws {
         let stack = PersistenceStack.inMemory()
         let listRepo = CoreDataListRepository(stack: stack)
@@ -145,4 +217,73 @@ final class PersistenceStackTests: XCTestCase {
         XCTAssertNil(deletedList)
         XCTAssertTrue(remainingItems.isEmpty)
     }
+
+    private func createV1Store(
+        at storeURL: URL,
+        list: ListItem,
+        items: [OutlineItem]
+    ) throws {
+        removeStoreFiles(at: storeURL)
+        try FileManager.default.createDirectory(
+            at: storeURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+
+        let container = NSPersistentContainer(
+            name: "Listsurf",
+            managedObjectModel: CoreDataModel.create(version: .v1Initial)
+        )
+        let description = NSPersistentStoreDescription(url: storeURL)
+        container.persistentStoreDescriptions = [description]
+
+        let loadResult = StoreLoadResult()
+        let semaphore = DispatchSemaphore(value: 0)
+        container.loadPersistentStores { _, error in
+            loadResult.error = error
+            semaphore.signal()
+        }
+        semaphore.wait()
+        if let error = loadResult.error {
+            throw error
+        }
+
+        let context = container.viewContext
+        let listEntity = ListEntityMO(
+            entity: NSEntityDescription.entity(forEntityName: "ListEntity", in: context)!,
+            insertInto: context
+        )
+        listEntity.update(from: list)
+
+        for item in items {
+            let itemEntity = OutlineItemEntityMO(
+                entity: NSEntityDescription.entity(
+                    forEntityName: "OutlineItemEntity",
+                    in: context
+                )!,
+                insertInto: context
+            )
+            itemEntity.update(from: item)
+        }
+
+        try context.save()
+    }
+
+    private func temporaryStoreURL() throws -> URL {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ListsurfMigrationTests", isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return directory.appendingPathComponent("migration.sqlite")
+    }
+
+    private func removeStoreFiles(at storeURL: URL) {
+        for suffix in ["", "-wal", "-shm"] {
+            try? FileManager.default.removeItem(atPath: storeURL.path + suffix)
+        }
+        try? FileManager.default.removeItem(at: storeURL.deletingLastPathComponent())
+    }
+}
+
+private final class StoreLoadResult: @unchecked Sendable {
+    var error: Error?
 }

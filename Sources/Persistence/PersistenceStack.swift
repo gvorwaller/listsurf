@@ -18,6 +18,7 @@ public final class PersistenceStack: Sendable {
         if inMemory {
             let description = NSPersistentStoreDescription()
             description.type = NSInMemoryStoreType
+            Self.configureMigrationOptions(description)
             container.persistentStoreDescriptions = [description]
         } else if let storeURL {
             let directory = storeURL.deletingLastPathComponent()
@@ -29,6 +30,7 @@ public final class PersistenceStack: Sendable {
                 Self.removeStoreFiles(at: storeURL)
             }
             let description = NSPersistentStoreDescription(url: storeURL)
+            Self.configureMigrationOptions(description)
             container.persistentStoreDescriptions = [description]
         }
 
@@ -86,6 +88,11 @@ public final class PersistenceStack: Sendable {
         for suffix in ["", "-wal", "-shm"] {
             try? fileManager.removeItem(atPath: storeURL.path + suffix)
         }
+    }
+
+    private static func configureMigrationOptions(_ description: NSPersistentStoreDescription) {
+        description.setOption(true as NSNumber, forKey: NSMigratePersistentStoresAutomaticallyOption)
+        description.setOption(true as NSNumber, forKey: NSInferMappingModelAutomaticallyOption)
     }
 }
 

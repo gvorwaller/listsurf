@@ -1,8 +1,16 @@
 import CoreData
 
+enum CoreDataModelVersion: String, CaseIterable {
+    case v1Initial = "ListsurfModel.v1.initial"
+    case v2ConstraintsAndIndexes = "ListsurfModel.v2.constraints-and-indexes"
+
+    static let current: CoreDataModelVersion = .v2ConstraintsAndIndexes
+}
+
 enum CoreDataModel {
-    static func create() -> NSManagedObjectModel {
+    static func create(version: CoreDataModelVersion = .current) -> NSManagedObjectModel {
         let model = NSManagedObjectModel()
+        model.versionIdentifiers = [version.rawValue]
 
         let listEntity = NSEntityDescription()
         listEntity.name = "ListEntity"
@@ -33,17 +41,6 @@ enum CoreDataModel {
             listUpdatedAt,
             listArchivedAt,
         ]
-        listEntity.uniquenessConstraints = [["id"]]
-        listEntity.indexes = [
-            fetchIndex(
-                name: "ListEntity_active_position",
-                properties: [listArchivedAt, listPosition]
-            ),
-            fetchIndex(
-                name: "ListEntity_archived_position",
-                properties: [listArchivedAt, listPosition]
-            ),
-        ]
 
         let outlineID = attribute("id", .UUIDAttributeType)
         let outlineListID = attribute("listID", .UUIDAttributeType)
@@ -68,17 +65,34 @@ enum CoreDataModel {
             outlineCreatedAt,
             outlineUpdatedAt,
         ]
-        outlineItemEntity.uniquenessConstraints = [["id"]]
-        outlineItemEntity.indexes = [
-            fetchIndex(
-                name: "OutlineItemEntity_list_position",
-                properties: [outlineListID, outlinePosition]
-            ),
-            fetchIndex(
-                name: "OutlineItemEntity_list_parent_position",
-                properties: [outlineListID, outlineParentID, outlinePosition]
-            ),
-        ]
+
+        switch version {
+        case .v1Initial:
+            break
+        case .v2ConstraintsAndIndexes:
+            listEntity.uniquenessConstraints = [["id"]]
+            listEntity.indexes = [
+                fetchIndex(
+                    name: "ListEntity_active_position",
+                    properties: [listArchivedAt, listPosition]
+                ),
+                fetchIndex(
+                    name: "ListEntity_archived_position",
+                    properties: [listArchivedAt, listPosition]
+                ),
+            ]
+            outlineItemEntity.uniquenessConstraints = [["id"]]
+            outlineItemEntity.indexes = [
+                fetchIndex(
+                    name: "OutlineItemEntity_list_position",
+                    properties: [outlineListID, outlinePosition]
+                ),
+                fetchIndex(
+                    name: "OutlineItemEntity_list_parent_position",
+                    properties: [outlineListID, outlineParentID, outlinePosition]
+                ),
+            ]
+        }
 
         model.entities = [listEntity, outlineItemEntity]
         return model
