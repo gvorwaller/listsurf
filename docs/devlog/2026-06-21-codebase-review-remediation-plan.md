@@ -682,3 +682,52 @@ context menus, keyboard shortcuts, or unlabeled toolbar icons.
   path.
 - Keyboard command polish is still useful, but it should not be the only route
   to critical edit operations.
+
+## Progress update — June 22, 2026, iOS touch-first editor controls
+
+The editor now prioritizes touch-first iPhone/iPad workflows. This explicitly
+deprioritizes external-keyboard assumptions on iPad.
+
+### Implemented
+
+- Added an iOS-only selected-item action bar at the bottom of the editor with:
+  - add below;
+  - add child;
+  - indent;
+  - outdent;
+  - move up;
+  - move down;
+  - details;
+  - delete.
+- Added an iOS software-keyboard accessory toolbar while adding/editing items:
+  - Cancel;
+  - Below;
+  - Child;
+  - Indent;
+  - Outdent;
+  - Done.
+- Changed Add Child from immediate placeholder insertion to a type-first flow:
+  tapping Child opens the add field and inserts the submitted text as a child.
+- Changed Add Below to use the same type-first flow.
+- When the rapid-entry add field is empty and the user taps an existing row,
+  the add field closes so the selected-item action bar is visible.
+- Kept macOS out of the iOS-only modifier path so Mac bulk-entry behavior stays
+  stable.
+- Extended the iOS UI test to exercise the touch-first child insertion path:
+  select an item, tap Child in the bottom action bar, enter a child item, and
+  verify it appears.
+
+### Verification
+
+- `swift test --quiet`: 95 passed, 0 failed.
+- Xcode iOS simulator `test_sim`: 98 passed, 0 failed.
+- Xcode macOS `test_macos`: 100 passed, 0 failed.
+
+### Notes
+
+- The iOS software-keyboard accessory is implemented but should still get a
+  manual device pass. UI automation can verify the selected-item action bar
+  reliably; native software-keyboard accessory bars are more brittle under
+  XCTest.
+- The Mac app remains useful for mass entry, but ongoing UX priority should be
+  touch-first iOS editing/checking.

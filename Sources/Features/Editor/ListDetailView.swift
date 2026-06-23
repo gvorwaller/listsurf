@@ -185,7 +185,7 @@ struct ListDetailView: View {
         }
 
         Button {
-            store.addChild(parentID: itemID, title: "New Item", undoManager: undoManager)
+            requestAdd(childOfID: itemID)
         } label: {
             Label("Add Child", systemImage: "arrow.turn.down.right")
         }
@@ -280,7 +280,7 @@ struct ListDetailView: View {
                 store.insertAbove(referenceID: selectedID, title: "New Item", undoManager: undoManager)
             }
             actions.addChild = {
-                store.addChild(parentID: selectedID, title: "New Item", undoManager: undoManager)
+                requestAdd(childOfID: selectedID)
             }
             actions.indent = {
                 store.indent(itemID: selectedID, undoManager: undoManager)
@@ -313,6 +313,10 @@ struct ListDetailView: View {
 
     private func requestAdd(afterID: UUID?) {
         addRequest = OutlineAddRequest(afterID: afterID)
+    }
+
+    private func requestAdd(childOfID: UUID) {
+        addRequest = OutlineAddRequest(childOfID: childOfID)
     }
 
     private func syncListMetadata(from lists: [ListItem]) {

@@ -105,7 +105,11 @@ final class Listsurf_macOSUITests: XCTestCase {
         XCTAssertTrue(addItem.waitForExistence(timeout: 5))
         addItem.click()
 
-        let itemField = app.textFields["editor.newItem"]
+        let itemField = firstExisting(
+            app.textFields["editor.newItem"],
+            app.textFields["New item"],
+            app.textFields.firstMatch
+        )
         XCTAssertTrue(itemField.waitForExistence(timeout: 5))
         itemField.click()
         itemField.typeText("\(title)\n")

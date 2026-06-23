@@ -51,6 +51,20 @@ final class Listsurf_iOSUITests: XCTestCase {
 
         XCTAssertTrue(app.buttons["editor.rowActions"].firstMatch.waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["editor.deleteItem"].firstMatch.waitForExistence(timeout: 5))
+
+        let item = app.staticTexts["Indentable Item"]
+        XCTAssertTrue(item.waitForExistence(timeout: 5))
+        item.tap()
+
+        XCTAssertTrue(app.buttons["editor.ios.addChild"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["editor.ios.indent"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["editor.ios.outdent"].waitForExistence(timeout: 5))
+
+        app.buttons["editor.ios.addChild"].tap()
+        let childField = app.textFields["editor.newItem"]
+        XCTAssertTrue(childField.waitForExistence(timeout: 5))
+        childField.typeText("Child Item\n")
+        XCTAssertTrue(app.staticTexts["Child Item"].waitForExistence(timeout: 5))
     }
 
     @MainActor private func launchApp(store: String, reset: Bool) -> XCUIApplication {

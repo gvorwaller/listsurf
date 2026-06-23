@@ -1,9 +1,23 @@
 import SwiftUI
 import Domain
 
+enum OutlineAddPlacement: Equatable {
+    case root
+    case below(UUID)
+    case child(UUID)
+}
+
 struct OutlineAddRequest: Equatable {
     let id = UUID()
-    let afterID: UUID?
+    let placement: OutlineAddPlacement
+
+    init(afterID: UUID?) {
+        placement = afterID.map(OutlineAddPlacement.below) ?? .root
+    }
+
+    init(childOfID: UUID) {
+        placement = .child(childOfID)
+    }
 }
 
 struct OutlineEditorView: View {
@@ -14,12 +28,33 @@ struct OutlineEditorView: View {
     @State private var editingItemID: UUID?
     @State private var editingText = ""
     @State private var showingAddField = false
-    @State private var addingAfterID: UUID?
+    @State private var addPlacement: OutlineAddPlacement = .root
     @State private var newItemText = ""
     @State private var itemPendingDeletion: ItemDeletionConfirmation?
     @FocusState private var addFieldFocused: Bool
 
     var body: some View {
+        #if os(iOS)
+        editorContent
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                selectedItemActionBar
+            }
+            .modifier(KeyboardAccessoryModifier(
+                isVisible: showingAddField || editingItemID != nil,
+                onCancel: cancelTextEntry,
+                onDone: commitTextEntry,
+                onAddBelow: { selectedRow.map { beginAdding(.below($0.id)) } },
+                onAddChild: { selectedRow.map { beginAdding(.child($0.id)) } },
+                onIndent: { selectedRow.map { store.indent(itemID: $0.id, undoManager: undoManager) } },
+                onOutdent: { selectedRow.map { store.outdent(itemID: $0.id, undoManager: undoManager) } },
+                hasSelectedItem: selectedRow != nil
+            ))
+        #else
+        editorContent
+        #endif
+    }
+
+    private var editorContent: some View {
         Group {
             if store.filteredRows.isEmpty && !showingAddField && store.searchText.isEmpty {
                 emptyState
@@ -33,7 +68,7 @@ struct OutlineEditorView: View {
         .onChange(of: addRequest) { _, newValue in
             if let newValue {
                 addRequest = nil
-                beginAdding(afterID: newValue.afterID)
+                beginAdding(newValue.placement)
             }
         }
         .confirmationDialog(
@@ -60,7 +95,7 @@ struct OutlineEditorView: View {
             Text("Add your first item, or paste multiple lines.")
         } actions: {
             Button("Add Item") {
-                beginAdding(afterID: nil)
+                beginAdding(.root)
             }
             .buttonStyle(.borderedProminent)
             .accessibilityIdentifier("editor.addFirstItem")
@@ -129,11 +164,87 @@ struct OutlineEditorView: View {
         .animation(.default, value: store.flatRows.map(\.id))
     }
 
+    #if os(iOS)
+    @ViewBuilder
+    private var selectedItemActionBar: some View {
+        if let row = selectedRow, !showingAddField {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    Button {
+                        beginAdding(.below(row.id))
+                    } label: {
+                        Label("Below", systemImage: "plus")
+                    }
+                    .accessibilityIdentifier("editor.ios.addBelow")
+
+                    Button {
+                        beginAdding(.child(row.id))
+                    } label: {
+                        Label("Child", systemImage: "arrow.turn.down.right")
+                    }
+                    .accessibilityIdentifier("editor.ios.addChild")
+
+                    Button {
+                        store.indent(itemID: row.id, undoManager: undoManager)
+                    } label: {
+                        Label("Indent", systemImage: "increase.indent")
+                    }
+                    .accessibilityIdentifier("editor.ios.indent")
+
+                    Button {
+                        store.outdent(itemID: row.id, undoManager: undoManager)
+                    } label: {
+                        Label("Outdent", systemImage: "decrease.indent")
+                    }
+                    .accessibilityIdentifier("editor.ios.outdent")
+
+                    Button {
+                        store.moveUp(itemID: row.id, undoManager: undoManager)
+                    } label: {
+                        Label("Up", systemImage: "arrow.up")
+                    }
+                    .accessibilityIdentifier("editor.ios.moveUp")
+
+                    Button {
+                        store.moveDown(itemID: row.id, undoManager: undoManager)
+                    } label: {
+                        Label("Down", systemImage: "arrow.down")
+                    }
+                    .accessibilityIdentifier("editor.ios.moveDown")
+
+                    Button {
+                        inspectorItemID = row.id
+                    } label: {
+                        Label("Details", systemImage: "info.circle")
+                    }
+                    .accessibilityIdentifier("editor.ios.details")
+
+                    Button(role: .destructive) {
+                        requestDelete(row)
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                    .accessibilityIdentifier("editor.ios.delete")
+                }
+                .labelStyle(.titleAndIcon)
+                .buttonStyle(.bordered)
+                .controlSize(.regular)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+            }
+            .background(.regularMaterial)
+            .overlay(alignment: .top) { Divider() }
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("editor.ios.actionBar")
+        }
+    }
+    #endif
+
     private var addItemField: some View {
         HStack {
             Image(systemName: "plus.circle.fill")
                 .foregroundStyle(.green)
-            TextField("New item", text: $newItemText)
+            TextField(addPlaceholder, text: $newItemText)
                 .accessibilityIdentifier("editor.newItem")
                 .focused($addFieldFocused)
                 .onSubmit { commitNewItem() }
@@ -146,12 +257,15 @@ struct OutlineEditorView: View {
 
     private func select(_ row: FlatRow) {
         addFieldFocused = false
+        if showingAddField && newItemText.isEmpty {
+            cancelAdding()
+        }
         store.selectedItemIDs = [row.id]
         inspectorItemID = row.id
     }
 
-    private func beginAdding(afterID: UUID?) {
-        addingAfterID = afterID
+    private func beginAdding(_ placement: OutlineAddPlacement) {
+        addPlacement = placement
         newItemText = ""
         showingAddField = true
         addFieldFocused = true
@@ -159,7 +273,7 @@ struct OutlineEditorView: View {
 
     private func cancelAdding() {
         showingAddField = false
-        addingAfterID = nil
+        addPlacement = .root
         newItemText = ""
     }
 
@@ -181,7 +295,14 @@ struct OutlineEditorView: View {
             cancelAdding()
             return
         }
-        store.addItem(title: text, afterItemID: addingAfterID, undoManager: undoManager)
+        switch addPlacement {
+        case .root:
+            store.addItem(title: text, undoManager: undoManager)
+        case .below(let itemID):
+            store.addItem(title: text, afterItemID: itemID, undoManager: undoManager)
+        case .child(let itemID):
+            store.addChild(parentID: itemID, title: text, undoManager: undoManager)
+        }
         newItemText = ""
         addFieldFocused = true
     }
@@ -189,7 +310,7 @@ struct OutlineEditorView: View {
     @ViewBuilder
     private func rowContextMenu(_ row: FlatRow) -> some View {
         Button {
-            beginAdding(afterID: row.id)
+            beginAdding(.below(row.id))
         } label: {
             Label("Add Below", systemImage: "plus")
         }
@@ -201,7 +322,7 @@ struct OutlineEditorView: View {
         }
 
         Button {
-            store.addChild(parentID: row.id, title: "New Item", undoManager: undoManager)
+            beginAdding(.child(row.id))
         } label: {
             Label("Add Child", systemImage: "arrow.turn.down.right")
         }
@@ -262,6 +383,100 @@ struct OutlineEditorView: View {
             get: { itemPendingDeletion != nil },
             set: { if !$0 { itemPendingDeletion = nil } }
         )
+    }
+
+    private var selectedRow: FlatRow? {
+        guard store.selectedItemIDs.count == 1,
+              let selectedID = store.selectedItemIDs.first else {
+            return nil
+        }
+        return store.flatRows.first { $0.id == selectedID }
+    }
+
+    private var addPlaceholder: String {
+        switch addPlacement {
+        case .root:
+            "New item"
+        case .below:
+            "New item below"
+        case .child:
+            "New child item"
+        }
+    }
+
+    private func cancelTextEntry() {
+        if showingAddField {
+            cancelAdding()
+        }
+        if editingItemID != nil {
+            editingItemID = nil
+            editingText = ""
+        }
+    }
+
+    private func commitTextEntry() {
+        if let editingItemID {
+            commitEdit(editingItemID)
+        } else if showingAddField {
+            commitNewItem()
+        }
+    }
+}
+
+private struct KeyboardAccessoryModifier: ViewModifier {
+    let isVisible: Bool
+    let onCancel: () -> Void
+    let onDone: () -> Void
+    let onAddBelow: () -> Void
+    let onAddChild: () -> Void
+    let onIndent: () -> Void
+    let onOutdent: () -> Void
+    let hasSelectedItem: Bool
+
+    func body(content: Content) -> some View {
+        #if os(iOS)
+        content
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    if isVisible {
+                        Button("Cancel", action: onCancel)
+                            .accessibilityIdentifier("editor.keyboard.cancel")
+
+                        Spacer()
+
+                        Button("Below", action: onAddBelow)
+                            .disabled(!hasSelectedItem)
+                            .accessibilityIdentifier("editor.keyboard.addBelow")
+
+                        Button("Child", action: onAddChild)
+                            .disabled(!hasSelectedItem)
+                            .accessibilityIdentifier("editor.keyboard.addChild")
+
+                        Button {
+                            onIndent()
+                        } label: {
+                            Image(systemName: "increase.indent")
+                        }
+                        .disabled(!hasSelectedItem)
+                        .accessibilityIdentifier("editor.keyboard.indent")
+
+                        Button {
+                            onOutdent()
+                        } label: {
+                            Image(systemName: "decrease.indent")
+                        }
+                        .disabled(!hasSelectedItem)
+                        .accessibilityIdentifier("editor.keyboard.outdent")
+
+                        Button("Done", action: onDone)
+                            .bold()
+                            .accessibilityIdentifier("editor.keyboard.done")
+                    }
+                }
+            }
+        #else
+        content
+        #endif
     }
 }
 
