@@ -58,6 +58,7 @@ final class Listsurf_macOSUITests: XCTestCase {
         XCTAssertTrue(app.buttons["library.importBackup.visible"].waitForExistence(timeout: 15))
         XCTAssertTrue(app.buttons["library.exportBackup.visible"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["library.archive.visible"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["library.help.visible"].waitForExistence(timeout: 5))
 
         createList(named: "Visible Mac Actions List", in: app)
         addItem(named: "Indentable Mac Item", in: app)
@@ -67,6 +68,24 @@ final class Listsurf_macOSUITests: XCTestCase {
             app.menuButtons["editor.rowActions"].firstMatch
         )
         XCTAssertTrue(rowActions.waitForExistence(timeout: 5))
+    }
+
+    @MainActor func testHelpOpensFromLibrary() {
+        continueAfterFailure = false
+        let app = launchApp(store: "mac-help", reset: true)
+
+        let help = firstExisting(
+            app.buttons["library.help.visible"],
+            app.buttons["library.help.empty"]
+        )
+        XCTAssertTrue(help.waitForExistence(timeout: 15))
+        help.click()
+
+        XCTAssertTrue(app.staticTexts["Listsurf Help"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Start here"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Mac use"].waitForExistence(timeout: 5))
+        app.buttons["help.done"].click()
+        XCTAssertFalse(app.staticTexts["Listsurf Help"].waitForExistence(timeout: 2))
     }
 
     @MainActor private func launchApp(store: String, reset: Bool) -> XCUIApplication {

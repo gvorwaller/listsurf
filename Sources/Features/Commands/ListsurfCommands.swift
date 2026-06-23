@@ -27,6 +27,14 @@ public struct ListsurfCommands: Commands {
             .disabled(appCommands == nil)
         }
 
+        CommandGroup(replacing: .help) {
+            Button("Listsurf Help") {
+                appCommands?.showHelp()
+            }
+            .keyboardShortcut("?", modifiers: [.command])
+            .disabled(appCommands == nil)
+        }
+
         CommandMenu("Item") {
             Button("Add Item Below") {
                 listCommands?.addBelow?()

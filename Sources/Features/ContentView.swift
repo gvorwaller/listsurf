@@ -11,6 +11,7 @@ public struct ContentView: View {
     @State private var newListColorName = ListColor.blue.rawValue
     @State private var showingImporter = false
     @State private var showingExporter = false
+    @State private var showingHelp = false
     @State private var exportDocument = ListsurfBackupDocument()
     @State private var exportFilename = "Listsurf Backup.json"
     @State private var pendingImport: PendingLibraryImport?
@@ -27,7 +28,8 @@ public struct ContentView: View {
                     LibrarySidebar(
                         onNewList: beginNewList,
                         onImportBackup: beginImportBackup,
-                        onExportBackup: beginExportBackup
+                        onExportBackup: beginExportBackup,
+                        onShowHelp: showHelp
                     )
                 } detail: {
                     if let selectedID = appStore.selectedListID {
@@ -67,7 +69,8 @@ public struct ContentView: View {
             ListsurfAppCommandActions(
                 newList: beginNewList,
                 importBackup: beginImportBackup,
-                exportBackup: beginExportBackup
+                exportBackup: beginExportBackup,
+                showHelp: showHelp
             )
         )
         .fileImporter(
@@ -99,6 +102,11 @@ public struct ContentView: View {
             defaultFilename: exportFilename,
             onCompletion: handleExportCompletion
         )
+        .sheet(isPresented: $showingHelp) {
+            ListsurfHelpView {
+                showingHelp = false
+            }
+        }
         .task {
             if case .storeCorrupted = appStore.errorStore.current?.error {
                 return
@@ -131,6 +139,10 @@ public struct ContentView: View {
                 // AppStore already presents the export failure through the shared error store.
             }
         }
+    }
+
+    private func showHelp() {
+        showingHelp = true
     }
 
     private func createList() {

@@ -6,6 +6,7 @@ struct LibrarySidebar: View {
     let onNewList: () -> Void
     let onImportBackup: () -> Void
     let onExportBackup: () -> Void
+    let onShowHelp: () -> Void
     @State private var searchText = ""
     @State private var showingArchive = false
     @State private var listPendingDeletion: ListDeletionConfirmation?
@@ -14,11 +15,13 @@ struct LibrarySidebar: View {
     init(
         onNewList: @escaping () -> Void = {},
         onImportBackup: @escaping () -> Void = {},
-        onExportBackup: @escaping () -> Void = {}
+        onExportBackup: @escaping () -> Void = {},
+        onShowHelp: @escaping () -> Void = {}
     ) {
         self.onNewList = onNewList
         self.onImportBackup = onImportBackup
         self.onExportBackup = onExportBackup
+        self.onShowHelp = onShowHelp
     }
 
     var body: some View {
@@ -45,6 +48,13 @@ struct LibrarySidebar: View {
                     Label("Archive", systemImage: "archivebox")
                 }
                 .accessibilityIdentifier("library.archive.visible")
+
+                Button {
+                    onShowHelp()
+                } label: {
+                    Label("Help", systemImage: "questionmark.circle")
+                }
+                .accessibilityIdentifier("library.help.visible")
             }
 
             if filteredLists.isEmpty && searchText.isEmpty {
@@ -91,6 +101,27 @@ struct LibrarySidebar: View {
                 .help("View archived lists")
 
                 Menu {
+                    Button(action: onShowHelp) {
+                        Label("Help", systemImage: "questionmark.circle")
+                    }
+                    .accessibilityIdentifier("library.help")
+
+                    Divider()
+
+                    Button(action: onNewList) {
+                        Label("New List", systemImage: "plus")
+                    }
+                    .accessibilityIdentifier("library.menu.newList")
+
+                    Button {
+                        showingArchive = true
+                    } label: {
+                        Label("Archive", systemImage: "archivebox")
+                    }
+                    .accessibilityIdentifier("library.menu.archive")
+
+                    Divider()
+
                     Button {
                         onImportBackup()
                     } label: {
@@ -105,10 +136,10 @@ struct LibrarySidebar: View {
                     }
                     .accessibilityIdentifier("library.exportBackup")
                 } label: {
-                    Label("Backups", systemImage: "externaldrive")
+                    Label("Menu", systemImage: "line.3.horizontal")
                 }
-                .accessibilityIdentifier("library.backupMenu")
-                .help("Import or export a library backup")
+                .accessibilityIdentifier("library.appMenu")
+                .help("Open Listsurf actions and help")
             }
         }
         .sheet(isPresented: $showingArchive) {
@@ -191,6 +222,9 @@ struct LibrarySidebar: View {
 
                 Button("Import Backup…", action: onImportBackup)
                     .accessibilityIdentifier("library.importFirstBackup")
+
+                Button("Help", action: onShowHelp)
+                    .accessibilityIdentifier("library.help.empty")
             }
         }
     }

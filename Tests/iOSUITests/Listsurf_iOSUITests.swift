@@ -45,6 +45,7 @@ final class Listsurf_iOSUITests: XCTestCase {
         XCTAssertTrue(app.buttons["library.importBackup.visible"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["library.exportBackup.visible"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["library.archive.visible"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["library.help.visible"].waitForExistence(timeout: 5))
 
         createList(named: "Visible Actions List", in: app)
         addItem(named: "Indentable Item", in: app)
@@ -65,6 +66,24 @@ final class Listsurf_iOSUITests: XCTestCase {
         XCTAssertTrue(childField.waitForExistence(timeout: 5))
         childField.typeText("Child Item\n")
         XCTAssertTrue(app.staticTexts["Child Item"].waitForExistence(timeout: 5))
+    }
+
+    @MainActor func testHelpOpensFromLibrary() {
+        continueAfterFailure = false
+        let app = launchApp(store: "ios-help", reset: true)
+
+        let help = firstExisting(
+            app.buttons["library.help.visible"],
+            app.buttons["library.help.empty"]
+        )
+        XCTAssertTrue(help.waitForExistence(timeout: 5))
+        help.tap()
+
+        XCTAssertTrue(app.staticTexts["Listsurf Help"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Start here"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["iPhone and iPad touch controls"].waitForExistence(timeout: 5))
+        app.buttons["help.done"].tap()
+        XCTAssertFalse(app.staticTexts["Listsurf Help"].waitForExistence(timeout: 2))
     }
 
     @MainActor private func launchApp(store: String, reset: Bool) -> XCUIApplication {

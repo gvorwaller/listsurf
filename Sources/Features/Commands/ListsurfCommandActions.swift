@@ -4,6 +4,7 @@ struct ListsurfAppCommandActions {
     let newList: @MainActor () -> Void
     let importBackup: @MainActor () -> Void
     let exportBackup: @MainActor () -> Void
+    let showHelp: @MainActor () -> Void
 }
 
 struct ListsurfListCommandActions {
