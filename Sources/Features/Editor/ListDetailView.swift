@@ -136,6 +136,8 @@ struct ListDetailView: View {
         .accessibilityIdentifier("editor.addItem")
         .help("Add a new item")
 
+        selectedItemToolbarMenu(store)
+
         Button {
             store.expandAll()
         } label: {
@@ -149,6 +151,82 @@ struct ListDetailView: View {
             Label("Collapse All", systemImage: "arrow.up.left.and.arrow.down.right")
         }
         .help("Collapse all branches")
+    }
+
+    @ViewBuilder
+    private func selectedItemToolbarMenu(_ store: ListStore) -> some View {
+        let selectedID = singleSelectedItemID(in: store)
+        Menu {
+            if let selectedID {
+                itemActionMenu(for: selectedID, in: store)
+            } else {
+                Text("Select an item first")
+            }
+        } label: {
+            Label("Item Actions", systemImage: "ellipsis.circle")
+        }
+        .disabled(selectedID == nil)
+        .accessibilityIdentifier("editor.itemActions")
+        .help("Add, indent, move, rename, or delete the selected item")
+    }
+
+    @ViewBuilder
+    private func itemActionMenu(for itemID: UUID, in store: ListStore) -> some View {
+        Button {
+            requestAdd(afterID: itemID)
+        } label: {
+            Label("Add Below", systemImage: "plus")
+        }
+
+        Button {
+            store.insertAbove(referenceID: itemID, title: "New Item", undoManager: undoManager)
+        } label: {
+            Label("Add Above", systemImage: "arrow.up")
+        }
+
+        Button {
+            store.addChild(parentID: itemID, title: "New Item", undoManager: undoManager)
+        } label: {
+            Label("Add Child", systemImage: "arrow.turn.down.right")
+        }
+
+        Divider()
+
+        Button {
+            store.indent(itemID: itemID, undoManager: undoManager)
+        } label: {
+            Label("Indent", systemImage: "increase.indent")
+        }
+
+        Button {
+            store.outdent(itemID: itemID, undoManager: undoManager)
+        } label: {
+            Label("Outdent", systemImage: "decrease.indent")
+        }
+
+        Divider()
+
+        Button {
+            store.moveUp(itemID: itemID, undoManager: undoManager)
+        } label: {
+            Label("Move Up", systemImage: "arrow.up")
+        }
+
+        Button {
+            store.moveDown(itemID: itemID, undoManager: undoManager)
+        } label: {
+            Label("Move Down", systemImage: "arrow.down")
+        }
+
+        Divider()
+
+        Button(role: .destructive) {
+            selectedItemsPendingDeletion = SelectedItemsDeletionConfirmation(
+                selectedCount: store.selectedItemIDs.count
+            )
+        } label: {
+            Label("Delete", systemImage: "trash")
+        }
     }
 
     @ViewBuilder

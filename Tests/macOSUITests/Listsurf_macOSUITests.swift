@@ -20,7 +20,7 @@ final class Listsurf_macOSUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Passport"].waitForExistence(timeout: 5))
     }
 
-    @MainActor func testCommandDeleteRequiresConfirmation() {
+    @MainActor func testVisibleDeleteRequiresConfirmation() {
         continueAfterFailure = false
         let app = launchApp(store: "mac-delete-confirmation", reset: true)
         createList(named: "Delete Confirmation List", in: app)
@@ -28,9 +28,11 @@ final class Listsurf_macOSUITests: XCTestCase {
 
         let item = app.staticTexts["Temporary Item"]
         XCTAssertTrue(item.waitForExistence(timeout: 5))
-        item.click()
 
-        app.typeKey(.delete, modifierFlags: .command)
+        let deleteItem = app.buttons["editor.deleteItem"].firstMatch
+        XCTAssertTrue(deleteItem.waitForExistence(timeout: 5))
+        deleteItem.click()
+
         let deleteButton = app.sheets.buttons["Delete Item"].firstMatch
         XCTAssertTrue(deleteButton.waitForExistence(timeout: 5))
         XCTAssertTrue(item.exists)
@@ -47,6 +49,24 @@ final class Listsurf_macOSUITests: XCTestCase {
         relaunch(app, reset: false)
 
         XCTAssertTrue(app.staticTexts["Persistent Mac List"].waitForExistence(timeout: 5))
+    }
+
+    @MainActor func testCoreActionsAreVisible() {
+        continueAfterFailure = false
+        let app = launchApp(store: "mac-visible-actions", reset: true)
+
+        XCTAssertTrue(app.buttons["library.importBackup.visible"].waitForExistence(timeout: 15))
+        XCTAssertTrue(app.buttons["library.exportBackup.visible"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["library.archive.visible"].waitForExistence(timeout: 5))
+
+        createList(named: "Visible Mac Actions List", in: app)
+        addItem(named: "Indentable Mac Item", in: app)
+
+        let rowActions = firstExisting(
+            app.buttons["editor.rowActions"].firstMatch,
+            app.menuButtons["editor.rowActions"].firstMatch
+        )
+        XCTAssertTrue(rowActions.waitForExistence(timeout: 5))
     }
 
     @MainActor private func launchApp(store: String, reset: Bool) -> XCUIApplication {

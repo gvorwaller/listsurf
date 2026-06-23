@@ -19,27 +19,21 @@ struct ArchiveView: View {
                 } else {
                     List {
                         ForEach(appStore.archivedLists) { list in
-                            LibraryRow(list: list)
+                            HStack(spacing: 8) {
+                                LibraryRow(list: list)
+                                Spacer(minLength: 8)
+                                Menu {
+                                    archivedListActionMenu(list)
+                                } label: {
+                                    Image(systemName: "ellipsis.circle")
+                                        .imageScale(.large)
+                                }
+                                .buttonStyle(.borderless)
+                                .accessibilityLabel("Actions for \(list.title)")
+                                .accessibilityIdentifier("archive.listActions")
+                            }
                                 .contextMenu {
-                                    Button {
-                                        listBeingEdited = list
-                                    } label: {
-                                        Label("Edit Details", systemImage: "pencil")
-                                    }
-
-                                    Divider()
-
-                                    Button {
-                                        Task { await appStore.restoreList(id: list.id) }
-                                    } label: {
-                                        Label("Restore", systemImage: "arrow.uturn.backward")
-                                    }
-
-                                    Button(role: .destructive) {
-                                        listPendingDeletion = ArchivedListDeletionConfirmation(list)
-                                    } label: {
-                                        Label("Delete Permanently", systemImage: "trash")
-                                    }
+                                    archivedListActionMenu(list)
                                 }
                                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                     Button(role: .destructive) {
@@ -96,6 +90,29 @@ struct ArchiveView: View {
             get: { listPendingDeletion != nil },
             set: { if !$0 { listPendingDeletion = nil } }
         )
+    }
+
+    @ViewBuilder
+    private func archivedListActionMenu(_ list: ListItem) -> some View {
+        Button {
+            listBeingEdited = list
+        } label: {
+            Label("Edit Details", systemImage: "pencil")
+        }
+
+        Divider()
+
+        Button {
+            Task { await appStore.restoreList(id: list.id) }
+        } label: {
+            Label("Restore", systemImage: "arrow.uturn.backward")
+        }
+
+        Button(role: .destructive) {
+            listPendingDeletion = ArchivedListDeletionConfirmation(list)
+        } label: {
+            Label("Delete Permanently", systemImage: "trash")
+        }
     }
 }
 

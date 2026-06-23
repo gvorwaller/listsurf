@@ -70,15 +70,40 @@ struct OutlineEditorView: View {
     private var outlineList: some View {
         List(selection: $store.selectedItemIDs) {
             ForEach(store.filteredRows) { row in
-                OutlineRowView(
-                    row: row,
-                    isEditing: editingItemID == row.id,
-                    editingText: editingItemID == row.id ? $editingText : .constant(""),
-                    onToggleExpand: { store.toggleExpanded(row.id) },
-                    onCommitEdit: { commitEdit(row.id) },
-                    onStartEdit: { startEdit(row) },
-                    onSelect: { inspectorItemID = row.id }
-                )
+                HStack(spacing: 8) {
+                    OutlineRowView(
+                        row: row,
+                        isSelected: store.selectedItemIDs.contains(row.id),
+                        isEditing: editingItemID == row.id,
+                        editingText: editingItemID == row.id ? $editingText : .constant(""),
+                        onToggleExpand: { store.toggleExpanded(row.id) },
+                        onCommitEdit: { commitEdit(row.id) },
+                        onStartEdit: { startEdit(row) },
+                        onSelect: { select(row) }
+                    )
+
+                    Menu {
+                        rowContextMenu(row)
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                            .imageScale(.large)
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel("Actions for \(row.item.title)")
+                    .accessibilityIdentifier("editor.rowActions")
+
+                    Button(role: .destructive) {
+                        requestDelete(row)
+                    } label: {
+                        Image(systemName: "trash")
+                            .imageScale(.large)
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel("Delete \(row.item.title)")
+                    .accessibilityIdentifier("editor.deleteItem")
+                }
+                .contentShape(Rectangle())
+                .onTapGesture { select(row) }
                 .tag(row.id)
                 .listRowInsets(EdgeInsets(
                     top: 4,
@@ -117,6 +142,12 @@ struct OutlineEditorView: View {
                     return .handled
                 }
         }
+    }
+
+    private func select(_ row: FlatRow) {
+        addFieldFocused = false
+        store.selectedItemIDs = [row.id]
+        inspectorItemID = row.id
     }
 
     private func beginAdding(afterID: UUID?) {

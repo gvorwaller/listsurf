@@ -3,6 +3,7 @@ import Domain
 
 struct OutlineRowView: View {
     let row: FlatRow
+    let isSelected: Bool
     let isEditing: Bool
     @Binding var editingText: String
     let onToggleExpand: () -> Void
@@ -23,8 +24,8 @@ struct OutlineRowView: View {
             } else {
                 Text(row.item.title.isEmpty ? "Untitled" : row.item.title)
                     .foregroundStyle(row.item.title.isEmpty ? .secondary : .primary)
-                    .onTapGesture(count: 2) { onStartEdit() }
                     .onTapGesture { onSelect() }
+                    .onTapGesture(count: 2) { onStartEdit() }
             }
 
             Spacer()
@@ -32,6 +33,16 @@ struct OutlineRowView: View {
             trailingInfo
         }
         .contentShape(Rectangle())
+        .padding(.vertical, 2)
+        .padding(.horizontal, 4)
+        .background {
+            if isSelected {
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(.selection.opacity(0.18))
+            }
+        }
+        .onTapGesture { onSelect() }
+        .onTapGesture(count: 2) { onStartEdit() }
     }
 
     @ViewBuilder

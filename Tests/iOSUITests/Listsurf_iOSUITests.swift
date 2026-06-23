@@ -38,6 +38,21 @@ final class Listsurf_iOSUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Persistent UI List"].waitForExistence(timeout: 5))
     }
 
+    @MainActor func testCoreActionsAreVisible() {
+        continueAfterFailure = false
+        let app = launchApp(store: "ios-visible-actions", reset: true)
+
+        XCTAssertTrue(app.buttons["library.importBackup.visible"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["library.exportBackup.visible"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["library.archive.visible"].waitForExistence(timeout: 5))
+
+        createList(named: "Visible Actions List", in: app)
+        addItem(named: "Indentable Item", in: app)
+
+        XCTAssertTrue(app.buttons["editor.rowActions"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["editor.deleteItem"].firstMatch.waitForExistence(timeout: 5))
+    }
+
     @MainActor private func launchApp(store: String, reset: Bool) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchEnvironment["LISTSURF_UI_TEST_STORE"] = store
@@ -79,6 +94,19 @@ final class Listsurf_iOSUITests: XCTestCase {
             app.buttons["editor.addItem"]
         )
         XCTAssertTrue(editor.waitForExistence(timeout: 5))
+    }
+
+    @MainActor private func addItem(named title: String, in app: XCUIApplication) {
+        let addItem = firstExisting(
+            app.buttons["editor.addFirstItem"],
+            app.buttons["editor.addItem"]
+        )
+        XCTAssertTrue(addItem.waitForExistence(timeout: 5))
+        addItem.tap()
+
+        let itemField = app.textFields["editor.newItem"]
+        XCTAssertTrue(itemField.waitForExistence(timeout: 5))
+        itemField.typeText("\(title)\n")
     }
 
     @MainActor private func firstExisting(_ elements: XCUIElement...) -> XCUIElement {

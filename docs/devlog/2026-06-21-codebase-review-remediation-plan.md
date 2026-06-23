@@ -634,3 +634,51 @@ UI on both iOS and macOS.
 - Add explicit backup-before-CloudKit activation flow.
 - Add OPML and Markdown interchange after JSON backup/restore gets a manual
   end-to-end pass.
+
+## Progress update — June 22, 2026, manual UI discoverability remediation
+
+Manual testing exposed a serious gap: many implemented capabilities were
+technically present but not discoverable. Important actions were hidden behind
+context menus, keyboard shortcuts, or unlabeled toolbar icons.
+
+### Problems found manually
+
+- Indent/outdent and other item structure commands were not discoverable.
+- Backup import/export was not obvious in the library UI.
+- Archive/restore was not obvious.
+- List edit/archive/delete actions were hidden behind context menus.
+- Item delete was hidden behind keyboard/context routes.
+
+### Implemented
+
+- Added visible library action rows for:
+  - `Import Backup…`;
+  - `Export Backup…`;
+  - `Archive`.
+- Added visible per-list action menus in the library rows for edit, duplicate,
+  archive, and delete flows.
+- Added visible per-archived-list action menus for edit, restore, and permanent
+  delete.
+- Added visible per-item action menus in edit mode for add above/below/child,
+  indent/outdent, move, rename/details, and delete.
+- Added a visible per-item trash button that opens the existing destructive
+  delete confirmation.
+- Made row tap selection explicit and visually highlighted so item actions have
+  a clear target.
+- Added UI regressions that assert the visible library actions, item action
+  menu, and item delete affordance exist.
+
+### Verification
+
+- `swift test --quiet`: 95 passed, 0 failed.
+- Xcode iOS simulator `test_sim`: 98 passed, 0 failed.
+- Xcode macOS `test_macos`: 100 passed, 0 failed.
+
+### Notes
+
+- The old macOS Command-Delete UI test was replaced with a visible-delete
+  confirmation test. That is intentional for this slice: the product gap was
+  discoverability, and the visible trash affordance is now the primary tested
+  path.
+- Keyboard command polish is still useful, but it should not be the only route
+  to critical edit operations.

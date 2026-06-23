@@ -24,12 +24,47 @@ struct LibrarySidebar: View {
     var body: some View {
         @Bindable var store = appStore
         List(selection: $store.selectedListID) {
+            Section {
+                Button {
+                    onImportBackup()
+                } label: {
+                    Label("Import Backup…", systemImage: "square.and.arrow.down")
+                }
+                .accessibilityIdentifier("library.importBackup.visible")
+
+                Button {
+                    onExportBackup()
+                } label: {
+                    Label("Export Backup…", systemImage: "square.and.arrow.up")
+                }
+                .accessibilityIdentifier("library.exportBackup.visible")
+
+                Button {
+                    showingArchive = true
+                } label: {
+                    Label("Archive", systemImage: "archivebox")
+                }
+                .accessibilityIdentifier("library.archive.visible")
+            }
+
             if filteredLists.isEmpty && searchText.isEmpty {
                 emptyLibrary
             } else {
                 Section {
                     ForEach(filteredLists) { list in
-                        LibraryRow(list: list)
+                        HStack(spacing: 8) {
+                            LibraryRow(list: list)
+                            Spacer(minLength: 8)
+                            Menu {
+                                listActionMenu(list)
+                            } label: {
+                                Image(systemName: "ellipsis.circle")
+                                    .imageScale(.large)
+                            }
+                            .buttonStyle(.borderless)
+                            .accessibilityLabel("Actions for \(list.title)")
+                            .accessibilityIdentifier("library.listActions")
+                        }
                             .tag(list.id)
                             .contextMenu { listContextMenu(list) }
                     }
@@ -162,6 +197,11 @@ struct LibrarySidebar: View {
 
     @ViewBuilder
     private func listContextMenu(_ list: ListItem) -> some View {
+        listActionMenu(list)
+    }
+
+    @ViewBuilder
+    private func listActionMenu(_ list: ListItem) -> some View {
         Button(action: onNewList) {
             Label("New List", systemImage: "plus")
         }
