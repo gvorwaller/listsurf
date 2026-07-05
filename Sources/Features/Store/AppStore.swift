@@ -13,7 +13,7 @@ public final class AppStore {
 
     private let listRepo: any ListRepository
     private let outlineRepo: any OutlineRepository
-    private let logger = Logger(subsystem: "com.listsurf.app", category: "ui")
+    private let logger = Logger(subsystem: "net.vorwaller.listsurf", category: "ui")
     private let exportService = ExportService()
 
     public init(

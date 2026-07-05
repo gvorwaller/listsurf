@@ -1,6 +1,6 @@
 name: Listsurf
 options:
-  bundleIdPrefix: com.listsurf
+  bundleIdPrefix: net.vorwaller
   deploymentTarget:
     iOS: "18.0"
     macOS: "15.0"
@@ -32,13 +32,15 @@ targets:
         product: Persistence
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.listsurf.app
+        PRODUCT_BUNDLE_IDENTIFIER: net.vorwaller.listsurf
+        DEVELOPMENT_TEAM: BH65T3A7FT
+        CODE_SIGN_STYLE: Automatic
         PRODUCT_NAME: Listsurf
         INFOPLIST_FILE: App/Info.plist
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         GENERATE_INFOPLIST_FILE: true
         INFOPLIST_KEY_CFBundleDisplayName: Listsurf
-        MARKETING_VERSION: "0.1.0"
+        MARKETING_VERSION: "1.0.0"
         CURRENT_PROJECT_VERSION: "1"
 
   Listsurf_iOSLogicTests:
@@ -57,10 +59,25 @@ targets:
         product: Features
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.listsurf.tests.ios.logic
+        PRODUCT_BUNDLE_IDENTIFIER: net.vorwaller.listsurf.tests.ios.logic
         GENERATE_INFOPLIST_FILE: true
         SWIFT_VERSION: "6.0"
         SWIFT_STRICT_CONCURRENCY: complete
+
+  Listsurf_iOSUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: Tests/iOSUITests
+    dependencies:
+      - target: Listsurf_iOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: net.vorwaller.listsurf.tests.ios.ui
+        GENERATE_INFOPLIST_FILE: true
+        SWIFT_VERSION: "6.0"
+        TEST_TARGET_NAME: Listsurf_iOS
+        TARGETED_DEVICE_FAMILY: "1,2"
 
   Listsurf_macOSLogicTests:
     type: bundle.unit-test
@@ -78,7 +95,62 @@ targets:
         product: Features
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.listsurf.tests.macos.logic
+        PRODUCT_BUNDLE_IDENTIFIER: net.vorwaller.listsurf.tests.macos.logic
         GENERATE_INFOPLIST_FILE: true
         SWIFT_VERSION: "6.0"
         SWIFT_STRICT_CONCURRENCY: complete
+
+  Listsurf_macOSUITests:
+    type: bundle.ui-testing
+    platform: macOS
+    sources:
+      - path: Tests/macOSUITests
+    dependencies:
+      - target: Listsurf_macOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: net.vorwaller.listsurf.tests.macos.ui
+        GENERATE_INFOPLIST_FILE: true
+        SWIFT_VERSION: "6.0"
+        TEST_TARGET_NAME: Listsurf_macOS
+
+schemes:
+  Listsurf_iOS:
+    shared: true
+    build:
+      targets:
+        Listsurf_iOS: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      gatherCoverageData: true
+      testPlans:
+        - path: Listsurf_iOS.xctestplan
+          defaultPlan: true
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
+
+  Listsurf_macOS:
+    shared: true
+    build:
+      targets:
+        Listsurf_macOS: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      gatherCoverageData: true
+      testPlans:
+        - path: Listsurf_macOS.xctestplan
+          defaultPlan: true
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release

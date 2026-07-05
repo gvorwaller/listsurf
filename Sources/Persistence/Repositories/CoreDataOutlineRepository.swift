@@ -4,7 +4,7 @@ import os
 
 public final class CoreDataOutlineRepository: OutlineRepository, @unchecked Sendable {
     private let stack: PersistenceStack
-    private let logger = Logger(subsystem: "com.listsurf.app", category: "persistence")
+    private let logger = Logger(subsystem: "net.vorwaller.listsurf", category: "persistence")
 
     public init(stack: PersistenceStack) {
         self.stack = stack

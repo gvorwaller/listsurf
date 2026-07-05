@@ -20,7 +20,7 @@
       "parallelizable" : false,
       "target" : {
         "containerPath" : "container:Listsurf.xcodeproj",
-        "identifier" : "AF0000000000000000000002",
+        "identifier" : "0B454C1499D96F633875713B",
         "name" : "Listsurf_macOSLogicTests"
       }
     },
@@ -28,7 +28,7 @@
       "parallelizable" : false,
       "target" : {
         "containerPath" : "container:Listsurf.xcodeproj",
-        "identifier" : "AF0000000000000000000004",
+        "identifier" : "08C5D2D20A5BA06B8FC8BCB2",
         "name" : "Listsurf_macOSUITests"
       }
     }

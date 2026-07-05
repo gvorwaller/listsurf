@@ -114,18 +114,20 @@ final class Listsurf_iOSUITests: XCTestCase {
         )
         XCTAssertTrue(titleField.waitForExistence(timeout: 5))
         titleField.tap()
-        titleField.typeText(title)
+        titleField.typeText("\(title)\n")
 
-        let create = firstExisting(
-            app.buttons["newList.create"].firstMatch,
-            app.buttons["Create"].firstMatch
-        )
-        XCTAssertTrue(create.waitForExistence(timeout: 5))
-        create.tap()
         let editor = firstExisting(
             app.buttons["editor.addFirstItem"],
             app.buttons["editor.addItem"]
         )
+        if !editor.waitForExistence(timeout: 2) {
+            let create = firstExisting(
+                app.buttons["newList.create"].firstMatch,
+                app.buttons["Create"].firstMatch
+            )
+            XCTAssertTrue(create.waitForExistence(timeout: 5))
+            create.tap()
+        }
         XCTAssertTrue(editor.waitForExistence(timeout: 5))
     }
 

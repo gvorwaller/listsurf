@@ -19,7 +19,7 @@ public final class ListStore {
     private let listRepo: any ListRepository
     private let errorStore: AppErrorStore
     private let engine = TreeEngine()
-    private let logger = Logger(subsystem: "com.listsurf.app", category: "tree")
+    private let logger = Logger(subsystem: "net.vorwaller.listsurf", category: "tree")
     @ObservationIgnored private var persistenceTail: Task<Void, Never>?
 
     public enum CheckFilter: String, CaseIterable {

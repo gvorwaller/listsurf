@@ -93,12 +93,14 @@ final class Listsurf_macOSUITests: XCTestCase {
         app.launchEnvironment["LISTSURF_UI_TEST_STORE"] = store
         app.launchArguments = reset ? ["--ui-testing-reset"] : []
         app.launch()
+        app.activate()
         return app
     }
 
     @MainActor private func relaunch(_ app: XCUIApplication, reset: Bool) {
         app.launchArguments = reset ? ["--ui-testing-reset"] : []
         app.launch()
+        app.activate()
     }
 
     @MainActor private func createList(named title: String, in app: XCUIApplication) {
@@ -107,6 +109,7 @@ final class Listsurf_macOSUITests: XCTestCase {
             app.buttons["library.createFirstList"]
         )
         XCTAssertTrue(newList.waitForExistence(timeout: 15))
+        app.activate()
         newList.click()
         fillNewListSheet(named: title, in: app)
         let editor = firstExisting(

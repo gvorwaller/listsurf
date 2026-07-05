@@ -7,45 +7,47 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		AB0000000000000000000001 /* ExportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000001 /* ExportTests.swift */; };
-		AB0000000000000000000002 /* TreeEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000002 /* TreeEngineTests.swift */; };
-		AB0000000000000000000003 /* PersistenceStackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000003 /* PersistenceStackTests.swift */; };
-		AB0000000000000000000004 /* ExportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000001 /* ExportTests.swift */; };
-		AB0000000000000000000005 /* TreeEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000002 /* TreeEngineTests.swift */; };
-		AB0000000000000000000006 /* PersistenceStackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000003 /* PersistenceStackTests.swift */; };
-		AB0000000000000000000007 /* Listsurf_iOSUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000004 /* Listsurf_iOSUITests.swift */; };
-		AB0000000000000000000008 /* Listsurf_macOSUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000005 /* Listsurf_macOSUITests.swift */; };
-		AB0000000000000000000009 /* Domain in Frameworks */ = {isa = PBXBuildFile; productRef = BCE6AF1EC704498F1C09F7A6 /* Domain */; };
-		AB000000000000000000000A /* Persistence in Frameworks */ = {isa = PBXBuildFile; productRef = 47ABA88EB97275BFA6257FC4 /* Persistence */; };
-		AB000000000000000000000B /* Domain in Frameworks */ = {isa = PBXBuildFile; productRef = 3330C307246A95A02800DF07 /* Domain */; };
-		AB000000000000000000000C /* Persistence in Frameworks */ = {isa = PBXBuildFile; productRef = F1D39B35E5B78D7039B7946C /* Persistence */; };
-		AB000000000000000000000D /* ListStorePersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000006 /* ListStorePersistenceTests.swift */; };
-		AB000000000000000000000E /* ListStorePersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000006 /* ListStorePersistenceTests.swift */; };
-		AB0000000000000000000015 /* AppStoreExportImportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000007 /* AppStoreExportImportTests.swift */; };
-		AB0000000000000000000016 /* AppStoreExportImportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000007 /* AppStoreExportImportTests.swift */; };
-		AB000000000000000000000F /* Features in Frameworks */ = {isa = PBXBuildFile; productRef = EC2DEADB41298DF100C18397 /* Features */; };
-		AB0000000000000000000010 /* Features in Frameworks */ = {isa = PBXBuildFile; productRef = 74D3E44A8AB016EAD31E55B4 /* Features */; };
 		04D73B890EB765A6881B7365 /* Persistence in Frameworks */ = {isa = PBXBuildFile; productRef = F1D39B35E5B78D7039B7946C /* Persistence */; };
+		0A16651A7BC95F88103BA122 /* Domain in Frameworks */ = {isa = PBXBuildFile; productRef = A97A64D9B8B5FCB4F4596254 /* Domain */; };
+		1A0B5D5277CE53A65FA6D7B6 /* PersistenceStackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6333E421FA3C467DD6B1FC32 /* PersistenceStackTests.swift */; };
+		1BC21E1BC964B3FB71DCB5D4 /* AppStoreExportImportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64EEE7C32951799279EFE079 /* AppStoreExportImportTests.swift */; };
 		2B3F5E9CDDF2664F3C8C13BA /* ListsurfApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 381BB974398C3B1771AC6076 /* ListsurfApp.swift */; };
+		300AA94F0D7736B139E2CED3 /* PersistenceStackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6333E421FA3C467DD6B1FC32 /* PersistenceStackTests.swift */; };
 		387B386B50AD3FF3A2D18E2F /* ListsurfApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 381BB974398C3B1771AC6076 /* ListsurfApp.swift */; };
+		45E7E4865D76EEA6B4A807A6 /* AppStoreExportImportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64EEE7C32951799279EFE079 /* AppStoreExportImportTests.swift */; };
+		464DB6D8F9509B3663C8A70D /* ListStorePersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD47F2E0D8AB9E6BCAA24598 /* ListStorePersistenceTests.swift */; };
+		485C8EB6EC889B0B510968F7 /* Features in Frameworks */ = {isa = PBXBuildFile; productRef = 612D6A7467094FC9D904EF31 /* Features */; };
 		4FD8A8185A90100AC9BA72BD /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E596D00A45E2A16387F9EBBA /* Assets.xcassets */; };
+		52CFADE9A0AFF4F8638BBC40 /* Features in Frameworks */ = {isa = PBXBuildFile; productRef = 15D449EADD6AB0B1808B7799 /* Features */; };
+		585C2BC4AA461CAC38E1ADF1 /* Listsurf_macOSUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 468653C87021C1129C8D3CE2 /* Listsurf_macOSUITests.swift */; };
+		5AA8BA968490582CBD4D4A1F /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = FC95DFD9A1535CA110E3DB8D /* PrivacyInfo.xcprivacy */; };
+		5C43F676AEA4A4B113CE6D43 /* Persistence in Frameworks */ = {isa = PBXBuildFile; productRef = ACB2D7DD86014ED66252B5A0 /* Persistence */; };
+		614C0A70EC2A23C336024AC3 /* TreeEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6108498B78633A46A33B8646 /* TreeEngineTests.swift */; };
+		6331436AB3C6050915EE3A52 /* Domain in Frameworks */ = {isa = PBXBuildFile; productRef = 4601F91B9DF59FFDE1B64DC9 /* Domain */; };
+		7047217D18C44730B4BEF665 /* Listsurf_iOSUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 442B43B6390F4FF4A5BBB824 /* Listsurf_iOSUITests.swift */; };
+		7315A5141C567537F2DFED4D /* ExportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB4BB5FF121D8510A85F9237 /* ExportTests.swift */; };
 		77789F2FB1C9230335FBEF72 /* Domain in Frameworks */ = {isa = PBXBuildFile; productRef = BCE6AF1EC704498F1C09F7A6 /* Domain */; };
+		9242FA81FFD089CCB8C72B63 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = FC95DFD9A1535CA110E3DB8D /* PrivacyInfo.xcprivacy */; };
+		A1B6F4D2AF103C5CE9C88F24 /* ListStorePersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD47F2E0D8AB9E6BCAA24598 /* ListStorePersistenceTests.swift */; };
 		C18AB7AA988149D102942319 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E596D00A45E2A16387F9EBBA /* Assets.xcassets */; };
+		C42829FB4DE842A49C741970 /* TreeEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6108498B78633A46A33B8646 /* TreeEngineTests.swift */; };
 		D2BE1E360A276E8D91FA6339 /* Features in Frameworks */ = {isa = PBXBuildFile; productRef = EC2DEADB41298DF100C18397 /* Features */; };
+		D30AAFEBE521108DCF654301 /* ExportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB4BB5FF121D8510A85F9237 /* ExportTests.swift */; };
 		D62EBE8307D37ECE74897052 /* Features in Frameworks */ = {isa = PBXBuildFile; productRef = 74D3E44A8AB016EAD31E55B4 /* Features */; };
 		DF012DBA6E76A1B0016B569D /* Persistence in Frameworks */ = {isa = PBXBuildFile; productRef = 47ABA88EB97275BFA6257FC4 /* Persistence */; };
 		F9FE080FF103C37461C4160B /* Domain in Frameworks */ = {isa = PBXBuildFile; productRef = 3330C307246A95A02800DF07 /* Domain */; };
+		FE5EE6A68054C8CFBE2A481E /* Persistence in Frameworks */ = {isa = PBXBuildFile; productRef = 4F9ABDA1284B5E70CD556299 /* Persistence */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		A10000000000000000000001 /* PBXContainerItemProxy */ = {
+		1F8A6D2272504DA5A4CC4962 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 1DB703B63C48DF0C8E3F8BAC /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = EEDD7F1DFF04B1A1CBADA0BD;
 			remoteInfo = Listsurf_iOS;
 		};
-		A10000000000000000000002 /* PBXContainerItemProxy */ = {
+		45C8D54742048074353002DD /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 1DB703B63C48DF0C8E3F8BAC /* Project object */;
 			proxyType = 1;
@@ -55,60 +57,27 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		AA0000000000000000000001 /* ExportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainTests/ExportTests.swift; sourceTree = "<group>"; };
-		AA0000000000000000000002 /* TreeEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainTests/TreeEngineTests.swift; sourceTree = "<group>"; };
-		AA0000000000000000000003 /* PersistenceStackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceTests/PersistenceStackTests.swift; sourceTree = "<group>"; };
-		AA0000000000000000000004 /* Listsurf_iOSUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iOSUITests/Listsurf_iOSUITests.swift; sourceTree = "<group>"; };
-		AA0000000000000000000005 /* Listsurf_macOSUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macOSUITests/Listsurf_macOSUITests.swift; sourceTree = "<group>"; };
-		AA0000000000000000000006 /* ListStorePersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeaturesTests/ListStorePersistenceTests.swift; sourceTree = "<group>"; };
-		AA0000000000000000000007 /* AppStoreExportImportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeaturesTests/AppStoreExportImportTests.swift; sourceTree = "<group>"; };
-		AA0000000000000000000011 /* Listsurf_iOSLogicTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Listsurf_iOSLogicTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		AA0000000000000000000012 /* Listsurf_macOSLogicTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Listsurf_macOSLogicTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		AA0000000000000000000013 /* Listsurf_iOSUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Listsurf_iOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		AA0000000000000000000014 /* Listsurf_macOSUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Listsurf_macOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		21F7BF9402B30E3EAA895E98 /* Listsurf_macOSLogicTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Listsurf_macOSLogicTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		381BB974398C3B1771AC6076 /* ListsurfApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListsurfApp.swift; sourceTree = "<group>"; };
+		442B43B6390F4FF4A5BBB824 /* Listsurf_iOSUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Listsurf_iOSUITests.swift; sourceTree = "<group>"; };
+		468653C87021C1129C8D3CE2 /* Listsurf_macOSUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Listsurf_macOSUITests.swift; sourceTree = "<group>"; };
+		6108498B78633A46A33B8646 /* TreeEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TreeEngineTests.swift; sourceTree = "<group>"; };
+		6333E421FA3C467DD6B1FC32 /* PersistenceStackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceStackTests.swift; sourceTree = "<group>"; };
+		64EEE7C32951799279EFE079 /* AppStoreExportImportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStoreExportImportTests.swift; sourceTree = "<group>"; };
 		6E66F8E41A2C38C6BAAC47A9 /* Listsurf.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Listsurf.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		941D111D6BECE669A5DF61BE /* Listsurf_iOSLogicTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = Listsurf_iOSLogicTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		9B4ED75FAE369D28532E3998 /* listsurf */ = {isa = PBXFileReference; lastKnownFileType = folder; name = listsurf; path = .; sourceTree = SOURCE_ROOT; };
+		BB4BB5FF121D8510A85F9237 /* ExportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportTests.swift; sourceTree = "<group>"; };
 		C0000389AECEE218E691E647 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		D44A2C096FC174F53C7FDAD4 /* Listsurf.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Listsurf.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E596D00A45E2A16387F9EBBA /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		EA6AD7120BBA722213D66A24 /* Listsurf_macOSUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Listsurf_macOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		FC95DFD9A1535CA110E3DB8D /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		FD47F2E0D8AB9E6BCAA24598 /* ListStorePersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListStorePersistenceTests.swift; sourceTree = "<group>"; };
+		FE49A4249F72A4A5922141B4 /* Listsurf_iOSUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = Listsurf_iOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		AC0000000000000000000001 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				AB0000000000000000000009 /* Domain in Frameworks */,
-				AB000000000000000000000A /* Persistence in Frameworks */,
-				AB000000000000000000000F /* Features in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		AC0000000000000000000002 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				AB000000000000000000000B /* Domain in Frameworks */,
-				AB000000000000000000000C /* Persistence in Frameworks */,
-				AB0000000000000000000010 /* Features in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		AC0000000000000000000003 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		AC0000000000000000000004 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		9EB09369F338F6B44D39B23B /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -116,6 +85,26 @@
 				D2BE1E360A276E8D91FA6339 /* Features in Frameworks */,
 				77789F2FB1C9230335FBEF72 /* Domain in Frameworks */,
 				DF012DBA6E76A1B0016B569D /* Persistence in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D8662013E9819D905BFB94F9 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6331436AB3C6050915EE3A52 /* Domain in Frameworks */,
+				FE5EE6A68054C8CFBE2A481E /* Persistence in Frameworks */,
+				485C8EB6EC889B0B510968F7 /* Features in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E6AF5F5AADD96362EBAEC76A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0A16651A7BC95F88103BA122 /* Domain in Frameworks */,
+				5C43F676AEA4A4B113CE6D43 /* Persistence in Frameworks */,
+				52CFADE9A0AFF4F8638BBC40 /* Features in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -136,8 +125,8 @@
 			isa = PBXGroup;
 			children = (
 				2CCF868C3E7D611435267A0A /* App */,
-				AA0000000000000000000020 /* Tests */,
 				968FA7395B6015387FFDD8C6 /* Packages */,
+				5F33861646174B898CCF8F45 /* Tests */,
 				7FE7990AF7649E4D59228D93 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -148,21 +137,51 @@
 				E596D00A45E2A16387F9EBBA /* Assets.xcassets */,
 				C0000389AECEE218E691E647 /* Info.plist */,
 				381BB974398C3B1771AC6076 /* ListsurfApp.swift */,
+				FC95DFD9A1535CA110E3DB8D /* PrivacyInfo.xcprivacy */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		5235ACD1F75B67E86609AD77 /* DomainTests */ = {
+			isa = PBXGroup;
+			children = (
+				BB4BB5FF121D8510A85F9237 /* ExportTests.swift */,
+				6108498B78633A46A33B8646 /* TreeEngineTests.swift */,
+			);
+			path = DomainTests;
+			sourceTree = "<group>";
+		};
+		5F33861646174B898CCF8F45 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				5235ACD1F75B67E86609AD77 /* DomainTests */,
+				A5F92740711CE9A95FE6E203 /* FeaturesTests */,
+				93A0813F1863D88D729EC8CB /* iOSUITests */,
+				B951F74DFA2444BC80CB605A /* macOSUITests */,
+				998DF1D8EB7C92BC871FA41B /* PersistenceTests */,
+			);
+			path = Tests;
 			sourceTree = "<group>";
 		};
 		7FE7990AF7649E4D59228D93 /* Products */ = {
 			isa = PBXGroup;
 			children = (
+				941D111D6BECE669A5DF61BE /* Listsurf_iOSLogicTests.xctest */,
+				FE49A4249F72A4A5922141B4 /* Listsurf_iOSUITests.xctest */,
+				21F7BF9402B30E3EAA895E98 /* Listsurf_macOSLogicTests.xctest */,
+				EA6AD7120BBA722213D66A24 /* Listsurf_macOSUITests.xctest */,
 				6E66F8E41A2C38C6BAAC47A9 /* Listsurf.app */,
 				D44A2C096FC174F53C7FDAD4 /* Listsurf.app */,
-				AA0000000000000000000011 /* Listsurf_iOSLogicTests.xctest */,
-				AA0000000000000000000012 /* Listsurf_macOSLogicTests.xctest */,
-				AA0000000000000000000013 /* Listsurf_iOSUITests.xctest */,
-				AA0000000000000000000014 /* Listsurf_macOSUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		93A0813F1863D88D729EC8CB /* iOSUITests */ = {
+			isa = PBXGroup;
+			children = (
+				442B43B6390F4FF4A5BBB824 /* Listsurf_iOSUITests.swift */,
+			);
+			path = iOSUITests;
 			sourceTree = "<group>";
 		};
 		968FA7395B6015387FFDD8C6 /* Packages */ = {
@@ -173,50 +192,58 @@
 			name = Packages;
 			sourceTree = "<group>";
 		};
-		AA0000000000000000000020 /* Tests */ = {
+		998DF1D8EB7C92BC871FA41B /* PersistenceTests */ = {
 			isa = PBXGroup;
 			children = (
-				AA0000000000000000000001 /* ExportTests.swift */,
-				AA0000000000000000000002 /* TreeEngineTests.swift */,
-				AA0000000000000000000003 /* PersistenceStackTests.swift */,
-				AA0000000000000000000006 /* ListStorePersistenceTests.swift */,
-				AA0000000000000000000007 /* AppStoreExportImportTests.swift */,
-				AA0000000000000000000004 /* Listsurf_iOSUITests.swift */,
-				AA0000000000000000000005 /* Listsurf_macOSUITests.swift */,
+				6333E421FA3C467DD6B1FC32 /* PersistenceStackTests.swift */,
 			);
-			path = Tests;
+			path = PersistenceTests;
+			sourceTree = "<group>";
+		};
+		A5F92740711CE9A95FE6E203 /* FeaturesTests */ = {
+			isa = PBXGroup;
+			children = (
+				64EEE7C32951799279EFE079 /* AppStoreExportImportTests.swift */,
+				FD47F2E0D8AB9E6BCAA24598 /* ListStorePersistenceTests.swift */,
+			);
+			path = FeaturesTests;
+			sourceTree = "<group>";
+		};
+		B951F74DFA2444BC80CB605A /* macOSUITests */ = {
+			isa = PBXGroup;
+			children = (
+				468653C87021C1129C8D3CE2 /* Listsurf_macOSUITests.swift */,
+			);
+			path = macOSUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		AF0000000000000000000001 /* Listsurf_iOSLogicTests */ = {
+		08C5D2D20A5BA06B8FC8BCB2 /* Listsurf_macOSUITests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = AE0000000000000000000001 /* Build configuration list for PBXNativeTarget "Listsurf_iOSLogicTests" */;
+			buildConfigurationList = 668CD2B92105D0AB7F1A778A /* Build configuration list for PBXNativeTarget "Listsurf_macOSUITests" */;
 			buildPhases = (
-				AC0000000000000000000011 /* Sources */,
-				AC0000000000000000000001 /* Frameworks */,
+				90AD267AB7D9318AEAC0FAFD /* Sources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				D46D92152A7E88F9E87319B5 /* PBXTargetDependency */,
 			);
-			name = Listsurf_iOSLogicTests;
+			name = Listsurf_macOSUITests;
 			packageProductDependencies = (
-				BCE6AF1EC704498F1C09F7A6 /* Domain */,
-				47ABA88EB97275BFA6257FC4 /* Persistence */,
-				EC2DEADB41298DF100C18397 /* Features */,
 			);
-			productName = Listsurf_iOSLogicTests;
-			productReference = AA0000000000000000000011 /* Listsurf_iOSLogicTests.xctest */;
-			productType = "com.apple.product-type.bundle.unit-test";
+			productName = Listsurf_macOSUITests;
+			productReference = EA6AD7120BBA722213D66A24 /* Listsurf_macOSUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
 		};
-		AF0000000000000000000002 /* Listsurf_macOSLogicTests */ = {
+		0B454C1499D96F633875713B /* Listsurf_macOSLogicTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = AE0000000000000000000002 /* Build configuration list for PBXNativeTarget "Listsurf_macOSLogicTests" */;
+			buildConfigurationList = B72A5F6C9367A0DB82A06253 /* Build configuration list for PBXNativeTarget "Listsurf_macOSLogicTests" */;
 			buildPhases = (
-				AC0000000000000000000012 /* Sources */,
-				AC0000000000000000000002 /* Frameworks */,
+				A39C13479487B6FB7B80EC38 /* Sources */,
+				D8662013E9819D905BFB94F9 /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -224,51 +251,13 @@
 			);
 			name = Listsurf_macOSLogicTests;
 			packageProductDependencies = (
-				3330C307246A95A02800DF07 /* Domain */,
-				F1D39B35E5B78D7039B7946C /* Persistence */,
-				74D3E44A8AB016EAD31E55B4 /* Features */,
+				4601F91B9DF59FFDE1B64DC9 /* Domain */,
+				4F9ABDA1284B5E70CD556299 /* Persistence */,
+				612D6A7467094FC9D904EF31 /* Features */,
 			);
 			productName = Listsurf_macOSLogicTests;
-			productReference = AA0000000000000000000012 /* Listsurf_macOSLogicTests.xctest */;
+			productReference = 21F7BF9402B30E3EAA895E98 /* Listsurf_macOSLogicTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
-		};
-		AF0000000000000000000003 /* Listsurf_iOSUITests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = AE0000000000000000000003 /* Build configuration list for PBXNativeTarget "Listsurf_iOSUITests" */;
-			buildPhases = (
-				AC0000000000000000000013 /* Sources */,
-				AC0000000000000000000003 /* Frameworks */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				A10000000000000000000011 /* PBXTargetDependency */,
-			);
-			name = Listsurf_iOSUITests;
-			packageProductDependencies = (
-			);
-			productName = Listsurf_iOSUITests;
-			productReference = AA0000000000000000000013 /* Listsurf_iOSUITests.xctest */;
-			productType = "com.apple.product-type.bundle.ui-testing";
-		};
-		AF0000000000000000000004 /* Listsurf_macOSUITests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = AE0000000000000000000004 /* Build configuration list for PBXNativeTarget "Listsurf_macOSUITests" */;
-			buildPhases = (
-				AC0000000000000000000014 /* Sources */,
-				AC0000000000000000000004 /* Frameworks */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				A10000000000000000000012 /* PBXTargetDependency */,
-			);
-			name = Listsurf_macOSUITests;
-			packageProductDependencies = (
-			);
-			productName = Listsurf_macOSUITests;
-			productReference = AA0000000000000000000014 /* Listsurf_macOSUITests.xctest */;
-			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 		D86EAE2EF6BC0A1393BBFDD3 /* Listsurf_macOS */ = {
 			isa = PBXNativeTarget;
@@ -291,6 +280,45 @@
 			productName = Listsurf_macOS;
 			productReference = D44A2C096FC174F53C7FDAD4 /* Listsurf.app */;
 			productType = "com.apple.product-type.application";
+		};
+		DCF5BB030AB752CEE5A05438 /* Listsurf_iOSUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = ECD5571534BA8CC64048630F /* Build configuration list for PBXNativeTarget "Listsurf_iOSUITests" */;
+			buildPhases = (
+				1FFD6A6EDB7B4FE7B8600755 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F0ED4CE3DECE486866BBC7C2 /* PBXTargetDependency */,
+			);
+			name = Listsurf_iOSUITests;
+			packageProductDependencies = (
+			);
+			productName = Listsurf_iOSUITests;
+			productReference = FE49A4249F72A4A5922141B4 /* Listsurf_iOSUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		E64DDBA03E458DF78B099382 /* Listsurf_iOSLogicTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9B2C6592B7858B62194CB094 /* Build configuration list for PBXNativeTarget "Listsurf_iOSLogicTests" */;
+			buildPhases = (
+				C58CDCB96AE60AB913665864 /* Sources */,
+				E6AF5F5AADD96362EBAEC76A /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Listsurf_iOSLogicTests;
+			packageProductDependencies = (
+				A97A64D9B8B5FCB4F4596254 /* Domain */,
+				ACB2D7DD86014ED66252B5A0 /* Persistence */,
+				15D449EADD6AB0B1808B7799 /* Features */,
+			);
+			productName = Listsurf_iOSLogicTests;
+			productReference = 941D111D6BECE669A5DF61BE /* Listsurf_iOSLogicTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 		EEDD7F1DFF04B1A1CBADA0BD /* Listsurf_iOS */ = {
 			isa = PBXNativeTarget;
@@ -323,19 +351,19 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 2650;
 				TargetAttributes = {
-					AF0000000000000000000001 = {
-						CreatedOnToolsVersion = 26.5;
+					08C5D2D20A5BA06B8FC8BCB2 = {
+						TestTargetID = D86EAE2EF6BC0A1393BBFDD3;
 					};
-					AF0000000000000000000002 = {
-						CreatedOnToolsVersion = 26.5;
+					D86EAE2EF6BC0A1393BBFDD3 = {
+						DevelopmentTeam = BH65T3A7FT;
+						ProvisioningStyle = Automatic;
 					};
-					AF0000000000000000000003 = {
-						CreatedOnToolsVersion = 26.5;
+					DCF5BB030AB752CEE5A05438 = {
 						TestTargetID = EEDD7F1DFF04B1A1CBADA0BD;
 					};
-					AF0000000000000000000004 = {
-						CreatedOnToolsVersion = 26.5;
-						TestTargetID = D86EAE2EF6BC0A1393BBFDD3;
+					EEDD7F1DFF04B1A1CBADA0BD = {
+						DevelopmentTeam = BH65T3A7FT;
+						ProvisioningStyle = Automatic;
 					};
 				};
 			};
@@ -357,11 +385,11 @@
 			projectRoot = "";
 			targets = (
 				EEDD7F1DFF04B1A1CBADA0BD /* Listsurf_iOS */,
+				E64DDBA03E458DF78B099382 /* Listsurf_iOSLogicTests */,
+				DCF5BB030AB752CEE5A05438 /* Listsurf_iOSUITests */,
 				D86EAE2EF6BC0A1393BBFDD3 /* Listsurf_macOS */,
-				AF0000000000000000000001 /* Listsurf_iOSLogicTests */,
-				AF0000000000000000000002 /* Listsurf_macOSLogicTests */,
-				AF0000000000000000000003 /* Listsurf_iOSUITests */,
-				AF0000000000000000000004 /* Listsurf_macOSUITests */,
+				0B454C1499D96F633875713B /* Listsurf_macOSLogicTests */,
+				08C5D2D20A5BA06B8FC8BCB2 /* Listsurf_macOSUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -372,6 +400,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				C18AB7AA988149D102942319 /* Assets.xcassets in Resources */,
+				9242FA81FFD089CCB8C72B63 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -380,49 +409,26 @@
 			buildActionMask = 2147483647;
 			files = (
 				4FD8A8185A90100AC9BA72BD /* Assets.xcassets in Resources */,
+				5AA8BA968490582CBD4D4A1F /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		AC0000000000000000000011 /* Sources */ = {
+		1FFD6A6EDB7B4FE7B8600755 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				AB0000000000000000000001 /* ExportTests.swift in Sources */,
-				AB0000000000000000000002 /* TreeEngineTests.swift in Sources */,
-				AB0000000000000000000003 /* PersistenceStackTests.swift in Sources */,
-				AB000000000000000000000D /* ListStorePersistenceTests.swift in Sources */,
-				AB0000000000000000000015 /* AppStoreExportImportTests.swift in Sources */,
+				7047217D18C44730B4BEF665 /* Listsurf_iOSUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		AC0000000000000000000012 /* Sources */ = {
+		90AD267AB7D9318AEAC0FAFD /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				AB0000000000000000000004 /* ExportTests.swift in Sources */,
-				AB0000000000000000000005 /* TreeEngineTests.swift in Sources */,
-				AB0000000000000000000006 /* PersistenceStackTests.swift in Sources */,
-				AB000000000000000000000E /* ListStorePersistenceTests.swift in Sources */,
-				AB0000000000000000000016 /* AppStoreExportImportTests.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		AC0000000000000000000013 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				AB0000000000000000000007 /* Listsurf_iOSUITests.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		AC0000000000000000000014 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				AB0000000000000000000008 /* Listsurf_macOSUITests.swift in Sources */,
+				585C2BC4AA461CAC38E1ADF1 /* Listsurf_macOSUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -434,6 +440,18 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A39C13479487B6FB7B80EC38 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1BC21E1BC964B3FB71DCB5D4 /* AppStoreExportImportTests.swift in Sources */,
+				7315A5141C567537F2DFED4D /* ExportTests.swift in Sources */,
+				A1B6F4D2AF103C5CE9C88F24 /* ListStorePersistenceTests.swift in Sources */,
+				1A0B5D5277CE53A65FA6D7B6 /* PersistenceStackTests.swift in Sources */,
+				C42829FB4DE842A49C741970 /* TreeEngineTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		C253B4E261FE4FAFCBAD445B /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -442,148 +460,42 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C58CDCB96AE60AB913665864 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				45E7E4865D76EEA6B4A807A6 /* AppStoreExportImportTests.swift in Sources */,
+				D30AAFEBE521108DCF654301 /* ExportTests.swift in Sources */,
+				464DB6D8F9509B3663C8A70D /* ListStorePersistenceTests.swift in Sources */,
+				300AA94F0D7736B139E2CED3 /* PersistenceStackTests.swift in Sources */,
+				614C0A70EC2A23C336024AC3 /* TreeEngineTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		A10000000000000000000011 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = EEDD7F1DFF04B1A1CBADA0BD /* Listsurf_iOS */;
-			targetProxy = A10000000000000000000001 /* PBXContainerItemProxy */;
-		};
-		A10000000000000000000012 /* PBXTargetDependency */ = {
+		D46D92152A7E88F9E87319B5 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = D86EAE2EF6BC0A1393BBFDD3 /* Listsurf_macOS */;
-			targetProxy = A10000000000000000000002 /* PBXContainerItemProxy */;
+			targetProxy = 45C8D54742048074353002DD /* PBXContainerItemProxy */;
+		};
+		F0ED4CE3DECE486866BBC7C2 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = EEDD7F1DFF04B1A1CBADA0BD /* Listsurf_iOS */;
+			targetProxy = 1F8A6D2272504DA5A4CC4962 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
-		AD0000000000000000000001 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.listsurf.tests.ios.logic;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SWIFT_STRICT_CONCURRENCY = complete;
-				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Debug;
-		};
-		AD0000000000000000000002 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.listsurf.tests.ios.logic;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SWIFT_STRICT_CONCURRENCY = complete;
-				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Release;
-		};
-		AD0000000000000000000003 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				GENERATE_INFOPLIST_FILE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.listsurf.tests.macos.logic;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-				SWIFT_STRICT_CONCURRENCY = complete;
-				SWIFT_VERSION = 6.0;
-			};
-			name = Debug;
-		};
-		AD0000000000000000000004 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				GENERATE_INFOPLIST_FILE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.listsurf.tests.macos.logic;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-				SWIFT_STRICT_CONCURRENCY = complete;
-				SWIFT_VERSION = 6.0;
-			};
-			name = Release;
-		};
-		AD0000000000000000000005 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.listsurf.tests.ios.ui;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = Listsurf_iOS;
-			};
-			name = Debug;
-		};
-		AD0000000000000000000006 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.listsurf.tests.ios.ui;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = Listsurf_iOS;
-			};
-			name = Release;
-		};
-		AD0000000000000000000007 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				GENERATE_INFOPLIST_FILE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.listsurf.tests.macos.ui;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-				SWIFT_VERSION = 6.0;
-				TEST_TARGET_NAME = Listsurf_macOS;
-			};
-			name = Debug;
-		};
-		AD0000000000000000000008 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				GENERATE_INFOPLIST_FILE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.listsurf.tests.macos.ui;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-				SWIFT_VERSION = 6.0;
-				TEST_TARGET_NAME = Listsurf_macOS;
-			};
-			name = Release;
-		};
 		01010E978FE2E43CB90C5399 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = BH65T3A7FT;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = App/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Listsurf;
@@ -591,8 +503,8 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.listsurf.app;
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = net.vorwaller.listsurf;
 				PRODUCT_NAME = Listsurf;
 				SDKROOT = macosx;
 			};
@@ -655,22 +567,77 @@
 			};
 			name = Release;
 		};
+		3289FD9670D2118F405E74A2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = net.vorwaller.listsurf.tests.macos.logic;
+				SDKROOT = macosx;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		5B4E6810DB6D78447FCB7D29 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = net.vorwaller.listsurf.tests.macos.logic;
+				SDKROOT = macosx;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		693169E05638BCDC933123E1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = net.vorwaller.listsurf.tests.ios.logic;
+				SDKROOT = iphoneos;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		6EE47F35DFBB303DD913D3C2 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = BH65T3A7FT;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = App/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Listsurf;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.listsurf.app;
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = net.vorwaller.listsurf;
 				PRODUCT_NAME = Listsurf;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -741,12 +708,50 @@
 			};
 			name = Debug;
 		};
+		8FE9E12E94C35D21CC5C9BEA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = net.vorwaller.listsurf.tests.macos.ui;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+				TEST_TARGET_NAME = Listsurf_macOS;
+			};
+			name = Release;
+		};
+		A4D4F8A2F1089E02ECC2CE10 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = net.vorwaller.listsurf.tests.ios.ui;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Listsurf_iOS;
+			};
+			name = Debug;
+		};
 		C049F8DA0D86308A3B299F96 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = BH65T3A7FT;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = App/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Listsurf;
@@ -754,29 +759,84 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.listsurf.app;
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = net.vorwaller.listsurf;
 				PRODUCT_NAME = Listsurf;
 				SDKROOT = macosx;
 			};
 			name = Debug;
+		};
+		CC65AC1ADDEC75AECD820B58 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = net.vorwaller.listsurf.tests.macos.ui;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+				TEST_TARGET_NAME = Listsurf_macOS;
+			};
+			name = Debug;
+		};
+		E2F9650B8947C67D2B7F5E0B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = net.vorwaller.listsurf.tests.ios.logic;
+				SDKROOT = iphoneos;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		EBB6D0A3AC1D936D0BA2E28D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = net.vorwaller.listsurf.tests.ios.ui;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Listsurf_iOS;
+			};
+			name = Release;
 		};
 		F56016A9A752A9D151B2EF3E /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = BH65T3A7FT;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = App/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Listsurf;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.listsurf.app;
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = net.vorwaller.listsurf;
 				PRODUCT_NAME = Listsurf;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -786,38 +846,11 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		AE0000000000000000000001 /* Build configuration list for PBXNativeTarget "Listsurf_iOSLogicTests" */ = {
+		668CD2B92105D0AB7F1A778A /* Build configuration list for PBXNativeTarget "Listsurf_macOSUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				AD0000000000000000000001 /* Debug */,
-				AD0000000000000000000002 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Debug;
-		};
-		AE0000000000000000000002 /* Build configuration list for PBXNativeTarget "Listsurf_macOSLogicTests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				AD0000000000000000000003 /* Debug */,
-				AD0000000000000000000004 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Debug;
-		};
-		AE0000000000000000000003 /* Build configuration list for PBXNativeTarget "Listsurf_iOSUITests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				AD0000000000000000000005 /* Debug */,
-				AD0000000000000000000006 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Debug;
-		};
-		AE0000000000000000000004 /* Build configuration list for PBXNativeTarget "Listsurf_macOSUITests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				AD0000000000000000000007 /* Debug */,
-				AD0000000000000000000008 /* Release */,
+				CC65AC1ADDEC75AECD820B58 /* Debug */,
+				8FE9E12E94C35D21CC5C9BEA /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
@@ -831,6 +864,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
+		9B2C6592B7858B62194CB094 /* Build configuration list for PBXNativeTarget "Listsurf_iOSLogicTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E2F9650B8947C67D2B7F5E0B /* Debug */,
+				693169E05638BCDC933123E1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		B44902698240F048146AE4CB /* Build configuration list for PBXProject "Listsurf" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -840,11 +882,29 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
+		B72A5F6C9367A0DB82A06253 /* Build configuration list for PBXNativeTarget "Listsurf_macOSLogicTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3289FD9670D2118F405E74A2 /* Debug */,
+				5B4E6810DB6D78447FCB7D29 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		D29D751AB88A3A6497C6B13A /* Build configuration list for PBXNativeTarget "Listsurf_iOS" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				F56016A9A752A9D151B2EF3E /* Debug */,
 				6EE47F35DFBB303DD913D3C2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		ECD5571534BA8CC64048630F /* Build configuration list for PBXNativeTarget "Listsurf_iOSUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A4D4F8A2F1089E02ECC2CE10 /* Debug */,
+				EBB6D0A3AC1D936D0BA2E28D /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
@@ -859,7 +919,15 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		15D449EADD6AB0B1808B7799 /* Features */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Features;
+		};
 		3330C307246A95A02800DF07 /* Domain */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Domain;
+		};
+		4601F91B9DF59FFDE1B64DC9 /* Domain */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = Domain;
 		};
@@ -867,9 +935,25 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = Persistence;
 		};
+		4F9ABDA1284B5E70CD556299 /* Persistence */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Persistence;
+		};
+		612D6A7467094FC9D904EF31 /* Features */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Features;
+		};
 		74D3E44A8AB016EAD31E55B4 /* Features */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = Features;
+		};
+		A97A64D9B8B5FCB4F4596254 /* Domain */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Domain;
+		};
+		ACB2D7DD86014ED66252B5A0 /* Persistence */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Persistence;
 		};
 		BCE6AF1EC704498F1C09F7A6 /* Domain */ = {
 			isa = XCSwiftPackageProductDependency;

@@ -5,7 +5,7 @@ public final class PersistenceStack: Sendable {
     public let container: NSPersistentContainer
     public let storeLoadError: String?
 
-    private static let logger = Logger(subsystem: "com.listsurf.app", category: "persistence")
+    private static let logger = Logger(subsystem: "net.vorwaller.listsurf", category: "persistence")
 
     public init(
         inMemory: Bool = false,

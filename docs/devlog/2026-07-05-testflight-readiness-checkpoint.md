@@ -1,0 +1,111 @@
+# 2026-07-05 — TestFlight readiness checkpoint
+
+## Goal
+
+Execute the first implementation phases from `2026-07-03-testflight-pipeline-plan.md`: clear upload blockers, prove the generated Xcode project and test plans are mechanically sound, and create a committed checkpoint before App Store Connect archive/upload work.
+
+## Completed
+
+### Upload blockers
+
+- Replaced the generated app icon set with a clean local bitmap icon and regenerated all referenced sizes:
+  - `icon_1024.png`
+  - `icon_512.png`
+  - `icon_256.png`
+  - `icon_128.png`
+  - `icon_64.png`
+  - `icon_32.png`
+  - `icon_16.png`
+- Verified every icon reports `hasAlpha: no` with `sips`.
+- Kept `project.yml` as the source of truth and regenerated `Listsurf.xcodeproj` with XcodeGen.
+- Verified `App/PrivacyInfo.xcprivacy` is included in both app targets; the macOS debug build copied it into `Listsurf.app/Contents/Resources/PrivacyInfo.xcprivacy`.
+- Confirmed bundle/signing/version metadata remains:
+  - Bundle ID: `net.vorwaller.listsurf`
+  - Development team: `BH65T3A7FT`
+  - Signing style: Automatic
+  - Marketing version: `1.0.0`
+  - Build: `1`
+
+### Xcode project and tests
+
+- Rechecked `xcodebuild -list -project Listsurf.xcodeproj`.
+- Confirmed the expected targets remain present:
+  - `Listsurf_iOS`
+  - `Listsurf_iOSLogicTests`
+  - `Listsurf_iOSUITests`
+  - `Listsurf_macOS`
+  - `Listsurf_macOSLogicTests`
+  - `Listsurf_macOSUITests`
+- Validated `Listsurf_iOS.xctestplan` and `Listsurf_macOS.xctestplan` with `python3 -m json.tool`.
+- Validated `App/PrivacyInfo.xcprivacy` and `App/Info.plist` with `plutil -lint`.
+
+### macOS UI-test stability
+
+The first macOS Xcode test run exposed a harness issue in `testCoreActionsAreVisible`: XCTest attempted to scroll/click while other desktop windows were treated as interrupting elements and raised `NSInvalidArgumentException` while checking a non-string accessibility value.
+
+The app was launching and UI tests were executing, so this was not the old "Timed out while enabling automation mode" host gate. I fixed the harness by activating the Listsurf app after launch/relaunch and immediately before the shared create-list click helper.
+
+## Verification
+
+Commands run from `/Users/gaylonvorwaller/listsurf`:
+
+```sh
+xcodegen generate
+xcodebuild -list -project Listsurf.xcodeproj
+python3 -m json.tool Listsurf_iOS.xctestplan >/dev/null
+python3 -m json.tool Listsurf_macOS.xctestplan >/dev/null
+plutil -lint App/PrivacyInfo.xcprivacy App/Info.plist
+sips -g hasAlpha App/Assets.xcassets/AppIcon.appiconset/icon_*.png
+swift test --quiet
+xcodebuild test -project Listsurf.xcodeproj -scheme Listsurf_iOS -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.5' -derivedDataPath /tmp/listsurf-dd-ios -resultBundlePath /tmp/listsurf-ios.xcresult
+xcodebuild build -project Listsurf.xcodeproj -scheme Listsurf_macOS -destination 'platform=macOS' -derivedDataPath /tmp/listsurf-dd-macos-build -resultBundlePath /tmp/listsurf-macos-build.xcresult
+xcodebuild test -project Listsurf.xcodeproj -scheme Listsurf_macOS -destination 'platform=macOS' -derivedDataPath /tmp/listsurf-dd-macos-test -resultBundlePath /tmp/listsurf-macos-test.xcresult
+```
+
+Results:
+
+- `swift test --quiet`: 95 tests passed.
+- iOS Xcode test plan on iPhone 17 iOS 26.5 Simulator:
+  - Logic tests: 95 passed.
+  - UI tests: 4 passed.
+  - Result bundle: `/tmp/listsurf-ios.xcresult`.
+- macOS debug build: succeeded.
+  - Result bundle: `/tmp/listsurf-macos-build.xcresult`.
+- macOS Xcode test plan:
+  - Logic tests: 95 passed.
+  - UI tests: 6 passed after the harness activation fix.
+  - Result bundle: `/tmp/listsurf-macos-test.xcresult`.
+
+## Remaining phases
+
+### App Store Connect setup
+
+This still needs an interactive Apple session:
+
+- Create the App Store Connect app record for `net.vorwaller.listsurf`.
+- Category: Productivity.
+- Pricing: free.
+- TestFlight information: minimum internal testing details.
+- Privacy answers: no tracking and no data collection, matching the local-only app behavior and `PrivacyInfo.xcprivacy`.
+
+### Archive and upload
+
+Next archive attempts should start from this committed checkpoint.
+
+Preferred path remains Xcode Organizer:
+
+1. Open `Listsurf.xcodeproj`.
+2. Archive `Listsurf_iOS` for generic iOS.
+3. Validate and upload to App Store Connect.
+4. Archive `Listsurf_macOS`.
+5. Validate and upload to App Store Connect.
+6. Record exact App Store Connect, signing, entitlement, sandbox, or upload errors if Apple rejects either build.
+
+### Dogfood
+
+Once App Store Connect processes builds:
+
+- Add the builds to an internal TestFlight group.
+- Install on owned iOS/macOS devices.
+- Exercise create/edit hierarchy, check mode, archive/restore, export/import backup, quit/relaunch, and persistence.
+- File follow-up `td` items for product friction discovered through the TestFlight build.
