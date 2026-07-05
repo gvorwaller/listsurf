@@ -76,6 +76,55 @@ Results:
   - UI tests: 6 passed after the harness activation fix.
   - Result bundle: `/tmp/listsurf-macos-test.xcresult`.
 
+## Archive attempts
+
+### iOS
+
+Attempted:
+
+```sh
+xcodebuild archive -project Listsurf.xcodeproj -scheme Listsurf_iOS -destination 'generic/platform=iOS' -archivePath /tmp/listsurf-ios.xcarchive -derivedDataPath /tmp/listsurf-dd-ios-archive -allowProvisioningUpdates
+```
+
+Result: blocked before compilation by Apple signing/provisioning state.
+
+Exact xcodebuild errors from `/tmp/listsurf-ios-archive.log`:
+
+- `Communication with Apple failed: Your team has no devices from which to generate a provisioning profile. Connect a device to use or manually add device IDs in Certificates, Identifiers & Profiles.`
+- `No profiles for 'net.vorwaller.listsurf' were found: Xcode couldn't find any iOS App Development provisioning profiles matching 'net.vorwaller.listsurf'.`
+
+I also checked the installed signing identities and confirmed both are present:
+
+- `Apple Distribution: GAYLON BLAINE VORWALLER (BH65T3A7FT)`
+- `Apple Development: GAYLON BLAINE VORWALLER (94NK4MZHHR)`
+
+I briefly tested forcing `CODE_SIGN_IDENTITY = Apple Distribution` for Release. Xcode rejected that because the target is still automatically signed for development:
+
+`Listsurf_iOS has conflicting provisioning settings. Listsurf_iOS is automatically signed for development, but a conflicting code signing identity Apple Distribution has been manually specified.`
+
+That override was not kept. The next action is Apple/Xcode workflow setup rather than a repo code change: register an iOS device or use Xcode Organizer/App Store Connect to create the distribution profile path for upload.
+
+### macOS
+
+Attempted:
+
+```sh
+xcodebuild archive -project Listsurf.xcodeproj -scheme Listsurf_macOS -destination 'generic/platform=macOS' -archivePath /tmp/listsurf-macos.xcarchive -derivedDataPath /tmp/listsurf-dd-macos-archive -allowProvisioningUpdates
+```
+
+Initial result: archive succeeded, but validation warned that no app category was set.
+
+Fix:
+
+- Added `LSApplicationCategoryType = public.app-category.productivity` to `App/Info.plist`.
+
+Final result:
+
+- `plutil -lint App/Info.plist`: OK.
+- `xcodebuild archive` for `Listsurf_macOS`: succeeded.
+- Archive path: `/tmp/listsurf-macos.xcarchive`.
+- Log path: `/tmp/listsurf-macos-archive.log`.
+
 ## Remaining phases
 
 ### App Store Connect setup
@@ -90,7 +139,7 @@ This still needs an interactive Apple session:
 
 ### Archive and upload
 
-Next archive attempts should start from this committed checkpoint.
+The macOS archive can now be opened in Xcode Organizer. The iOS archive path is blocked by signing/provisioning state until Apple has a usable development device/profile or a distribution profile path for App Store upload.
 
 Preferred path remains Xcode Organizer:
 
