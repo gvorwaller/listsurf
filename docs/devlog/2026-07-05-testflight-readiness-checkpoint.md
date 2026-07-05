@@ -125,6 +125,20 @@ Final result:
 - Archive path: `/tmp/listsurf-macos.xcarchive`.
 - Log path: `/tmp/listsurf-macos-archive.log`.
 
+Export attempt:
+
+```sh
+xcodebuild -exportArchive -archivePath /tmp/listsurf-macos.xcarchive -exportPath /tmp/listsurf-macos-export -exportOptionsPlist /tmp/listsurf-export-app-store-connect.plist -allowProvisioningUpdates
+```
+
+Result:
+
+- `xcodebuild -exportArchive`: succeeded.
+- Export path: `/tmp/listsurf-macos-export`.
+- Upload package: `/tmp/listsurf-macos-export/Listsurf.pkg`.
+- `pkgutil --check-signature`: package is signed by `3rd Party Mac Developer Installer: GAYLON BLAINE VORWALLER (BH65T3A7FT)`.
+- Upload still requires App Store Connect app/authentication state.
+
 ## Remaining phases
 
 ### App Store Connect setup
@@ -139,7 +153,7 @@ This still needs an interactive Apple session:
 
 ### Archive and upload
 
-The macOS archive can now be opened in Xcode Organizer. The iOS archive path is blocked by signing/provisioning state until Apple has a usable development device/profile or a distribution profile path for App Store upload.
+The macOS archive/export can now be uploaded after App Store Connect authentication is available. The iOS archive path is blocked by signing/provisioning state until Apple has a usable development device/profile or a distribution profile path for App Store upload.
 
 Preferred path remains Xcode Organizer:
 
