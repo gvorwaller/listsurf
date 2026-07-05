@@ -141,6 +141,13 @@ Specific log evidence:
 - Request log: `GET .../v1/apps?...filter[bundleId]=net.vorwaller.listsurf...`
 - Response: `200 success`, `fetched 0 items`.
 
+Follow-up after creating the App Store Connect app record:
+
+- Retried the iOS upload with the same archive and `destination=upload` export options.
+- App Store Connect accepted the upload.
+- Result: `Uploaded Listsurf_iOS`, `** EXPORT SUCCEEDED **`.
+- App Store Connect reported the uploaded package is processing.
+
 ### macOS
 
 Attempted:
@@ -174,15 +181,43 @@ Result:
 - Export path: `/tmp/listsurf-macos-export`.
 - Upload package: `/tmp/listsurf-macos-export/Listsurf.pkg`.
 - `pkgutil --check-signature`: package is signed by `3rd Party Mac Developer Installer: GAYLON BLAINE VORWALLER (BH65T3A7FT)`.
-- Upload still requires App Store Connect app/authentication state.
+- Initial upload attempt after app record creation reached App Store Connect but failed with code `90296`:
+  - `App sandbox not enabled.`
+  - Apple required `com.apple.security.app-sandbox` on `net.vorwaller.listsurf.pkg/Payload/Listsurf.app/Contents/MacOS/Listsurf`.
+
+Fix:
+
+- Added `App/Listsurf_macOS.entitlements`.
+- Enabled `com.apple.security.app-sandbox`.
+- Enabled `com.apple.security.files.user-selected.read-write` because the app has backup import/export through user-selected files.
+- Set `CODE_SIGN_ENTITLEMENTS[sdk=macosx*] = App/Listsurf_macOS.entitlements` in `project.yml`.
+- Regenerated `Listsurf.xcodeproj` with `xcodegen generate`.
+- Rebuilt `/tmp/listsurf-macos.xcarchive`.
+- Verified the archived app's signed entitlements with:
+
+```sh
+codesign -dvvv --entitlements :- /tmp/listsurf-macos.xcarchive/Products/Applications/Listsurf.app
+```
+
+Final upload result:
+
+- Retried the macOS upload with `destination=upload` export options.
+- App Store Connect accepted the upload.
+- Result: `Uploaded Listsurf_macOS`, `** EXPORT SUCCEEDED **`.
+- App Store Connect reported the uploaded package is processing.
 
 ## Remaining phases
 
 ### App Store Connect setup
 
-This still needs an interactive Apple session:
+Created in App Store Connect:
 
-- Create the App Store Connect app record for `net.vorwaller.listsurf`.
+- App Store Connect app record for `net.vorwaller.listsurf`.
+- iOS App Version 1.0.
+- macOS App Version 1.0.
+
+Still needed before public submission or external testing:
+
 - Category: Productivity.
 - Pricing: free.
 - TestFlight information: minimum internal testing details.
@@ -190,9 +225,9 @@ This still needs an interactive Apple session:
 
 ### Archive and upload
 
-Both iOS and macOS now have local App Store Connect export artifacts. Upload is blocked until the App Store Connect app record exists for `net.vorwaller.listsurf`.
+Both iOS and macOS uploads have succeeded and are processing in App Store Connect.
 
-Preferred path remains Xcode Organizer:
+Rebuild/upload path remains available through Xcode Organizer:
 
 1. Open `Listsurf.xcodeproj`.
 2. Archive `Listsurf_iOS` for generic iOS.

@@ -58,6 +58,7 @@
 
 /* Begin PBXFileReference section */
 		21F7BF9402B30E3EAA895E98 /* Listsurf_macOSLogicTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Listsurf_macOSLogicTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		2FFBF19226830B81281F5E84 /* Listsurf_macOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Listsurf_macOS.entitlements; sourceTree = "<group>"; };
 		381BB974398C3B1771AC6076 /* ListsurfApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListsurfApp.swift; sourceTree = "<group>"; };
 		442B43B6390F4FF4A5BBB824 /* Listsurf_iOSUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Listsurf_iOSUITests.swift; sourceTree = "<group>"; };
 		468653C87021C1129C8D3CE2 /* Listsurf_macOSUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Listsurf_macOSUITests.swift; sourceTree = "<group>"; };
@@ -136,6 +137,7 @@
 			children = (
 				E596D00A45E2A16387F9EBBA /* Assets.xcassets */,
 				C0000389AECEE218E691E647 /* Info.plist */,
+				2FFBF19226830B81281F5E84 /* Listsurf_macOS.entitlements */,
 				381BB974398C3B1771AC6076 /* ListsurfApp.swift */,
 				FC95DFD9A1535CA110E3DB8D /* PrivacyInfo.xcprivacy */,
 			);
@@ -492,6 +494,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = App/Listsurf_macOS.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -625,6 +628,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = App/Listsurf_macOS.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -748,6 +752,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = App/Listsurf_macOS.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -824,6 +829,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = App/Listsurf_macOS.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;

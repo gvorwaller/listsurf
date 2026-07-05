@@ -35,6 +35,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: net.vorwaller.listsurf
         DEVELOPMENT_TEAM: BH65T3A7FT
         CODE_SIGN_STYLE: Automatic
+        "CODE_SIGN_ENTITLEMENTS[sdk=macosx*]": App/Listsurf_macOS.entitlements
         PRODUCT_NAME: Listsurf
         INFOPLIST_FILE: App/Info.plist
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
