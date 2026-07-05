@@ -147,6 +147,10 @@ Follow-up after creating the App Store Connect app record:
 - App Store Connect accepted the upload.
 - Result: `Uploaded Listsurf_iOS`, `** EXPORT SUCCEEDED **`.
 - App Store Connect reported the uploaded package is processing.
+- App Store Connect asked for app encryption documentation before enabling TestFlight.
+- Code search found no app-level encryption, security, keychain, network, TLS, or crypto API usage; the app is local-only.
+- The correct App Store Connect answer for the uploaded build is `None of the algorithms mentioned above`.
+- Added `ITSAppUsesNonExemptEncryption = false` to `App/Info.plist` so future uploads declare that the app does not use non-exempt encryption.
 
 ### macOS
 
