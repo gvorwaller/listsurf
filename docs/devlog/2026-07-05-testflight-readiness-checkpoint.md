@@ -104,6 +104,43 @@ I briefly tested forcing `CODE_SIGN_IDENTITY = Apple Distribution` for Release. 
 
 That override was not kept. The next action is Apple/Xcode workflow setup rather than a repo code change: register an iOS device or use Xcode Organizer/App Store Connect to create the distribution profile path for upload.
 
+Follow-up after connecting a physical iPhone:
+
+- Xcode Devices and Simulators saw the device as `00008130-000869591A13803A`.
+- Device build with `-allowProvisioningUpdates -allowProvisioningDeviceRegistration` succeeded.
+- Xcode created `iOS Team Provisioning Profile: net.vorwaller.listsurf`.
+- Re-ran iOS archive successfully at `/tmp/listsurf-ios.xcarchive`.
+- Fixed two iOS validation warnings by adding `UILaunchScreen`, `UISupportedInterfaceOrientations`, and `UISupportedInterfaceOrientations~ipad` to `App/Info.plist`.
+- Re-ran iOS archive after the plist fix; archive succeeded and no longer emitted the orientation/launch-screen validation warnings.
+
+Export attempt:
+
+```sh
+xcodebuild -exportArchive -archivePath /tmp/listsurf-ios.xcarchive -exportPath /tmp/listsurf-ios-export -exportOptionsPlist /tmp/listsurf-export-app-store-connect.plist -allowProvisioningUpdates
+```
+
+Result:
+
+- `xcodebuild -exportArchive`: succeeded.
+- Export path: `/tmp/listsurf-ios-export`.
+- Upload package: `/tmp/listsurf-ios-export/Listsurf.ipa`.
+- The exported IPA is signed by `Apple Distribution: GAYLON BLAINE VORWALLER (BH65T3A7FT)`.
+- Embedded profile: `iOS Team Store Provisioning Profile: net.vorwaller.listsurf`.
+
+Upload attempt:
+
+```sh
+xcodebuild -exportArchive -archivePath /tmp/listsurf-ios.xcarchive -exportPath /tmp/listsurf-ios-upload-export -exportOptionsPlist /tmp/listsurf-upload-app-store-connect.plist -allowProvisioningUpdates
+```
+
+Result: blocked by missing App Store Connect app record. Xcode authenticated to App Store Connect and queried apps for `net.vorwaller.listsurf`, but App Store Connect returned `data: []`.
+
+Specific log evidence:
+
+- Distribution log: `IDEDistribution.DistributionAppRecordProviderError.missingApp(bundleId: "net.vorwaller.listsurf")`.
+- Request log: `GET .../v1/apps?...filter[bundleId]=net.vorwaller.listsurf...`
+- Response: `200 success`, `fetched 0 items`.
+
 ### macOS
 
 Attempted:
@@ -153,7 +190,7 @@ This still needs an interactive Apple session:
 
 ### Archive and upload
 
-The macOS archive/export can now be uploaded after App Store Connect authentication is available. The iOS archive path is blocked by signing/provisioning state until Apple has a usable development device/profile or a distribution profile path for App Store upload.
+Both iOS and macOS now have local App Store Connect export artifacts. Upload is blocked until the App Store Connect app record exists for `net.vorwaller.listsurf`.
 
 Preferred path remains Xcode Organizer:
 
