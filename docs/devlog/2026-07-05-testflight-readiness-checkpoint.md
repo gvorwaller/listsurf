@@ -240,7 +240,7 @@ Rebuild/upload path remains available through Xcode Organizer:
 5. Validate and upload to App Store Connect.
 6. Record exact App Store Connect, signing, entitlement, sandbox, or upload errors if Apple rejects either build.
 
-### Dogfood
+### Local validation through TestFlight
 
 Once App Store Connect processes builds:
 

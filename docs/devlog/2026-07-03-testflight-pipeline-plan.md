@@ -18,7 +18,7 @@ choose to exercise that final step later.
 - `td-47ab6b` — Verify Xcode project and test-plan readiness
 - `td-e3a1c5` — Archive and upload iOS TestFlight build
 - `td-9cccf4` — Archive and upload macOS TestFlight build
-- `td-18ab4b` — Dogfood Listsurf through TestFlight
+- `td-18ab4b` — Exercise Listsurf through TestFlight
 - `td-e151b9` — Optional public App Store metadata and screenshots
 
 Existing related task:
@@ -151,7 +151,7 @@ Exit criteria:
   TestFlight testing, or every blocker is documented with exact error text and
   next action.
 
-## Phase 7 — Dogfood Through TestFlight
+## Phase 7 — Exercise Through TestFlight
 
 Task: `td-18ab4b`
 

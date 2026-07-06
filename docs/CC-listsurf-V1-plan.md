@@ -517,7 +517,7 @@ Use native file import/export and share sheets. Provide an explicit full-library
 - Add JSON, OPML, and Markdown round trips.
 - Add archive/restore, recovery messaging, accessibility, performance tests, and migration fixtures.
 - Build diagnostics screen.
-- Dogfood the app on real lists until the model and commands stop changing frequently.
+- Exercise the app on real lists until the model and commands stop changing frequently.
 
 ### Phase 5 — V1.1 Personal Sync
 
