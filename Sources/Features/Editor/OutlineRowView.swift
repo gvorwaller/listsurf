@@ -5,10 +5,11 @@ struct OutlineRowView: View {
     let row: FlatRow
     let isSelected: Bool
     let isEditing: Bool
+    let notePreviewLineCount: Int
     @Binding var editingText: String
     let onToggleExpand: () -> Void
     let onCommitEdit: () -> Void
-    let onStartEdit: () -> Void
+    let onShowDetails: () -> Void
     let onSelect: () -> Void
     @FocusState private var isFocused: Bool
 
@@ -16,17 +17,7 @@ struct OutlineRowView: View {
         HStack(spacing: 6) {
             disclosureIndicator
 
-            if isEditing {
-                TextField("Title", text: $editingText)
-                    .focused($isFocused)
-                    .onSubmit { onCommitEdit() }
-                    .onAppear { isFocused = true }
-            } else {
-                Text(row.item.title.isEmpty ? "Untitled" : row.item.title)
-                    .foregroundStyle(row.item.title.isEmpty ? .secondary : .primary)
-                    .onTapGesture { onSelect() }
-                    .onTapGesture(count: 2) { onStartEdit() }
-            }
+            titleAndNotes
 
             Spacer()
 
@@ -42,7 +33,30 @@ struct OutlineRowView: View {
             }
         }
         .onTapGesture { onSelect() }
-        .onTapGesture(count: 2) { onStartEdit() }
+        .onTapGesture(count: 2) { onShowDetails() }
+    }
+
+    @ViewBuilder
+    private var titleAndNotes: some View {
+        if isEditing {
+            TextField("Title", text: $editingText)
+                .focused($isFocused)
+                .onSubmit { onCommitEdit() }
+                .onAppear { isFocused = true }
+        } else {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(row.item.title.isEmpty ? "Untitled" : row.item.title)
+                    .foregroundStyle(row.item.title.isEmpty ? .secondary : .primary)
+
+                if notePreviewLineCount > 0,
+                   let notes = row.item.notes?.trimmingCharacters(in: .whitespacesAndNewlines),
+                   !notes.isEmpty {
+                    NotePreviewView(notes: notes, lineCount: notePreviewLineCount)
+                }
+            }
+            .onTapGesture { onSelect() }
+            .onTapGesture(count: 2) { onShowDetails() }
+        }
     }
 
     @ViewBuilder
@@ -73,7 +87,7 @@ struct OutlineRowView: View {
                 .monospacedDigit()
         }
 
-        if row.item.notes != nil {
+        if notePreviewLineCount == 0, row.item.notes != nil {
             Image(systemName: "note.text")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)

@@ -1,0 +1,17 @@
+Listsurf testing
+- duplicate should give new name 
+- Archive should say restore archive (where does archive go?)
+- New list should not be from existing list … - should be separate add icon
+- Import/export should also work per list, not just the whole db 
+    - Support OPML 
+- want drag-n-drop to move items (at least, up/down)
+- would like to connect to the local sqlpus db to see table structure and data
+- Symbols for 'expand all' and 'collapse all' are reversed (in edit mode)
+- Checkoff mode also needs expand / collapse all
+- help doc - make collapsible sections 
+- command keys as spec'd in 'help' doc don't work
+- on context menus, show command keystrokes where available 
+- in 'edit' and in 'checkoff' mode, cursor keys (Mac) do not cursor up and down 
+- edit in place doesn't work (Mac)
+- context menu in 'edit' mode for a line - 'details' doesn't do anything
+- Thinking if we should refactor to have common storage, so both Mac and iOS have same data.  This would be a P3 item for now.

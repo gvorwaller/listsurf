@@ -4,6 +4,54 @@ import XCTest
 
 final class AppStoreExportImportTests: XCTestCase {
     @MainActor
+    func testDuplicateListAppendsCopyToNewTitle() async throws {
+        let source = ListItem(title: "Packing", position: 1)
+        let listRepository = ExportImportListRepository(lists: [source])
+        let store = AppStore(
+            listRepository: listRepository,
+            outlineRepository: ExportImportOutlineRepository(items: [])
+        )
+        await store.loadLists()
+
+        await store.duplicateList(id: source.id, clearChecks: false)
+
+        XCTAssertEqual(store.lists.map(\.title).sorted(), ["Packing", "Packing Copy"])
+        XCTAssertEqual(store.selectedListID, store.lists.first { $0.title == "Packing Copy" }?.id)
+    }
+
+    @MainActor
+    func testDuplicateListUsesNumberedCopyWhenTitleAlreadyExists() async throws {
+        let source = ListItem(title: "Packing", position: 1)
+        let existingCopy = ListItem(title: "Packing Copy", position: 2)
+        let archivedCopy = ListItem(title: "Packing Copy 2", position: 3, archivedAt: Date())
+        let listRepository = ExportImportListRepository(lists: [source, existingCopy, archivedCopy])
+        let store = AppStore(
+            listRepository: listRepository,
+            outlineRepository: ExportImportOutlineRepository(items: [])
+        )
+        await store.loadLists()
+
+        await store.duplicateList(id: source.id, clearChecks: false)
+
+        XCTAssertTrue(store.lists.contains { $0.title == "Packing Copy 3" })
+    }
+
+    @MainActor
+    func testDuplicateListContinuesCopyNumberWhenSourceIsAlreadyACopy() async throws {
+        let source = ListItem(title: "Packing Copy 2", position: 1)
+        let listRepository = ExportImportListRepository(lists: [source])
+        let store = AppStore(
+            listRepository: listRepository,
+            outlineRepository: ExportImportOutlineRepository(items: [])
+        )
+        await store.loadLists()
+
+        await store.duplicateList(id: source.id, clearChecks: false)
+
+        XCTAssertTrue(store.lists.contains { $0.title == "Packing Copy 3" })
+    }
+
+    @MainActor
     func testExportLibraryIncludesAllListsAndItemsInPositionOrder() async throws {
         let activeList = ListItem(title: "Active", position: 2)
         let archivedList = ListItem(title: "Archived", position: 1, archivedAt: Date())

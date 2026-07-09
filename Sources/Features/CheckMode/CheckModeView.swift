@@ -4,6 +4,7 @@ import Platform
 
 struct CheckModeView: View {
     @Bindable var store: ListStore
+    let notePreviewLineCount: Int
     @Environment(\.undoManager) private var undoManager
     @State private var branchPendingReset: BranchResetConfirmation?
 
@@ -61,6 +62,7 @@ struct CheckModeView: View {
             ForEach(store.filteredRows) { row in
                 CheckRowView(
                     row: row,
+                    notePreviewLineCount: notePreviewLineCount,
                     onToggle: {
                         store.toggleCheck(itemID: row.id, undoManager: undoManager)
                         Haptics.checkToggle()
@@ -125,7 +127,10 @@ private struct BranchResetConfirmation: Identifiable {
 #if DEBUG
 #Preview("Check Mode") {
     NavigationStack {
-        CheckModeView(store: PreviewFixtures.listStore(checkMode: true))
+        CheckModeView(
+            store: PreviewFixtures.listStore(checkMode: true),
+            notePreviewLineCount: 1
+        )
             .navigationTitle("Weekend Packing")
     }
 }

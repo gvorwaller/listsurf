@@ -107,9 +107,10 @@ private struct HelpSection: View {
     let title: String
     let systemImage: String
     let items: [HelpItem]
+    @State private var isExpanded = true
 
     var body: some View {
-        Section {
+        DisclosureGroup(isExpanded: $isExpanded) {
             ForEach(items) { item in
                 VStack(alignment: .leading, spacing: 4) {
                     Text(item.term)
@@ -119,8 +120,9 @@ private struct HelpSection: View {
                 }
                 .padding(.vertical, 4)
             }
-        } header: {
+        } label: {
             Label(title, systemImage: systemImage)
+                .font(.headline)
         }
     }
 }

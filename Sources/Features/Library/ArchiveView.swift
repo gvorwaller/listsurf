@@ -14,7 +14,7 @@ struct ArchiveView: View {
                     ContentUnavailableView(
                         "No Archived Lists",
                         systemImage: "archivebox",
-                        description: Text("Archived lists will appear here.")
+                        description: Text("Archive moves lists out of the main library without deleting them. Restore brings a list back.")
                     )
                 } else {
                     List {
@@ -22,6 +22,15 @@ struct ArchiveView: View {
                             HStack(spacing: 8) {
                                 LibraryRow(list: list)
                                 Spacer(minLength: 8)
+                                Button {
+                                    Task { await appStore.restoreList(id: list.id) }
+                                } label: {
+                                    Label("Restore", systemImage: "arrow.uturn.backward")
+                                }
+                                .buttonStyle(.bordered)
+                                .controlSize(.small)
+                                .accessibilityIdentifier("archive.restoreList")
+
                                 Menu {
                                     archivedListActionMenu(list)
                                 } label: {
@@ -54,7 +63,7 @@ struct ArchiveView: View {
                     }
                 }
             }
-            .navigationTitle("Archive")
+            .navigationTitle("Archived Lists")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }

@@ -12,6 +12,7 @@ public struct ContentView: View {
     @State private var showingImporter = false
     @State private var showingExporter = false
     @State private var showingHelp = false
+    @State private var showingSettings = false
     @State private var exportDocument = ListsurfBackupDocument()
     @State private var exportFilename = "Listsurf Backup.json"
     @State private var pendingImport: PendingLibraryImport?
@@ -29,6 +30,7 @@ public struct ContentView: View {
                         onNewList: beginNewList,
                         onImportBackup: beginImportBackup,
                         onExportBackup: beginExportBackup,
+                        onShowSettings: showSettings,
                         onShowHelp: showHelp
                     )
                 } detail: {
@@ -107,6 +109,22 @@ public struct ContentView: View {
                 showingHelp = false
             }
         }
+        .sheet(isPresented: $showingSettings) {
+            NavigationStack {
+                ListsurfSettingsView()
+                    .navigationTitle("Settings")
+                    #if os(iOS)
+                    .navigationBarTitleDisplayMode(.inline)
+                    #endif
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") {
+                                showingSettings = false
+                            }
+                        }
+                    }
+            }
+        }
         .task {
             if case .storeCorrupted = appStore.errorStore.current?.error {
                 return
@@ -143,6 +161,10 @@ public struct ContentView: View {
 
     private func showHelp() {
         showingHelp = true
+    }
+
+    private func showSettings() {
+        showingSettings = true
     }
 
     private func createList() {

@@ -11,18 +11,24 @@ struct ListDetailView: View {
     @State private var showingResetAllChecksConfirmation = false
     @State private var selectedItemsPendingDeletion: SelectedItemsDeletionConfirmation?
     @State private var listBeingEdited: ListItem?
+    @AppStorage(ListsurfSettingsKey.notesPreviewLineLimit) private var notePreviewLineCount = 1
     @Environment(\.undoManager) private var undoManager
 
     var body: some View {
         Group {
             if let store = listStore {
                 if store.isCheckMode {
-                    CheckModeView(store: store)
+                    CheckModeView(
+                        store: store,
+                        notePreviewLineCount: normalizedNotePreviewLineCount
+                    )
                 } else {
                     OutlineEditorView(
                         store: store,
                         inspectorItemID: $inspectorItemID,
-                        addRequest: $addRequest
+                        showInspector: $showInspector,
+                        addRequest: $addRequest,
+                        notePreviewLineCount: normalizedNotePreviewLineCount
                     )
                 }
             } else {
@@ -70,6 +76,12 @@ struct ListDetailView: View {
                 Button(confirmation.buttonTitle, role: .destructive) {
                     store.deleteSelected(undoManager: undoManager)
                 }
+                .keyboardShortcut(.defaultAction)
+
+                Button("Cancel", role: .cancel) {
+                    selectedItemsPendingDeletion = nil
+                }
+                .keyboardShortcut(.cancelAction)
             }
         } message: {
             if let confirmation = selectedItemsPendingDeletion {
@@ -141,14 +153,14 @@ struct ListDetailView: View {
         Button {
             store.expandAll()
         } label: {
-            Label("Expand All", systemImage: "arrow.down.right.and.arrow.up.left")
+            Label("Expand All", systemImage: "arrow.up.left.and.arrow.down.right")
         }
         .help("Expand all branches")
 
         Button {
             store.collapseAll()
         } label: {
-            Label("Collapse All", systemImage: "arrow.up.left.and.arrow.down.right")
+            Label("Collapse All", systemImage: "arrow.down.right.and.arrow.up.left")
         }
         .help("Collapse all branches")
     }
@@ -177,18 +189,21 @@ struct ListDetailView: View {
         } label: {
             Label("Add Below", systemImage: "plus")
         }
+        .keyboardShortcut(.return, modifiers: [])
 
         Button {
             store.insertAbove(referenceID: itemID, title: "New Item", undoManager: undoManager)
         } label: {
             Label("Add Above", systemImage: "arrow.up")
         }
+        .keyboardShortcut(.return, modifiers: [.shift])
 
         Button {
             requestAdd(childOfID: itemID)
         } label: {
             Label("Add Child", systemImage: "arrow.turn.down.right")
         }
+        .keyboardShortcut(.return, modifiers: [.command])
 
         Divider()
 
@@ -197,12 +212,14 @@ struct ListDetailView: View {
         } label: {
             Label("Indent", systemImage: "increase.indent")
         }
+        .keyboardShortcut(.tab, modifiers: [])
 
         Button {
             store.outdent(itemID: itemID, undoManager: undoManager)
         } label: {
             Label("Outdent", systemImage: "decrease.indent")
         }
+        .keyboardShortcut(.tab, modifiers: [.shift])
 
         Divider()
 
@@ -211,12 +228,14 @@ struct ListDetailView: View {
         } label: {
             Label("Move Up", systemImage: "arrow.up")
         }
+        .keyboardShortcut(.upArrow, modifiers: [.command, .option])
 
         Button {
             store.moveDown(itemID: itemID, undoManager: undoManager)
         } label: {
             Label("Move Down", systemImage: "arrow.down")
         }
+        .keyboardShortcut(.downArrow, modifiers: [.command, .option])
 
         Divider()
 
@@ -227,6 +246,7 @@ struct ListDetailView: View {
         } label: {
             Label("Delete", systemImage: "trash")
         }
+        .keyboardShortcut(.delete, modifiers: [.command])
     }
 
     @ViewBuilder
@@ -244,6 +264,20 @@ struct ListDetailView: View {
         }
         .pickerStyle(.segmented)
         .help("Filter items by check state")
+
+        Button {
+            store.expandAll()
+        } label: {
+            Label("Expand All", systemImage: "arrow.up.left.and.arrow.down.right")
+        }
+        .help("Expand all branches")
+
+        Button {
+            store.collapseAll()
+        } label: {
+            Label("Collapse All", systemImage: "arrow.down.right.and.arrow.up.left")
+        }
+        .help("Collapse all branches")
 
         Button {
             showingResetAllChecksConfirmation = true
@@ -309,6 +343,10 @@ struct ListDetailView: View {
     private func singleSelectedItemID(in store: ListStore) -> UUID? {
         guard store.selectedItemIDs.count == 1 else { return nil }
         return store.selectedItemIDs.first
+    }
+
+    private var normalizedNotePreviewLineCount: Int {
+        max(1, notePreviewLineCount)
     }
 
     private func requestAdd(afterID: UUID?) {

@@ -81,6 +81,38 @@ final class ListStorePersistenceTests: XCTestCase {
     }
 
     @MainActor
+    func testAddItemReturnsAndSelectsNewItem() {
+        let list = ListItem(title: "Test")
+        let store = ListStore(
+            listID: list.id,
+            outlineRepo: DelayedOutlineRepository(items: []),
+            listRepo: StubListRepository(list: list)
+        )
+
+        let newID = store.addItem(title: "New")
+
+        XCTAssertEqual(store.selectedItemIDs, [newID])
+        XCTAssertTrue(store.items.contains { $0.id == newID && $0.title == "New" })
+    }
+
+    @MainActor
+    func testInsertAboveReturnsAndSelectsNewItem() {
+        let list = ListItem(title: "Test")
+        let existing = OutlineItem(listID: list.id, title: "Existing")
+        let store = ListStore(
+            listID: list.id,
+            outlineRepo: DelayedOutlineRepository(items: [existing]),
+            listRepo: StubListRepository(list: list)
+        )
+        store.items = [existing]
+
+        let newID = store.insertAbove(referenceID: existing.id, title: "New")
+
+        XCTAssertEqual(store.selectedItemIDs, [newID])
+        XCTAssertEqual(store.flatRows.first?.id, newID)
+    }
+
+    @MainActor
     func testPersistenceFailureIsPresented() async {
         let list = ListItem(title: "Test")
         let item = OutlineItem(listID: list.id, title: "Original")

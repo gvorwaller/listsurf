@@ -3,6 +3,7 @@ import Domain
 
 struct CheckRowView: View {
     let row: FlatRow
+    let notePreviewLineCount: Int
     let onToggle: () -> Void
     let onToggleExpand: () -> Void
 
@@ -43,6 +44,12 @@ struct CheckRowView: View {
                 Text(row.item.title)
                     .strikethrough(row.checkState == .checked)
                     .foregroundStyle(row.checkState == .checked ? .secondary : .primary)
+
+                if notePreviewLineCount > 0,
+                   let notes = row.item.notes?.trimmingCharacters(in: .whitespacesAndNewlines),
+                   !notes.isEmpty {
+                    NotePreviewView(notes: notes, lineCount: notePreviewLineCount)
+                }
 
                 if row.hasChildren {
                     let p = row.leafProgress

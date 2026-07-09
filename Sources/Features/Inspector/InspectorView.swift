@@ -24,8 +24,8 @@ struct InspectorView: View {
             }
 
             Section("Notes") {
-                TextField("Add notes…", text: notesBinding(item), axis: .vertical)
-                    .lineLimit(3...10)
+                NotesEditor(text: notesBinding(item))
+                    .frame(minHeight: 110)
             }
 
             Section("Quantity") {
@@ -105,5 +105,25 @@ struct InspectorView: View {
                 store.updateItemQuantity(id: item.id, quantity: newValue, undoManager: undoManager)
             }
         )
+    }
+}
+
+private struct NotesEditor: View {
+    @Binding var text: String
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            TextEditor(text: $text)
+                .scrollContentBackground(.hidden)
+                .accessibilityIdentifier("inspector.itemNotes")
+
+            if text.isEmpty {
+                Text("Add notes...")
+                    .foregroundStyle(.tertiary)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 8)
+                    .allowsHitTesting(false)
+            }
+        }
     }
 }

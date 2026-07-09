@@ -6,6 +6,7 @@ struct LibrarySidebar: View {
     let onNewList: () -> Void
     let onImportBackup: () -> Void
     let onExportBackup: () -> Void
+    let onShowSettings: () -> Void
     let onShowHelp: () -> Void
     @State private var searchText = ""
     @State private var showingArchive = false
@@ -16,11 +17,13 @@ struct LibrarySidebar: View {
         onNewList: @escaping () -> Void = {},
         onImportBackup: @escaping () -> Void = {},
         onExportBackup: @escaping () -> Void = {},
+        onShowSettings: @escaping () -> Void = {},
         onShowHelp: @escaping () -> Void = {}
     ) {
         self.onNewList = onNewList
         self.onImportBackup = onImportBackup
         self.onExportBackup = onExportBackup
+        self.onShowSettings = onShowSettings
         self.onShowHelp = onShowHelp
     }
 
@@ -45,8 +48,9 @@ struct LibrarySidebar: View {
                 Button {
                     showingArchive = true
                 } label: {
-                    Label("Archive", systemImage: "archivebox")
+                    Label("Archived Lists", systemImage: "archivebox")
                 }
+                .badge(appStore.archivedLists.count)
                 .accessibilityIdentifier("library.archive.visible")
 
                 Button {
@@ -55,6 +59,8 @@ struct LibrarySidebar: View {
                     Label("Help", systemImage: "questionmark.circle")
                 }
                 .accessibilityIdentifier("library.help.visible")
+
+                settingsButton
             }
 
             if filteredLists.isEmpty && searchText.isEmpty {
@@ -96,9 +102,12 @@ struct LibrarySidebar: View {
                 Button {
                     showingArchive = true
                 } label: {
-                    Label("Archive", systemImage: "archivebox")
+                    Label("Archived Lists", systemImage: "archivebox")
                 }
+                .badge(appStore.archivedLists.count)
                 .help("View archived lists")
+
+                settingsButton
 
                 Menu {
                     Button(action: onShowHelp) {
@@ -116,9 +125,14 @@ struct LibrarySidebar: View {
                     Button {
                         showingArchive = true
                     } label: {
-                        Label("Archive", systemImage: "archivebox")
+                        Label("Archived Lists", systemImage: "archivebox")
                     }
+                    .badge(appStore.archivedLists.count)
                     .accessibilityIdentifier("library.menu.archive")
+
+                    Divider()
+
+                    settingsButton
 
                     Divider()
 
@@ -184,9 +198,10 @@ struct LibrarySidebar: View {
             Button {
                 showingArchive = true
             } label: {
-                Label("Archive", systemImage: "archivebox")
+                Label("Archived Lists", systemImage: "archivebox")
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .badge(appStore.archivedLists.count)
             .buttonStyle(.borderless)
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
@@ -230,18 +245,29 @@ struct LibrarySidebar: View {
     }
 
     @ViewBuilder
+    private var settingsButton: some View {
+        #if os(macOS)
+        SettingsLink {
+            Label("Settings…", systemImage: "gearshape")
+        }
+        .accessibilityIdentifier("library.settings")
+        #else
+        Button {
+            onShowSettings()
+        } label: {
+            Label("Settings", systemImage: "gearshape")
+        }
+        .accessibilityIdentifier("library.settings")
+        #endif
+    }
+
+    @ViewBuilder
     private func listContextMenu(_ list: ListItem) -> some View {
         listActionMenu(list)
     }
 
     @ViewBuilder
     private func listActionMenu(_ list: ListItem) -> some View {
-        Button(action: onNewList) {
-            Label("New List", systemImage: "plus")
-        }
-
-        Divider()
-
         Button {
             listBeingEdited = list
         } label: {

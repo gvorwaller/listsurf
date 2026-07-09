@@ -104,6 +104,7 @@ public final class AppStore {
                 clearChecks: clearChecks
             )
             var positioned = newList
+            positioned.title = duplicateTitle(for: list.title)
             positioned.position = (lists.map(\.position).max() ?? 0) + 1.0
             try await listRepo.saveListAndItems(positioned, items: newItems)
             await loadLists()
@@ -164,6 +165,62 @@ public final class AppStore {
             listRepo: listRepo,
             errorStore: errorStore
         )
+    }
+
+    private func duplicateTitle(for title: String) -> String {
+        let existingTitles = Set((lists + archivedLists).map(\.title))
+        if let copySequence = copySequence(for: title) {
+            return firstAvailableCopyTitle(
+                baseTitle: copySequence.baseTitle,
+                startingAt: copySequence.nextNumber,
+                existingTitles: existingTitles
+            )
+        }
+
+        return firstAvailableCopyTitle(
+            baseTitle: title,
+            startingAt: 1,
+            existingTitles: existingTitles
+        )
+    }
+
+    private func firstAvailableCopyTitle(
+        baseTitle: String,
+        startingAt startingNumber: Int,
+        existingTitles: Set<String>
+    ) -> String {
+        var number = max(1, startingNumber)
+        while true {
+            let candidate = number == 1 ? "\(baseTitle) Copy" : "\(baseTitle) Copy \(number)"
+            if !existingTitles.contains(candidate) {
+                return candidate
+            }
+            number += 1
+        }
+    }
+
+    private func copySequence(for title: String) -> (baseTitle: String, nextNumber: Int)? {
+        let pattern = #"^(.*) Copy(?: (\d+))?$"#
+        guard let regex = try? NSRegularExpression(pattern: pattern),
+              let match = regex.firstMatch(in: title, range: NSRange(title.startIndex..., in: title)),
+              let range = Range(match.range(at: 1), in: title)
+        else {
+            return nil
+        }
+
+        let base = String(title[range]).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !base.isEmpty else { return nil }
+
+        let nextNumber: Int
+        if match.range(at: 2).location != NSNotFound,
+           let numberRange = Range(match.range(at: 2), in: title),
+           let number = Int(title[numberRange]) {
+            nextNumber = number + 1
+        } else {
+            nextNumber = 2
+        }
+
+        return (base, nextNumber)
     }
 
     private func presentLoadError(_ error: Error, operation: String) {

@@ -155,7 +155,8 @@ public final class ListStore {
 
     // MARK: - Structural commands
 
-    public func addItem(title: String, afterItemID: UUID? = nil, undoManager: UndoManager? = nil) {
+    @discardableResult
+    public func addItem(title: String, afterItemID: UUID? = nil, undoManager: UndoManager? = nil) -> UUID {
         let newItem = OutlineItem(listID: listID, title: title)
         let oldItems = items
 
@@ -171,9 +172,12 @@ public final class ListStore {
         registerUndo(undoManager: undoManager, oldItems: oldItems)
         applyChanges(to: updatedItems)
         persistInBackground(from: oldItems, to: updatedItems)
+        selectedItemIDs = [newItem.id]
+        return newItem.id
     }
 
-    public func addChild(parentID: UUID, title: String, undoManager: UndoManager? = nil) {
+    @discardableResult
+    public func addChild(parentID: UUID, title: String, undoManager: UndoManager? = nil) -> UUID {
         let newItem = OutlineItem(listID: listID, title: title)
         let oldItems = items
         let updatedItems = engine.insertChild(parentID: parentID, newItem: newItem, in: items)
@@ -181,15 +185,20 @@ public final class ListStore {
         registerUndo(undoManager: undoManager, oldItems: oldItems)
         applyChanges(to: updatedItems)
         persistInBackground(from: oldItems, to: updatedItems)
+        selectedItemIDs = [newItem.id]
+        return newItem.id
     }
 
-    public func insertAbove(referenceID: UUID, title: String, undoManager: UndoManager? = nil) {
+    @discardableResult
+    public func insertAbove(referenceID: UUID, title: String, undoManager: UndoManager? = nil) -> UUID {
         let newItem = OutlineItem(listID: listID, title: title)
         let oldItems = items
         let updatedItems = engine.insertAbove(referenceID: referenceID, newItem: newItem, in: items)
         registerUndo(undoManager: undoManager, oldItems: oldItems)
         applyChanges(to: updatedItems)
         persistInBackground(from: oldItems, to: updatedItems)
+        selectedItemIDs = [newItem.id]
+        return newItem.id
     }
 
     public func deleteItem(id: UUID, undoManager: UndoManager? = nil) {

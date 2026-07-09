@@ -47,5 +47,11 @@ struct ListsurfApp: App {
         .commands {
             ListsurfCommands()
         }
+
+        #if os(macOS)
+        Settings {
+            ListsurfSettingsView()
+        }
+        #endif
     }
 }
