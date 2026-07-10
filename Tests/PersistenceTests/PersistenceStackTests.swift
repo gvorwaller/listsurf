@@ -410,6 +410,70 @@ final class PersistenceStackTests: XCTestCase {
         XCTAssertEqual(fetchedItems.map(\.title), ["Existing Item"])
     }
 
+    func testAddListsAndItemsThrowsOnDuplicateIDsWithinArchive() async throws {
+        // Duplicates INSIDE the archive would pass the store-collision fetches
+        // and then hit the silent-upsert merge policy between two incoming
+        // rows — they must be rejected before the insert loop.
+        let stack = PersistenceStack.inMemory()
+        let listRepo = CoreDataListRepository(stack: stack)
+
+        let sharedListID = UUID()
+        let listA = ListItem(id: sharedListID, title: "A")
+        let listB = ListItem(id: sharedListID, title: "B")
+        do {
+            try await listRepo.addListsAndItems(with: LibraryArchive(lists: [
+                ArchivedList(list: listA, items: []),
+                ArchivedList(list: listB, items: []),
+            ]))
+            XCTFail("Expected duplicate list ID in archive to throw")
+        } catch AddListsAndItemsError.duplicateListIDInArchive(let id) {
+            XCTAssertEqual(id, sharedListID)
+        }
+        let lists = try await listRepo.fetchAll()
+        XCTAssertTrue(lists.isEmpty, "Nothing may land from a rejected archive")
+
+        let list = ListItem(title: "C")
+        let sharedItemID = UUID()
+        do {
+            try await listRepo.addListsAndItems(with: LibraryArchive(lists: [
+                ArchivedList(list: list, items: [
+                    OutlineItem(id: sharedItemID, listID: list.id, title: "One"),
+                    OutlineItem(id: sharedItemID, listID: list.id, title: "Two"),
+                ]),
+            ]))
+            XCTFail("Expected duplicate item ID in archive to throw")
+        } catch AddListsAndItemsError.duplicateItemIDInArchive(let id) {
+            XCTAssertEqual(id, sharedItemID)
+        }
+    }
+
+    func testAddListsAndItemsRejectsItemPackagedOutsideItsList() async throws {
+        // An item whose listID points at an EXISTING list would inject rows
+        // into that list — an additive import must never touch existing lists.
+        let stack = PersistenceStack.inMemory()
+        let listRepo = CoreDataListRepository(stack: stack)
+        let itemRepo = CoreDataOutlineRepository(stack: stack)
+
+        let existingList = ListItem(title: "Existing")
+        try await listRepo.saveListAndItems(existingList, items: [])
+
+        let newList = ListItem(title: "New")
+        let injected = OutlineItem(listID: existingList.id, title: "Injected")
+        do {
+            try await listRepo.addListsAndItems(
+                with: LibraryArchive(lists: [ArchivedList(list: newList, items: [injected])])
+            )
+            XCTFail("Expected mismatched item listID to throw")
+        } catch AddListsAndItemsError.itemOutsideItsList(let itemID) {
+            XCTAssertEqual(itemID, injected.id)
+        }
+
+        let existingItems = try await itemRepo.fetchItems(forList: existingList.id)
+        XCTAssertTrue(existingItems.isEmpty, "The existing list must not gain items")
+        let fetchedNewList = try await listRepo.fetch(id: newList.id)
+        XCTAssertNil(fetchedNewList, "The rejected archive's list must not land")
+    }
+
     private func createV1Store(
         at storeURL: URL,
         list: ListItem,

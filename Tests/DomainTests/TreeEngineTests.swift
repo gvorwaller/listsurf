@@ -648,6 +648,28 @@ final class TreeEngineTests: XCTestCase {
         XCTAssertTrue(repair.repaired.allSatisfy { $0.parentID == nil })
     }
 
+    func testRepairInvalidParentsKeepsDescendantsOfCycleAttached() {
+        // Only cycle MEMBERS are repaired: once A and B are promoted to root,
+        // C's child-of-A relationship is valid again — flattening C too would
+        // needlessly destroy hierarchy and overstate the repair count.
+        var a = makeItem(title: "A", position: 1.0)
+        var b = makeItem(title: "B", position: 2.0)
+        var c = makeItem(title: "C", position: 1.0)
+        a.parentID = b.id
+        b.parentID = a.id
+        c.parentID = a.id
+
+        let repair = engine.repairInvalidParents(in: [a, b, c])
+
+        XCTAssertEqual(repair.cycleCount, 2, "Only the two cycle members are repaired")
+        XCTAssertNil(repair.repaired.first { $0.id == a.id }?.parentID)
+        XCTAssertNil(repair.repaired.first { $0.id == b.id }?.parentID)
+        XCTAssertEqual(
+            repair.repaired.first { $0.id == c.id }?.parentID, a.id,
+            "The cycle's descendant keeps its now-valid parent"
+        )
+    }
+
     func testDescendantsStopAtCycle() {
         var a = makeItem(title: "A", position: 1.0)
         var b = makeItem(title: "B", position: 2.0)

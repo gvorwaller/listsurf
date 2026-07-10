@@ -220,6 +220,10 @@ public struct OPMLCodec: Sendable {
         private var elementPath: [String] = []
         private var outlineStack: [NodeBuilder] = []
         private var titleCharacters: String = ""
+        // Outlines outside <body> (e.g. metadata in <head>) are ignored, along
+        // with their entire subtree; this counts ignored-outline nesting so
+        // their end tags don't pop an accepted builder off the stack.
+        private var ignoredOutlineDepth = 0
 
         private(set) var rootNodes: [NodeBuilder] = []
         var semanticError: OPMLDecodeError?
@@ -250,6 +254,14 @@ public struct OPMLCodec: Sendable {
             }
 
             guard lower == Elem.outline else { return }
+
+            // Only outlines inside <body> are list content (the model contract:
+            // nodes are the body's outline children). An <outline> in <head> or
+            // elsewhere is producer metadata — ignore it and its subtree.
+            guard ignoredOutlineDepth == 0, elementPath.dropLast().contains(Elem.body) else {
+                ignoredOutlineDepth += 1
+                return
+            }
 
             let rawText = attributeDict[Attr.text] ?? attributeDict[Attr.legacyTitle]
             let trimmedText = (rawText ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
@@ -288,8 +300,12 @@ public struct OPMLCodec: Sendable {
             guard semanticError == nil else { return }
 
             let lower = elementName.lowercased()
-            if lower == Elem.outline, !outlineStack.isEmpty {
-                outlineStack.removeLast()
+            if lower == Elem.outline {
+                if ignoredOutlineDepth > 0 {
+                    ignoredOutlineDepth -= 1
+                } else if !outlineStack.isEmpty {
+                    outlineStack.removeLast()
+                }
             }
             if !elementPath.isEmpty {
                 elementPath.removeLast()

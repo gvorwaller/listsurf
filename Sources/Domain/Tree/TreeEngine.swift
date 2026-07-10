@@ -633,7 +633,7 @@ public struct TreeEngine: Sendable {
                 return fixed
             }
 
-            if parentID == item.id || hasAncestorCycle(startingAt: item.id, itemMap: itemMap) {
+            if isCycleMember(itemID: item.id, itemMap: itemMap) {
                 cycleCount += 1
                 var fixed = item
                 fixed.parentID = nil
@@ -647,14 +647,22 @@ public struct TreeEngine: Sendable {
         return (repaired, orphanCount, cycleCount)
     }
 
-    private func hasAncestorCycle(startingAt itemID: UUID, itemMap: [UUID: OutlineItem]) -> Bool {
-        var visited: Set<UUID> = [itemID]
+    /// True only when the parent chain returns to the item itself — i.e. the
+    /// item is a MEMBER of a cycle. A descendant hanging off a cycle is not a
+    /// member: once the members are promoted to root, the descendant's chain
+    /// is valid again, so repairing (and counting) it too would needlessly
+    /// flatten hierarchy and overstate the repair summary.
+    private func isCycleMember(itemID: UUID, itemMap: [UUID: OutlineItem]) -> Bool {
+        var visited: Set<UUID> = []
         var current = itemMap[itemID]?.parentID
 
         while let parentID = current {
+            if parentID == itemID { return true }
             guard let parent = itemMap[parentID] else { return false }
             if visited.contains(parentID) {
-                return true
+                // The chain entered a cycle that does not include the start:
+                // this item is a descendant of a cycle, not a member of one.
+                return false
             }
             visited.insert(parentID)
             current = parent.parentID

@@ -285,4 +285,25 @@ final class OPMLCodecTests: XCTestCase {
             }
         }
     }
+
+    func testOutlinesOutsideBodyAreIgnoredWithTheirSubtrees() throws {
+        // Only <body> outlines are list content: a metadata <outline> in <head>
+        // (or anywhere else) must not become an imported row, and its nested
+        // children must not corrupt the accepted outline stack.
+        let xml = """
+        <opml version="2.0">
+          <head>
+            <title>T</title>
+            <outline text="Metadata"><outline text="Nested metadata"/></outline>
+          </head>
+          <body>
+            <outline text="Real"><outline text="Real child"/></outline>
+          </body>
+        </opml>
+        """
+        let document = try codec.decode(Data(xml.utf8))
+        XCTAssertEqual(document.title, "T")
+        XCTAssertEqual(document.nodes.map(\.text), ["Real"])
+        XCTAssertEqual(document.nodes[0].children.map(\.text), ["Real child"])
+    }
 }

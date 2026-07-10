@@ -171,6 +171,28 @@ public final class CoreDataListRepository: ListRepository, @unchecked Sendable {
                 // mutate user data with no error. Fetching for collisions first,
                 // in the same transaction, converts that into a loud, tested failure.
                 let incomingListIDs = archive.lists.map(\.list.id)
+                let incomingItemIDs = archive.lists.flatMap { $0.items.map(\.id) }
+
+                // The archive itself must also be internally consistent:
+                // duplicate IDs WITHIN the archive would sail past the
+                // store-collision fetches below and then hit the silent-upsert
+                // merge policy between two incoming rows; an item whose listID
+                // points outside its packaged list would inject rows into an
+                // existing user list. Neither may reach the insert loop.
+                var seenListIDs = Set<UUID>()
+                for id in incomingListIDs where !seenListIDs.insert(id).inserted {
+                    throw AddListsAndItemsError.duplicateListIDInArchive(id)
+                }
+                var seenItemIDs = Set<UUID>()
+                for id in incomingItemIDs where !seenItemIDs.insert(id).inserted {
+                    throw AddListsAndItemsError.duplicateItemIDInArchive(id)
+                }
+                for archivedList in archive.lists {
+                    for item in archivedList.items where item.listID != archivedList.list.id {
+                        throw AddListsAndItemsError.itemOutsideItsList(itemID: item.id)
+                    }
+                }
+
                 let listCollisionRequest = NSFetchRequest<ListEntityMO>(entityName: "ListEntity")
                 listCollisionRequest.predicate = NSPredicate(format: "id IN %@", incomingListIDs)
                 listCollisionRequest.fetchLimit = 1
@@ -178,7 +200,6 @@ public final class CoreDataListRepository: ListRepository, @unchecked Sendable {
                     throw AddListsAndItemsError.collidingListID(collidingList.id)
                 }
 
-                let incomingItemIDs = archive.lists.flatMap { $0.items.map(\.id) }
                 let itemCollisionRequest = NSFetchRequest<OutlineItemEntityMO>(
                     entityName: "OutlineItemEntity"
                 )
@@ -275,6 +296,9 @@ public final class CoreDataListRepository: ListRepository, @unchecked Sendable {
 public enum AddListsAndItemsError: LocalizedError, Sendable {
     case collidingListID(UUID)
     case collidingItemID(UUID)
+    case duplicateListIDInArchive(UUID)
+    case duplicateItemIDInArchive(UUID)
+    case itemOutsideItsList(itemID: UUID)
 
     public var errorDescription: String? {
         switch self {
@@ -282,6 +306,12 @@ public enum AddListsAndItemsError: LocalizedError, Sendable {
             "Cannot add list \(id): a list with that ID already exists in the library."
         case .collidingItemID(let id):
             "Cannot add item \(id): an item with that ID already exists in the library."
+        case .duplicateListIDInArchive(let id):
+            "Cannot import: the archive contains two lists with the same ID \(id)."
+        case .duplicateItemIDInArchive(let id):
+            "Cannot import: the archive contains two items with the same ID \(id)."
+        case .itemOutsideItsList(let itemID):
+            "Cannot import: item \(itemID) does not belong to the list it was packaged with."
         }
     }
 }
