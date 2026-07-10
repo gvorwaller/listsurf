@@ -159,6 +159,65 @@ public final class CoreDataListRepository: ListRepository, @unchecked Sendable {
         }
     }
 
+    public func addListsAndItems(with archive: LibraryArchive) async throws {
+        let context = stack.newBackgroundContext()
+        try await context.perform {
+            do {
+                // MANDATORY collision preflight: the background context's
+                // NSMergePolicy.mergeByPropertyObjectTrump (PersistenceStack.swift)
+                // means a save that violates the `id` uniqueness constraint does NOT
+                // throw — it silently upserts onto the existing row. A planner
+                // regression that failed to remint even one ID would therefore
+                // mutate user data with no error. Fetching for collisions first,
+                // in the same transaction, converts that into a loud, tested failure.
+                let incomingListIDs = archive.lists.map(\.list.id)
+                let listCollisionRequest = NSFetchRequest<ListEntityMO>(entityName: "ListEntity")
+                listCollisionRequest.predicate = NSPredicate(format: "id IN %@", incomingListIDs)
+                listCollisionRequest.fetchLimit = 1
+                if let collidingList = try context.fetch(listCollisionRequest).first {
+                    throw AddListsAndItemsError.collidingListID(collidingList.id)
+                }
+
+                let incomingItemIDs = archive.lists.flatMap { $0.items.map(\.id) }
+                let itemCollisionRequest = NSFetchRequest<OutlineItemEntityMO>(
+                    entityName: "OutlineItemEntity"
+                )
+                itemCollisionRequest.predicate = NSPredicate(format: "id IN %@", incomingItemIDs)
+                itemCollisionRequest.fetchLimit = 1
+                if let collidingItem = try context.fetch(itemCollisionRequest).first {
+                    throw AddListsAndItemsError.collidingItemID(collidingItem.id)
+                }
+
+                for archivedList in archive.lists {
+                    let listEntity = ListEntityMO(
+                        entity: NSEntityDescription.entity(
+                            forEntityName: "ListEntity",
+                            in: context
+                        )!,
+                        insertInto: context
+                    )
+                    listEntity.update(from: archivedList.list)
+
+                    for item in archivedList.items {
+                        let itemEntity = OutlineItemEntityMO(
+                            entity: NSEntityDescription.entity(
+                                forEntityName: "OutlineItemEntity",
+                                in: context
+                            )!,
+                            insertInto: context
+                        )
+                        itemEntity.update(from: item)
+                    }
+                }
+
+                try context.save()
+            } catch {
+                context.rollback()
+                throw error
+            }
+        }
+    }
+
     public func deleteListAndItems(id: UUID) async throws {
         let context = stack.newBackgroundContext()
         try await context.perform {
@@ -207,5 +266,22 @@ public final class CoreDataListRepository: ListRepository, @unchecked Sendable {
                 )!,
                 insertInto: context
             )
+    }
+}
+
+/// Thrown by `addListsAndItems` when an incoming list or item ID already exists in
+/// the store — see the collision preflight in `addListsAndItems` for why this check
+/// is mandatory rather than relying on the merge policy to fail loudly on its own.
+public enum AddListsAndItemsError: LocalizedError, Sendable {
+    case collidingListID(UUID)
+    case collidingItemID(UUID)
+
+    public var errorDescription: String? {
+        switch self {
+        case .collidingListID(let id):
+            "Cannot add list \(id): a list with that ID already exists in the library."
+        case .collidingItemID(let id):
+            "Cannot add item \(id): an item with that ID already exists in the library."
+        }
     }
 }

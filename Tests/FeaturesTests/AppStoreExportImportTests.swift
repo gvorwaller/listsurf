@@ -167,6 +167,7 @@ private actor ExportImportListRepository: ListRepository {
     private var lists: [ListItem]
     private var itemsByList: [UUID: [OutlineItem]]
     private var replacements: [LibraryArchive] = []
+    private var additions: [LibraryArchive] = []
 
     init(lists: [ListItem], itemsByList: [UUID: [OutlineItem]] = [:]) {
         self.lists = lists
@@ -217,6 +218,14 @@ private actor ExportImportListRepository: ListRepository {
         })
     }
 
+    func addListsAndItems(with archive: LibraryArchive) async throws {
+        additions.append(archive)
+        for archivedList in archive.lists {
+            lists.append(archivedList.list)
+            itemsByList[archivedList.list.id] = archivedList.items
+        }
+    }
+
     func deleteListAndItems(id: UUID) async throws {
         lists.removeAll { $0.id == id }
         itemsByList[id] = nil
@@ -224,6 +233,10 @@ private actor ExportImportListRepository: ListRepository {
 
     func replacementCount() -> Int {
         replacements.count
+    }
+
+    func addCount() -> Int {
+        additions.count
     }
 
     func savedItems(forList listID: UUID) -> [OutlineItem] {

@@ -95,6 +95,9 @@ private actor PreviewListRepository: ListRepository {
     func replaceAllListsAndItems(with archive: LibraryArchive) async throws {
         lists = archive.lists.map(\.list)
     }
+    func addListsAndItems(with archive: LibraryArchive) async throws {
+        lists.append(contentsOf: archive.lists.map(\.list))
+    }
     func fetchLibraryArchive() async throws -> LibraryArchive {
         LibraryArchive(lists: lists.map { ArchivedList(list: $0, items: []) })
     }

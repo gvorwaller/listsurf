@@ -317,6 +317,99 @@ final class PersistenceStackTests: XCTestCase {
         XCTAssertEqual(items.map(\.id), [existingItem.id])
     }
 
+    func testAddListsAndItemsInsertsAlongsidePreexistingRows() async throws {
+        let stack = PersistenceStack.inMemory()
+        let listRepo = CoreDataListRepository(stack: stack)
+        let itemRepo = CoreDataOutlineRepository(stack: stack)
+
+        let existingList = ListItem(title: "Existing")
+        let existingItem = OutlineItem(listID: existingList.id, title: "Existing Item")
+        try await listRepo.saveListAndItems(existingList, items: [existingItem])
+
+        let newList = ListItem(title: "Added")
+        let newItem = OutlineItem(listID: newList.id, title: "Added Item")
+        try await listRepo.addListsAndItems(
+            with: LibraryArchive(lists: [ArchivedList(list: newList, items: [newItem])])
+        )
+
+        let allLists = try await listRepo.fetchAll()
+        XCTAssertEqual(Set(allLists.map(\.id)), [existingList.id, newList.id])
+
+        let existingFetchedItems = try await itemRepo.fetchItems(forList: existingList.id)
+        let newFetchedItems = try await itemRepo.fetchItems(forList: newList.id)
+        XCTAssertEqual(existingFetchedItems.map(\.id), [existingItem.id])
+        XCTAssertEqual(newFetchedItems.map(\.id), [newItem.id])
+    }
+
+    func testAddListsAndItemsThrowsOnCollidingListIDAndLeavesExistingRowUnchanged() async throws {
+        let stack = PersistenceStack.inMemory()
+        let listRepo = CoreDataListRepository(stack: stack)
+        let itemRepo = CoreDataOutlineRepository(stack: stack)
+
+        let existingList = ListItem(title: "Existing")
+        let existingItem = OutlineItem(listID: existingList.id, title: "Existing Item")
+        try await listRepo.saveListAndItems(existingList, items: [existingItem])
+
+        // Reuses the existing list's ID — this must never silently upsert.
+        let collidingList = ListItem(id: existingList.id, title: "Should Not Land")
+        let collidingItem = OutlineItem(listID: collidingList.id, title: "Should Not Land Item")
+
+        do {
+            try await listRepo.addListsAndItems(
+                with: LibraryArchive(lists: [ArchivedList(list: collidingList, items: [collidingItem])])
+            )
+            XCTFail("Expected addListsAndItems to throw on colliding list ID")
+        } catch AddListsAndItemsError.collidingListID(let id) {
+            XCTAssertEqual(id, existingList.id)
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+
+        let fetchedList = try await listRepo.fetch(id: existingList.id)
+        let fetchedItems = try await itemRepo.fetchItems(forList: existingList.id)
+        XCTAssertEqual(fetchedList?.title, "Existing")
+        XCTAssertEqual(fetchedItems.map(\.id), [existingItem.id])
+        XCTAssertEqual(fetchedItems.map(\.title), ["Existing Item"])
+
+        let allLists = try await listRepo.fetchAll()
+        XCTAssertEqual(allLists.map(\.id), [existingList.id])
+    }
+
+    func testAddListsAndItemsThrowsOnCollidingItemIDAndLeavesExistingRowUnchanged() async throws {
+        let stack = PersistenceStack.inMemory()
+        let listRepo = CoreDataListRepository(stack: stack)
+        let itemRepo = CoreDataOutlineRepository(stack: stack)
+
+        let existingList = ListItem(title: "Existing")
+        let existingItem = OutlineItem(listID: existingList.id, title: "Existing Item")
+        try await listRepo.saveListAndItems(existingList, items: [existingItem])
+
+        // New list ID, but reuses the existing item's ID.
+        let newList = ListItem(title: "New List")
+        let collidingItem = OutlineItem(
+            id: existingItem.id, listID: newList.id, title: "Should Not Land Item"
+        )
+
+        do {
+            try await listRepo.addListsAndItems(
+                with: LibraryArchive(lists: [ArchivedList(list: newList, items: [collidingItem])])
+            )
+            XCTFail("Expected addListsAndItems to throw on colliding item ID")
+        } catch AddListsAndItemsError.collidingItemID(let id) {
+            XCTAssertEqual(id, existingItem.id)
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+
+        // The colliding list must not have landed either — one transaction, no partial writes.
+        let fetchedNewList = try await listRepo.fetch(id: newList.id)
+        XCTAssertNil(fetchedNewList)
+
+        let fetchedItems = try await itemRepo.fetchItems(forList: existingList.id)
+        XCTAssertEqual(fetchedItems.map(\.id), [existingItem.id])
+        XCTAssertEqual(fetchedItems.map(\.title), ["Existing Item"])
+    }
+
     private func createV1Store(
         at storeURL: URL,
         list: ListItem,

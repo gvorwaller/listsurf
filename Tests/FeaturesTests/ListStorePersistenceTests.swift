@@ -345,6 +345,7 @@ private actor StubListRepository: ListRepository {
             list = first
         }
     }
+    func addListsAndItems(with archive: LibraryArchive) async throws {}
     func fetchLibraryArchive() async throws -> LibraryArchive {
         LibraryArchive(lists: [ArchivedList(list: list, items: [])])
     }
