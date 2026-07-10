@@ -252,22 +252,22 @@ public final class AppStore {
     /// Parses, validates, and plans an additive import. Writes nothing.
     /// Returns nil after presenting an actionable failure.
     public func prepareAdditiveImport(from data: Data, filename: String) async -> AdditiveImportPlan? {
-        // D11: strip a UTF-8 BOM, then sniff the first non-whitespace character.
+        // D11: strip a UTF-8 BOM, then sniff the first non-whitespace BYTE.
         var content = data
         if content.starts(with: [0xEF, 0xBB, 0xBF]) {
             content = content.dropFirst(3)
         }
-        guard let sniffedCharacter = firstSignificantCharacter(in: content) else {
+        guard let sniffedByte = firstSignificantByte(in: content) else {
             presentImportSniffFailure(filename: filename)
             return nil
         }
 
         do {
-            switch sniffedCharacter {
-            case "{":
+            switch sniffedByte {
+            case UInt8(ascii: "{"):
                 let export = try exportService.decode(from: content)
                 return try importPlanner.planAdditiveImport(from: export)
-            case "<":
+            case UInt8(ascii: "<"):
                 let document = try opmlCodec.decode(content)
                 let fallbackTitle = URL(fileURLWithPath: filename).deletingPathExtension().lastPathComponent
                 return importPlanner.planAdditiveImport(from: document, fallbackTitle: fallbackTitle)
@@ -362,9 +362,14 @@ public final class AppStore {
         }
     }
 
-    private func firstSignificantCharacter(in data: Data) -> Character? {
-        guard let string = String(data: data, encoding: .utf8) else { return nil }
-        return string.first { !$0.isWhitespace }
+    /// Byte-level sniff per D11: the format is identified from the first
+    /// non-whitespace BYTE. Decoding the whole payload as UTF-8 here would
+    /// misroute an OPML/JSON file with one bad byte later in the stream to
+    /// the generic "neither" message instead of letting the real codec
+    /// produce its actionable error (with line/column for XML).
+    private func firstSignificantByte(in data: Data) -> UInt8? {
+        let whitespace: Set<UInt8> = [0x09, 0x0A, 0x0D, 0x20]
+        return data.first { !whitespace.contains($0) }
     }
 
     private func presentImportSniffFailure(filename: String) {
@@ -382,20 +387,23 @@ public final class AppStore {
     private func decodingFailureMessage(_ error: DecodingError) -> String {
         switch error {
         case .keyNotFound(let key, let context):
-            return "Missing field \"\(key.stringValue)\" at \(decodingPath(context.codingPath))."
+            return "Missing field \"\(key.stringValue)\" \(decodingLocation(context.codingPath))."
         case .typeMismatch(let type, let context):
-            return "Expected \(type) at \(decodingPath(context.codingPath))."
+            return "Expected \(type) \(decodingLocation(context.codingPath))."
         case .valueNotFound(let type, let context):
-            return "Missing value of type \(type) at \(decodingPath(context.codingPath))."
+            return "Missing value of type \(type) \(decodingLocation(context.codingPath))."
         case .dataCorrupted(let context):
-            let location = decodingPath(context.codingPath)
-            if location.isEmpty {
-                return "Invalid value: \(context.debugDescription)"
-            }
-            return "Invalid value at \(location): \(context.debugDescription)"
+            return "Invalid value \(decodingLocation(context.codingPath)): \(context.debugDescription)"
         @unknown default:
             return error.localizedDescription
         }
+    }
+
+    /// An empty coding path is a top-level failure — rendering "at ." there
+    /// would be noise instead of a location.
+    private func decodingLocation(_ codingPath: [CodingKey]) -> String {
+        let path = decodingPath(codingPath)
+        return path.isEmpty ? "at the top level" : "at \(path)"
     }
 
     /// Renders a coding path as `lists[0].items[3].quantity`: string keys join

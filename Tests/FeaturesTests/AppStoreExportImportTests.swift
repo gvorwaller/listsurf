@@ -288,6 +288,55 @@ final class AppStoreExportImportTests: XCTestCase {
     }
 
     @MainActor
+    func testPrepareAdditiveImportRoutesBadByteOPMLToXMLError() async throws {
+        // The sniff is byte-level (D11): a '<'-prefixed file with one invalid
+        // UTF-8 byte later must reach the OPML codec and get its actionable
+        // XML error — not the generic "neither JSON nor OPML" sniff message.
+        let errorStore = AppErrorStore()
+        let store = AppStore(
+            listRepository: ExportImportListRepository(lists: []),
+            outlineRepository: ExportImportOutlineRepository(items: []),
+            errorStore: errorStore
+        )
+        var data = Data("<opml version=\"2.0\"><body><outline text=\"".utf8)
+        data.append(0xFF) // invalid UTF-8 byte mid-document
+        data.append(contentsOf: Data("\"/></body></opml>".utf8))
+
+        let plan = await store.prepareAdditiveImport(from: data, filename: "bad.opml")
+
+        XCTAssertNil(plan)
+        guard case .importValidation(let message) = errorStore.current?.error else {
+            return XCTFail("Expected import validation error")
+        }
+        XCTAssertFalse(
+            message.contains("neither Listsurf JSON nor OPML"),
+            "Bad byte must not be misclassified as an unrecognized format"
+        )
+        XCTAssertTrue(message.contains("XML"), "Expected the codec's XML error, got: \(message)")
+    }
+
+    @MainActor
+    func testTopLevelDecodingErrorMessageSaysTopLevelNotDot() async throws {
+        // Missing top-level fields must render "at the top level", not "at .".
+        let errorStore = AppErrorStore()
+        let store = AppStore(
+            listRepository: ExportImportListRepository(lists: []),
+            outlineRepository: ExportImportOutlineRepository(items: []),
+            errorStore: errorStore
+        )
+
+        // Valid JSON object, but not a ListsurfExport: top-level keys missing.
+        let plan = await store.prepareAdditiveImport(from: Data("{}".utf8), filename: "backup.json")
+
+        XCTAssertNil(plan)
+        guard case .importValidation(let message) = errorStore.current?.error else {
+            return XCTFail("Expected import validation error")
+        }
+        XCTAssertTrue(message.contains("at the top level"), "Got: \(message)")
+        XCTAssertFalse(message.contains("at ."), "Got: \(message)")
+    }
+
+    @MainActor
     func testPrepareAdditiveImportSniffsBOMPrefixedJSON() async throws {
         let listRepository = ExportImportListRepository(lists: [])
         let store = AppStore(
