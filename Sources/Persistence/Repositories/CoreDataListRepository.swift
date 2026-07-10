@@ -47,9 +47,36 @@ public final class CoreDataListRepository: ListRepository, @unchecked Sendable {
 
     public func save(_ list: ListItem) async throws {
         try await perform { context in
-            let entity = try self.listEntity(id: list.id, in: context)
-            entity.update(from: list)
-            try context.save()
+            do {
+                let entity = try self.listEntity(id: list.id, in: context)
+                entity.update(from: list)
+                try context.save()
+            } catch {
+                // The view context is long-lived and shared: without rollback
+                // a failed save leaves pending changes that ride along with
+                // the next unrelated save.
+                context.rollback()
+                throw error
+            }
+        }
+    }
+
+    public func fetchLibraryArchive() async throws -> LibraryArchive {
+        let context = stack.newBackgroundContext()
+        return try await context.perform {
+            let listRequest = NSFetchRequest<ListEntityMO>(entityName: "ListEntity")
+            listRequest.sortDescriptors = [NSSortDescriptor(key: "position", ascending: true)]
+            let lists = try context.fetch(listRequest).map { $0.toDomain() }
+
+            var archivedLists: [ArchivedList] = []
+            for list in lists {
+                let itemRequest = NSFetchRequest<OutlineItemEntityMO>(entityName: "OutlineItemEntity")
+                itemRequest.predicate = NSPredicate(format: "listID == %@", list.id as CVarArg)
+                itemRequest.sortDescriptors = [NSSortDescriptor(key: "position", ascending: true)]
+                let items = try context.fetch(itemRequest).map { $0.toDomain() }
+                archivedLists.append(ArchivedList(list: list, items: items))
+            }
+            return LibraryArchive(lists: archivedLists)
         }
     }
 
@@ -129,17 +156,6 @@ public final class CoreDataListRepository: ListRepository, @unchecked Sendable {
                 context.rollback()
                 throw error
             }
-        }
-    }
-
-    public func delete(id: UUID) async throws {
-        try await perform { context in
-            let request = NSFetchRequest<ListEntityMO>(entityName: "ListEntity")
-            request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
-            for entity in try context.fetch(request) {
-                context.delete(entity)
-            }
-            try context.save()
         }
     }
 

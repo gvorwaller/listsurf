@@ -15,6 +15,9 @@ public final class AppStore {
     private let outlineRepo: any OutlineRepository
     private let logger = Logger(subsystem: "net.vorwaller.listsurf", category: "ui")
     private let exportService = ExportService()
+    // Weak registry of issued ListStores so library-wide operations
+    // (export, delete) can drain their queued item writes first.
+    private var issuedStores: [WeakListStore] = []
 
     public init(
         listRepository: any ListRepository,
@@ -28,9 +31,13 @@ public final class AppStore {
 
     public func loadLists() async {
         do {
-            lists = try await listRepo.fetchActive()
+            // Fetch both before assigning either, so a mid-load failure can't
+            // leave active lists fresh while archived lists are stale.
+            let active = try await listRepo.fetchActive()
                 .sorted { $0.position < $1.position }
-            archivedLists = try await listRepo.fetchArchived()
+            let archived = try await listRepo.fetchArchived()
+            lists = active
+            archivedLists = archived
         } catch {
             presentLoadError(error, operation: "load lists")
         }
@@ -42,60 +49,82 @@ public final class AppStore {
         icon: String? = nil,
         colorName: String? = nil
     ) async {
-        let position = (lists.map(\.position).max() ?? 0) + 1.0
         let list = ListItem(
             title: title,
             notes: notes,
             icon: icon,
             colorName: colorName,
-            position: position
+            position: nextListPosition()
         )
         do {
             try await listRepo.save(list)
             await loadLists()
             selectedListID = list.id
         } catch {
-            presentSaveError(error, operation: "create list")
+            presentSaveError(error, operation: "create list", retryTitle: "Try Again") { [weak self] in
+                await self?.createList(title: title, notes: notes, icon: icon, colorName: colorName)
+            }
         }
     }
 
-    public func updateList(_ list: ListItem) async {
+    @discardableResult
+    public func updateList(_ list: ListItem) async -> Bool {
         do {
             try await listRepo.save(list)
             await loadLists()
+            return true
         } catch {
-            presentSaveError(error, operation: "update list")
+            presentSaveError(error, operation: "update list", retryTitle: "Try Again") { [weak self] in
+                await self?.updateList(list)
+            }
+            return false
         }
     }
 
     public func deleteList(id: UUID) async {
         do {
+            // Let queued item writes land before the delete transaction so
+            // the two can't interleave (the repository additionally refuses
+            // to save items for a deleted list, as defense in depth).
+            await drainPendingItemWrites()
             try await listRepo.deleteListAndItems(id: id)
             if selectedListID == id { selectedListID = nil }
             await loadLists()
         } catch {
-            presentSaveError(error, operation: "delete list")
+            presentSaveError(error, operation: "delete list", retryTitle: "Try Again") { [weak self] in
+                await self?.deleteList(id: id)
+            }
         }
     }
 
     public func archiveList(id: UUID) async {
-        guard var list = lists.first(where: { $0.id == id }) else { return }
+        guard var list = lists.first(where: { $0.id == id }) else {
+            await refreshAfterStaleReference(operation: "archive list")
+            return
+        }
         list.archivedAt = Date()
         list.updatedAt = Date()
-        await updateList(list)
-        if selectedListID == id { selectedListID = nil }
+        if await updateList(list), selectedListID == id {
+            selectedListID = nil
+        }
     }
 
     public func restoreList(id: UUID) async {
-        guard var list = archivedLists.first(where: { $0.id == id }) else { return }
+        guard var list = archivedLists.first(where: { $0.id == id }) else {
+            await refreshAfterStaleReference(operation: "restore list")
+            return
+        }
         list.archivedAt = nil
         list.updatedAt = Date()
         await updateList(list)
     }
 
     public func duplicateList(id: UUID, clearChecks: Bool) async {
+        guard let list = lists.first(where: { $0.id == id }) else {
+            await refreshAfterStaleReference(operation: "duplicate list")
+            return
+        }
         do {
-            guard let list = lists.first(where: { $0.id == id }) else { return }
             let items = try await outlineRepo.fetchItems(forList: id)
             let engine = TreeEngine()
             let (newList, newItems) = engine.duplicateList(
@@ -105,66 +134,97 @@ public final class AppStore {
             )
             var positioned = newList
             positioned.title = duplicateTitle(for: list.title)
-            positioned.position = (lists.map(\.position).max() ?? 0) + 1.0
+            positioned.position = nextListPosition()
             try await listRepo.saveListAndItems(positioned, items: newItems)
             await loadLists()
             selectedListID = positioned.id
         } catch {
-            presentSaveError(error, operation: "duplicate list")
+            presentSaveError(error, operation: "duplicate list", retryTitle: "Try Again") { [weak self] in
+                await self?.duplicateList(id: id, clearChecks: clearChecks)
+            }
         }
     }
 
-    public func exportLibrary(appVersion: String = "0.1.0") async throws -> Data {
+    /// Returns the encoded backup, or nil after presenting the failure.
+    /// Errors are presented here and never also thrown — a hybrid contract
+    /// invites call sites to swallow them.
+    public func exportLibrary(appVersion: String = AppStore.bundleVersion) async -> Data? {
         do {
-            let lists = try await listRepo.fetchAll()
-                .sorted { $0.position < $1.position }
-            var archivedLists: [ArchivedList] = []
-            for list in lists {
-                let items = try await outlineRepo.fetchItems(forList: list.id)
-                archivedLists.append(
-                    ArchivedList(
-                        list: list,
-                        items: items.sorted { $0.position < $1.position }
-                    )
-                )
-            }
+            // A backup must include edits made moments ago: drain queued
+            // item writes before taking the snapshot.
+            await drainPendingItemWrites()
+            let archive = try await listRepo.fetchLibraryArchive()
             let export = exportService.export(
-                archive: LibraryArchive(lists: archivedLists),
+                archive: archive,
                 appVersion: appVersion
             )
             return try exportService.encode(export)
         } catch {
-            presentLoadError(error, operation: "export library")
-            throw error
+            logger.error("Failed to export library: \(error.localizedDescription)")
+            errorStore.present(.persistenceLoad(underlying: error.localizedDescription))
+            return nil
         }
     }
 
-    public func importLibrary(from data: Data) async throws {
+    /// Returns whether the import succeeded. Errors are presented here.
+    @discardableResult
+    public func importLibrary(from data: Data) async -> Bool {
         do {
             let decoded = try exportService.decode(from: data)
             let archive = try exportService.archive(from: decoded)
             try await listRepo.replaceAllListsAndItems(with: archive)
             await loadLists()
             selectedListID = lists.first?.id
+            return true
         } catch let error as ExportValidationError {
             errorStore.present(.importValidation(message: error.localizedDescription))
-            throw error
+            return false
         } catch let error as DecodingError {
             errorStore.present(.importValidation(message: error.localizedDescription))
-            throw error
+            return false
         } catch {
-            presentSaveError(error, operation: "import library")
-            throw error
+            presentSaveError(error, operation: "import library", retryTitle: "Try Again") { [weak self] in
+                await self?.importLibrary(from: data)
+            }
+            return false
         }
     }
 
+    public static var bundleVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
+    }
+
+    private func nextListPosition() -> Double {
+        // Consider archived lists too: a restored list keeps its position,
+        // and colliding with it would make library order ambiguous.
+        ((lists + archivedLists).map(\.position).max() ?? 0) + 1.0
+    }
+
+    /// The UI acted on a list that no longer exists (stale row, another
+    /// window changed the library). Refresh so the stale entry disappears
+    /// instead of silently doing nothing.
+    private func refreshAfterStaleReference(operation: String) async {
+        logger.warning("Cannot \(operation): list no longer exists; refreshing library")
+        await loadLists()
+    }
+
     public func makeListStore(for listID: UUID) -> ListStore {
-        ListStore(
+        let store = ListStore(
             listID: listID,
             outlineRepo: outlineRepo,
             listRepo: listRepo,
             errorStore: errorStore
         )
+        issuedStores.removeAll { $0.store == nil }
+        issuedStores.append(WeakListStore(store: store))
+        return store
+    }
+
+    private func drainPendingItemWrites() async {
+        issuedStores.removeAll { $0.store == nil }
+        for box in issuedStores {
+            await box.store?.waitForPendingPersistence()
+        }
     }
 
     private func duplicateTitle(for title: String) -> String {
@@ -223,6 +283,10 @@ public final class AppStore {
         return (base, nextNumber)
     }
 
+    private struct WeakListStore {
+        weak var store: ListStore?
+    }
+
     private func presentLoadError(_ error: Error, operation: String) {
         logger.error("Failed to \(operation): \(error.localizedDescription)")
         errorStore.present(
@@ -233,13 +297,20 @@ public final class AppStore {
         }
     }
 
-    private func presentSaveError(_ error: Error, operation: String) {
+    /// Every save failure retries the operation that actually failed —
+    /// a generic "reload" retry would discard the user's pending change.
+    private func presentSaveError(
+        _ error: Error,
+        operation: String,
+        retryTitle: String,
+        retry: @escaping @MainActor () async -> Void
+    ) {
         logger.error("Failed to \(operation): \(error.localizedDescription)")
         errorStore.present(
             .persistenceSave(underlying: error.localizedDescription),
-            retryTitle: "Reload Lists"
-        ) { [weak self] in
-            Task { await self?.loadLists() }
+            retryTitle: retryTitle
+        ) {
+            Task { await retry() }
         }
     }
 }

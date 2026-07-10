@@ -95,9 +95,11 @@ private actor PreviewListRepository: ListRepository {
     func replaceAllListsAndItems(with archive: LibraryArchive) async throws {
         lists = archive.lists.map(\.list)
     }
-    func delete(id: UUID) async throws { lists.removeAll { $0.id == id } }
+    func fetchLibraryArchive() async throws -> LibraryArchive {
+        LibraryArchive(lists: lists.map { ArchivedList(list: $0, items: []) })
+    }
     func deleteListAndItems(id: UUID) async throws {
-        try await delete(id: id)
+        lists.removeAll { $0.id == id }
     }
 }
 
@@ -111,20 +113,12 @@ private actor PreviewOutlineRepository: OutlineRepository {
     func fetchItems(forList listID: UUID) async throws -> [OutlineItem] {
         items.filter { $0.listID == listID }
     }
-    func fetch(id: UUID) async throws -> OutlineItem? { items.first { $0.id == id } }
-    func save(_ item: OutlineItem) async throws {
-        items.removeAll { $0.id == item.id }
-        items.append(item)
-    }
-    func saveAll(_ newItems: [OutlineItem]) async throws {
-        let ids = Set(newItems.map(\.id))
-        items.removeAll { ids.contains($0.id) }
+    func applyChanges(saving newItems: [OutlineItem], deletingIDs: [UUID]) async throws {
+        let savedIDs = Set(newItems.map(\.id))
+        items.removeAll { savedIDs.contains($0.id) }
         items.append(contentsOf: newItems)
-    }
-    func delete(id: UUID) async throws { items.removeAll { $0.id == id } }
-    func deleteAll(ids: [UUID]) async throws {
-        let ids = Set(ids)
-        items.removeAll { ids.contains($0.id) }
+        let deleted = Set(deletingIDs)
+        items.removeAll { deleted.contains($0.id) }
     }
 }
 #endif

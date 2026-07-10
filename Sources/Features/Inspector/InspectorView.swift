@@ -4,6 +4,9 @@ import Domain
 struct InspectorView: View {
     @Bindable var store: ListStore
     let itemID: UUID?
+    /// List metadata comes from AppStore (the single owner), not from a
+    /// ListStore-cached copy that could go stale.
+    let list: ListItem?
     @Environment(\.undoManager) private var undoManager
 
     var body: some View {
@@ -56,7 +59,7 @@ struct InspectorView: View {
 
     private var listInspector: some View {
         Form {
-            if let list = store.list {
+            if let list {
                 Section("List") {
                     LabeledContent("Title", value: list.title)
                     if let notes = list.notes, !notes.isEmpty {

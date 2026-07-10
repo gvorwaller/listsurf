@@ -36,16 +36,19 @@ public struct ListsurfCommands: Commands {
         }
 
         CommandMenu("Item") {
+            // Note: Add Below/Above deliberately carry no key equivalents.
+            // Bare Return/Tab menu equivalents intercept typing in every
+            // text field in the window; the editor owns those keys directly
+            // (Return = add below, Shift-Return = add above, Tab = indent,
+            // Shift-Tab = outdent) and only while the outline has focus.
             Button("Add Item Below") {
                 listCommands?.addBelow?()
             }
-            .keyboardShortcut(.return, modifiers: [])
             .disabled(listCommands?.addBelow == nil)
 
             Button("Add Item Above") {
                 listCommands?.addAbove?()
             }
-            .keyboardShortcut(.return, modifiers: [.shift])
             .disabled(listCommands?.addAbove == nil)
 
             Button("Add Child") {
@@ -59,13 +62,13 @@ public struct ListsurfCommands: Commands {
             Button("Indent") {
                 listCommands?.indent?()
             }
-            .keyboardShortcut(.tab, modifiers: [])
+            .keyboardShortcut("]", modifiers: [.command])
             .disabled(listCommands?.indent == nil)
 
             Button("Outdent") {
                 listCommands?.outdent?()
             }
-            .keyboardShortcut(.tab, modifiers: [.shift])
+            .keyboardShortcut("[", modifiers: [.command])
             .disabled(listCommands?.outdent == nil)
 
             Divider()

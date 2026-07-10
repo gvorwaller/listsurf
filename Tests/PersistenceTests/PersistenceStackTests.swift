@@ -112,8 +112,7 @@ final class PersistenceStackTests: XCTestCase {
         let parent = OutlineItem(listID: list.id, title: "Parent", position: 1.0)
         let child = OutlineItem(listID: list.id, parentID: parent.id, title: "Child", quantity: 3, position: 1.0)
 
-        try await itemRepo.save(parent)
-        try await itemRepo.save(child)
+        try await itemRepo.applyChanges(saving: [parent, child], deletingIDs: [])
 
         let items = try await itemRepo.fetchItems(forList: list.id)
         XCTAssertEqual(items.count, 2)
@@ -129,7 +128,7 @@ final class PersistenceStackTests: XCTestCase {
 
         let list = ListItem(title: "To Delete")
         try await repo.save(list)
-        try await repo.delete(id: list.id)
+        try await repo.deleteListAndItems(id: list.id)
 
         let fetched = try await repo.fetchAll()
         XCTAssertTrue(fetched.isEmpty)
@@ -137,32 +136,36 @@ final class PersistenceStackTests: XCTestCase {
 
     func testBulkSaveItems() async throws {
         let stack = PersistenceStack.inMemory()
+        let listRepo = CoreDataListRepository(stack: stack)
         let itemRepo = CoreDataOutlineRepository(stack: stack)
-        let listID = UUID()
+        let list = ListItem(title: "Bulk")
+        try await listRepo.save(list)
 
         let items = (0..<10).map { i in
-            OutlineItem(listID: listID, title: "Item \(i)", position: Double(i))
+            OutlineItem(listID: list.id, title: "Item \(i)", position: Double(i))
         }
 
-        try await itemRepo.saveAll(items)
+        try await itemRepo.applyChanges(saving: items, deletingIDs: [])
 
-        let fetched = try await itemRepo.fetchItems(forList: listID)
+        let fetched = try await itemRepo.fetchItems(forList: list.id)
         XCTAssertEqual(fetched.count, 10)
     }
 
     func testBulkSaveUpdatesExistingItems() async throws {
         let stack = PersistenceStack.inMemory()
+        let listRepo = CoreDataListRepository(stack: stack)
         let itemRepo = CoreDataOutlineRepository(stack: stack)
-        let listID = UUID()
-        let item = OutlineItem(listID: listID, title: "Original", position: 1.0)
-        try await itemRepo.saveAll([item])
+        let list = ListItem(title: "Bulk")
+        try await listRepo.save(list)
+        let item = OutlineItem(listID: list.id, title: "Original", position: 1.0)
+        try await itemRepo.applyChanges(saving: [item], deletingIDs: [])
 
         var updated = item
         updated.title = "Updated"
         updated.quantity = 4
-        try await itemRepo.saveAll([updated])
+        try await itemRepo.applyChanges(saving: [updated], deletingIDs: [])
 
-        let fetched = try await itemRepo.fetchItems(forList: listID)
+        let fetched = try await itemRepo.fetchItems(forList: list.id)
         XCTAssertEqual(fetched.count, 1)
         XCTAssertEqual(fetched[0].id, item.id)
         XCTAssertEqual(fetched[0].title, "Updated")
@@ -171,16 +174,58 @@ final class PersistenceStackTests: XCTestCase {
 
     func testBulkDeleteRemovesOnlyMatchingItems() async throws {
         let stack = PersistenceStack.inMemory()
+        let listRepo = CoreDataListRepository(stack: stack)
         let itemRepo = CoreDataOutlineRepository(stack: stack)
-        let listID = UUID()
-        let deleted = OutlineItem(listID: listID, title: "Deleted", position: 1.0)
-        let kept = OutlineItem(listID: listID, title: "Kept", position: 2.0)
-        try await itemRepo.saveAll([deleted, kept])
+        let list = ListItem(title: "Bulk")
+        try await listRepo.save(list)
+        let deleted = OutlineItem(listID: list.id, title: "Deleted", position: 1.0)
+        let kept = OutlineItem(listID: list.id, title: "Kept", position: 2.0)
+        try await itemRepo.applyChanges(saving: [deleted, kept], deletingIDs: [])
 
-        try await itemRepo.deleteAll(ids: [deleted.id, UUID()])
+        try await itemRepo.applyChanges(saving: [], deletingIDs: [deleted.id, UUID()])
 
-        let fetched = try await itemRepo.fetchItems(forList: listID)
+        let fetched = try await itemRepo.fetchItems(forList: list.id)
         XCTAssertEqual(fetched.map(\.id), [kept.id])
+    }
+
+    func testApplyChangesRefusesItemsForDeletedList() async throws {
+        // A queued item save racing a list deletion must not resurrect
+        // orphaned item rows for the deleted list.
+        let stack = PersistenceStack.inMemory()
+        let listRepo = CoreDataListRepository(stack: stack)
+        let itemRepo = CoreDataOutlineRepository(stack: stack)
+        let doomed = ListItem(title: "Doomed")
+        let survivor = ListItem(title: "Survivor")
+        try await listRepo.save(doomed)
+        try await listRepo.save(survivor)
+
+        try await listRepo.deleteListAndItems(id: doomed.id)
+
+        let lateWrite = OutlineItem(listID: doomed.id, title: "Orphan-to-be")
+        let validWrite = OutlineItem(listID: survivor.id, title: "Valid")
+        try await itemRepo.applyChanges(saving: [lateWrite, validWrite], deletingIDs: [])
+
+        let orphans = try await itemRepo.fetchItems(forList: doomed.id)
+        let valid = try await itemRepo.fetchItems(forList: survivor.id)
+        XCTAssertTrue(orphans.isEmpty, "Items must not be saved for a deleted list")
+        XCTAssertEqual(valid.map(\.title), ["Valid"], "Writes for existing lists must still land")
+    }
+
+    func testApplyChangesSavesAndDeletesInOneOperation() async throws {
+        let stack = PersistenceStack.inMemory()
+        let listRepo = CoreDataListRepository(stack: stack)
+        let itemRepo = CoreDataOutlineRepository(stack: stack)
+        let list = ListItem(title: "Atomic")
+        try await listRepo.save(list)
+        let toDelete = OutlineItem(listID: list.id, title: "Going", position: 1.0)
+        let toKeep = OutlineItem(listID: list.id, title: "Staying", position: 2.0)
+        try await itemRepo.applyChanges(saving: [toDelete, toKeep], deletingIDs: [])
+
+        let incoming = OutlineItem(listID: list.id, title: "Arriving", position: 3.0)
+        try await itemRepo.applyChanges(saving: [incoming], deletingIDs: [toDelete.id])
+
+        let fetched = try await itemRepo.fetchItems(forList: list.id)
+        XCTAssertEqual(Set(fetched.map(\.title)), ["Staying", "Arriving"])
     }
 
     func testAtomicSaveCreatesListAndItems() async throws {

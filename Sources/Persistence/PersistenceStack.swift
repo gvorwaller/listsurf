@@ -22,10 +22,16 @@ public final class PersistenceStack: Sendable {
             container.persistentStoreDescriptions = [description]
         } else if let storeURL {
             let directory = storeURL.deletingLastPathComponent()
-            try? FileManager.default.createDirectory(
-                at: directory,
-                withIntermediateDirectories: true
-            )
+            do {
+                try FileManager.default.createDirectory(
+                    at: directory,
+                    withIntermediateDirectories: true
+                )
+            } catch {
+                // Surface the real cause now; swallowing it defers to a less
+                // diagnosable store-load failure moments later.
+                Self.logger.fault("Failed to create store directory: \(error.localizedDescription)")
+            }
             if resetStore {
                 Self.removeStoreFiles(at: storeURL)
             }
@@ -34,10 +40,10 @@ public final class PersistenceStack: Sendable {
             container.persistentStoreDescriptions = [description]
         }
 
+        // loadPersistentStores runs synchronously (shouldAddStoreAsynchronously
+        // defaults to false), so the completion has run before it returns.
         let loadResult = StoreLoadResult()
-        let loadSemaphore = DispatchSemaphore(value: 0)
         container.loadPersistentStores { description, error in
-            defer { loadSemaphore.signal() }
             if let error {
                 let message = error.localizedDescription
                 loadResult.errorMessage = message
@@ -46,7 +52,6 @@ public final class PersistenceStack: Sendable {
             }
             Self.logger.info("Persistent store loaded: \(description.type)")
         }
-        loadSemaphore.wait()
         storeLoadError = loadResult.errorMessage
 
         container.viewContext.automaticallyMergesChangesFromParent = true

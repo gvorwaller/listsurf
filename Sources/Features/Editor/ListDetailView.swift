@@ -6,10 +6,7 @@ struct ListDetailView: View {
     @Environment(AppStore.self) private var appStore
     @State private var listStore: ListStore?
     @State private var showInspector = false
-    @State private var inspectorItemID: UUID?
-    @State private var addRequest: OutlineAddRequest?
     @State private var showingResetAllChecksConfirmation = false
-    @State private var selectedItemsPendingDeletion: SelectedItemsDeletionConfirmation?
     @State private var listBeingEdited: ListItem?
     @AppStorage(ListsurfSettingsKey.notesPreviewLineLimit) private var notePreviewLineCount = 1
     @Environment(\.undoManager) private var undoManager
@@ -20,15 +17,13 @@ struct ListDetailView: View {
                 if store.isCheckMode {
                     CheckModeView(
                         store: store,
-                        notePreviewLineCount: normalizedNotePreviewLineCount
+                        notePreviewLineCount: max(0, notePreviewLineCount)
                     )
                 } else {
                     OutlineEditorView(
                         store: store,
-                        inspectorItemID: $inspectorItemID,
                         showInspector: $showInspector,
-                        addRequest: $addRequest,
-                        notePreviewLineCount: normalizedNotePreviewLineCount
+                        notePreviewLineCount: max(0, notePreviewLineCount)
                     )
                 }
             } else {
@@ -37,17 +32,18 @@ struct ListDetailView: View {
         }
         .inspector(isPresented: $showInspector) {
             if let store = listStore {
-                InspectorView(store: store, itemID: inspectorItemID)
-                    .inspectorColumnWidth(min: 250, ideal: 300, max: 400)
-                    .presentationDetents([.medium, .large])
+                InspectorView(
+                    store: store,
+                    itemID: singleSelectedItemID(in: store),
+                    list: currentList
+                )
+                .inspectorColumnWidth(min: 250, ideal: 300, max: 400)
+                .presentationDetents([.medium, .large])
             }
         }
-        .navigationTitle(listStore?.list?.title ?? "")
+        .navigationTitle(currentList?.title ?? "")
         .toolbar { toolbarContent }
         .focusedSceneValue(\.listsurfListCommands, focusedCommandActions)
-        .onChange(of: appStore.lists) { _, lists in
-            syncListMetadata(from: lists)
-        }
         .sheet(item: $listBeingEdited) { list in
             ListIdentityEditSheet(list: list) { updated in
                 Task { await appStore.updateList(updated) }
@@ -68,31 +64,43 @@ struct ListDetailView: View {
             Text("Every checked item in this list will be unchecked.")
         }
         .confirmationDialog(
-            "Delete Selected Items?",
-            isPresented: isConfirmingSelectedItemsDeletion,
+            deletionDialogTitle,
+            isPresented: isConfirmingDeletion,
             titleVisibility: .visible
         ) {
-            if let confirmation = selectedItemsPendingDeletion, let store = listStore {
-                Button(confirmation.buttonTitle, role: .destructive) {
-                    store.deleteSelected(undoManager: undoManager)
+            if let store = listStore, let ids = store.pendingDeletionIDs {
+                Button(ids.count == 1 ? "Delete Item" : "Delete Items", role: .destructive) {
+                    store.deleteItems(ids: ids, undoManager: undoManager)
+                    store.pendingDeletionIDs = nil
                 }
                 .keyboardShortcut(.defaultAction)
 
                 Button("Cancel", role: .cancel) {
-                    selectedItemsPendingDeletion = nil
+                    store.pendingDeletionIDs = nil
                 }
                 .keyboardShortcut(.cancelAction)
             }
         } message: {
-            if let confirmation = selectedItemsPendingDeletion {
-                Text(confirmation.message)
-            }
+            Text(deletionDialogMessage)
         }
         .task(id: listID) {
+            // Replacing the store must retire its undo actions, or the Undo
+            // menu could mutate and persist a list that's no longer shown.
+            listStore?.teardownUndo(undoManager)
             let store = appStore.makeListStore(for: listID)
             listStore = store
             await store.load()
         }
+        .onDisappear {
+            listStore?.teardownUndo(undoManager)
+        }
+    }
+
+    /// AppStore owns list metadata; this view reads it fresh on every render
+    /// instead of keeping a second copy synchronized by hand.
+    private var currentList: ListItem? {
+        appStore.lists.first { $0.id == listID }
+            ?? appStore.archivedLists.first { $0.id == listID }
     }
 
     @ToolbarContentBuilder
@@ -118,11 +126,11 @@ struct ListDetailView: View {
                 .help("Toggle Inspector")
 
                 Button {
-                    listBeingEdited = store.list
+                    listBeingEdited = currentList
                 } label: {
                     Label("Edit List", systemImage: "pencil")
                 }
-                .disabled(store.list == nil)
+                .disabled(currentList == nil)
                 .help("Edit list title, notes, icon, and color")
             }
         }
@@ -141,14 +149,33 @@ struct ListDetailView: View {
     @ViewBuilder
     private func editModeToolbar(_ store: ListStore) -> some View {
         Button {
-            requestAdd(afterID: nil)
+            store.beginAdding(.root)
         } label: {
             Label("Add Item", systemImage: "plus")
         }
         .accessibilityIdentifier("editor.addItem")
         .help("Add a new item")
 
-        selectedItemToolbarMenu(store)
+        Menu {
+            if store.selectedItemIDs.isEmpty {
+                Text("Select an item first")
+            } else {
+                ItemActionsMenu(
+                    store: store,
+                    itemIDs: store.selectedItemIDs,
+                    showsShortcutHints: true,
+                    onShowDetails: { id in
+                        store.selectedItemIDs = [id]
+                        showInspector = true
+                    }
+                )
+            }
+        } label: {
+            Label("Item Actions", systemImage: "ellipsis.circle")
+        }
+        .disabled(store.selectedItemIDs.isEmpty)
+        .accessibilityIdentifier("editor.itemActions")
+        .help("Add, indent, move, rename, or delete the selected items")
 
         Button {
             store.expandAll()
@@ -163,90 +190,6 @@ struct ListDetailView: View {
             Label("Collapse All", systemImage: "arrow.down.right.and.arrow.up.left")
         }
         .help("Collapse all branches")
-    }
-
-    @ViewBuilder
-    private func selectedItemToolbarMenu(_ store: ListStore) -> some View {
-        let selectedID = singleSelectedItemID(in: store)
-        Menu {
-            if let selectedID {
-                itemActionMenu(for: selectedID, in: store)
-            } else {
-                Text("Select an item first")
-            }
-        } label: {
-            Label("Item Actions", systemImage: "ellipsis.circle")
-        }
-        .disabled(selectedID == nil)
-        .accessibilityIdentifier("editor.itemActions")
-        .help("Add, indent, move, rename, or delete the selected item")
-    }
-
-    @ViewBuilder
-    private func itemActionMenu(for itemID: UUID, in store: ListStore) -> some View {
-        Button {
-            requestAdd(afterID: itemID)
-        } label: {
-            Label("Add Below", systemImage: "plus")
-        }
-        .keyboardShortcut(.return, modifiers: [])
-
-        Button {
-            store.insertAbove(referenceID: itemID, title: "New Item", undoManager: undoManager)
-        } label: {
-            Label("Add Above", systemImage: "arrow.up")
-        }
-        .keyboardShortcut(.return, modifiers: [.shift])
-
-        Button {
-            requestAdd(childOfID: itemID)
-        } label: {
-            Label("Add Child", systemImage: "arrow.turn.down.right")
-        }
-        .keyboardShortcut(.return, modifiers: [.command])
-
-        Divider()
-
-        Button {
-            store.indent(itemID: itemID, undoManager: undoManager)
-        } label: {
-            Label("Indent", systemImage: "increase.indent")
-        }
-        .keyboardShortcut(.tab, modifiers: [])
-
-        Button {
-            store.outdent(itemID: itemID, undoManager: undoManager)
-        } label: {
-            Label("Outdent", systemImage: "decrease.indent")
-        }
-        .keyboardShortcut(.tab, modifiers: [.shift])
-
-        Divider()
-
-        Button {
-            store.moveUp(itemID: itemID, undoManager: undoManager)
-        } label: {
-            Label("Move Up", systemImage: "arrow.up")
-        }
-        .keyboardShortcut(.upArrow, modifiers: [.command, .option])
-
-        Button {
-            store.moveDown(itemID: itemID, undoManager: undoManager)
-        } label: {
-            Label("Move Down", systemImage: "arrow.down")
-        }
-        .keyboardShortcut(.downArrow, modifiers: [.command, .option])
-
-        Divider()
-
-        Button(role: .destructive) {
-            selectedItemsPendingDeletion = SelectedItemsDeletionConfirmation(
-                selectedCount: store.selectedItemIDs.count
-            )
-        } label: {
-            Label("Delete", systemImage: "trash")
-        }
-        .keyboardShortcut(.delete, modifiers: [.command])
     }
 
     @ViewBuilder
@@ -297,8 +240,6 @@ struct ListDetailView: View {
 
     private var focusedCommandActions: ListsurfListCommandActions {
         guard let store = listStore else { return ListsurfListCommandActions() }
-        let selectedID = singleSelectedItemID(in: store)
-        let hasSelection = !store.selectedItemIDs.isEmpty
         var actions = ListsurfListCommandActions()
 
         actions.toggleCheckMode = { store.isCheckMode.toggle() }
@@ -306,15 +247,23 @@ struct ListDetailView: View {
         actions.expandAll = { store.expandAll() }
         actions.collapseAll = { store.collapseAll() }
 
-        guard !store.isCheckMode else { return actions }
+        // While the user is typing (rename or add field), structural
+        // commands must be disabled: an enabled menu equivalent would fire
+        // instead of, or on top of, the text field's own handling.
+        guard !store.isCheckMode, !store.isTextInputActive else { return actions }
 
-        actions.addBelow = { requestAdd(afterID: selectedID) }
+        let selectedID = singleSelectedItemID(in: store)
+
+        actions.addBelow = {
+            store.beginAdding(selectedID.map(OutlineAddPlacement.below) ?? .root)
+        }
         if let selectedID {
             actions.addAbove = {
-                store.insertAbove(referenceID: selectedID, title: "New Item", undoManager: undoManager)
+                let newID = store.insertAbove(referenceID: selectedID, title: "New Item", undoManager: undoManager)
+                store.beginEditing(itemID: newID)
             }
             actions.addChild = {
-                requestAdd(childOfID: selectedID)
+                store.beginAdding(.child(selectedID))
             }
             actions.indent = {
                 store.indent(itemID: selectedID, undoManager: undoManager)
@@ -329,11 +278,9 @@ struct ListDetailView: View {
                 store.moveDown(itemID: selectedID, undoManager: undoManager)
             }
         }
-        if hasSelection {
+        if !store.selectedItemIDs.isEmpty {
             actions.delete = {
-                selectedItemsPendingDeletion = SelectedItemsDeletionConfirmation(
-                    selectedCount: store.selectedItemIDs.count
-                )
+                store.pendingDeletionIDs = store.selectedItemIDs
             }
         }
 
@@ -345,41 +292,26 @@ struct ListDetailView: View {
         return store.selectedItemIDs.first
     }
 
-    private var normalizedNotePreviewLineCount: Int {
-        max(1, notePreviewLineCount)
+    private var deletionDialogTitle: String {
+        guard let ids = listStore?.pendingDeletionIDs, ids.count > 1 else {
+            return "Delete Item?"
+        }
+        return "Delete \(ids.count) Items?"
     }
 
-    private func requestAdd(afterID: UUID?) {
-        addRequest = OutlineAddRequest(afterID: afterID)
+    private var deletionDialogMessage: String {
+        guard let store = listStore, let ids = store.pendingDeletionIDs else { return "" }
+        if ids.count == 1, let id = ids.first,
+           let item = store.items.first(where: { $0.id == id }) {
+            return "“\(item.title)” and all of its child items will be deleted."
+        }
+        return "\(ids.count) selected items and any child items will be deleted."
     }
 
-    private func requestAdd(childOfID: UUID) {
-        addRequest = OutlineAddRequest(childOfID: childOfID)
-    }
-
-    private func syncListMetadata(from lists: [ListItem]) {
-        guard let updated = lists.first(where: { $0.id == listID }) else { return }
-        listStore?.list = updated
-    }
-
-    private var isConfirmingSelectedItemsDeletion: Binding<Bool> {
+    private var isConfirmingDeletion: Binding<Bool> {
         Binding(
-            get: { selectedItemsPendingDeletion != nil },
-            set: { if !$0 { selectedItemsPendingDeletion = nil } }
+            get: { listStore?.pendingDeletionIDs != nil },
+            set: { if !$0 { listStore?.pendingDeletionIDs = nil } }
         )
-    }
-}
-
-private struct SelectedItemsDeletionConfirmation: Identifiable {
-    let id = UUID()
-    let selectedCount: Int
-
-    var buttonTitle: String {
-        selectedCount == 1 ? "Delete Item" : "Delete Items"
-    }
-
-    var message: String {
-        let subject = selectedCount == 1 ? "The selected item" : "\(selectedCount) selected items"
-        return "\(subject) and any child items will be deleted."
     }
 }

@@ -1,40 +1,15 @@
 import SwiftUI
 import Domain
 
-enum OutlineAddPlacement: Equatable {
-    case root
-    case below(UUID)
-    case child(UUID)
-}
-
-struct OutlineAddRequest: Equatable {
-    let id = UUID()
-    let placement: OutlineAddPlacement
-
-    init(afterID: UUID?) {
-        placement = afterID.map(OutlineAddPlacement.below) ?? .root
-    }
-
-    init(childOfID: UUID) {
-        placement = .child(childOfID)
-    }
-}
-
 struct OutlineEditorView: View {
     @Bindable var store: ListStore
-    @Binding var inspectorItemID: UUID?
     @Binding var showInspector: Bool
-    @Binding var addRequest: OutlineAddRequest?
     let notePreviewLineCount: Int
     @Environment(\.undoManager) private var undoManager
-    @State private var editingItemID: UUID?
     @State private var editingText = ""
-    @State private var showingAddField = false
-    @State private var addPlacement: OutlineAddPlacement = .root
     @State private var newItemText = ""
-    @State private var itemPendingDeletion: ItemDeletionConfirmation?
+    @State private var selectionFromAddFlow: Set<UUID> = []
     @FocusState private var addFieldFocused: Bool
-    @FocusState private var editorFocused: Bool
 
     var body: some View {
         #if os(iOS)
@@ -43,93 +18,84 @@ struct OutlineEditorView: View {
                 selectedItemActionBar
             }
             .modifier(KeyboardAccessoryModifier(
-                isVisible: showingAddField || editingItemID != nil,
+                isVisible: store.isTextInputActive,
                 onCancel: cancelTextEntry,
                 onDone: commitTextEntry,
-                onAddBelow: { selectedRow.map { beginAdding(.below($0.id)) } },
-                onAddChild: { selectedRow.map { beginAdding(.child($0.id)) } },
+                // Below/Child commit the current draft first (as Help
+                // documents), then continue relative to the fresh selection —
+                // never silently relocate typed text to another placement.
+                onAddBelow: {
+                    commitTextEntry()
+                    selectedRow.map { store.beginAdding(.below($0.id)) }
+                },
+                onAddChild: {
+                    commitTextEntry()
+                    selectedRow.map { store.beginAdding(.child($0.id)) }
+                },
                 onIndent: { selectedRow.map { store.indent(itemID: $0.id, undoManager: undoManager) } },
                 onOutdent: { selectedRow.map { store.outdent(itemID: $0.id, undoManager: undoManager) } },
                 hasSelectedItem: selectedRow != nil
             ))
         #else
+        // macOS keyboard ownership: the List (via native selection) handles
+        // ↑/↓/⌘-click/⇧-click itself; Return and Tab are claimed here and
+        // ONLY here — never as bare menu key equivalents, which would
+        // intercept typing in every text field in the window.
         editorContent
-            .focusable()
-            .focused($editorFocused)
-            .background {
-                MacOutlineTabKeyMonitor(
-                    isOutlineActive: editorFocused && editingItemID == nil && !showingAddField,
-                    isAddFieldActive: showingAddField && addFieldFocused,
-                    onTab: { isShiftPressed in
-                        handleTabKey(isShiftPressed: isShiftPressed)
-                    },
-                    onCommitAddField: {
-                        commitNewItem()
-                    }
-                )
-                .frame(width: 0, height: 0)
-            }
-            .onAppear { editorFocused = true }
-            .onChange(of: store.selectedItemIDs) { _, _ in
-                if editingItemID == nil && !showingAddField {
-                    editorFocused = true
-                }
-            }
-            .onKeyPress(.upArrow) {
-                moveSelection(delta: -1)
-                return .handled
-            }
-            .onKeyPress(.downArrow) {
-                moveSelection(delta: 1)
-                return .handled
-            }
             .onKeyPress(.return, phases: .down) { keyPress in
                 handleReturnKey(modifiers: keyPress.modifiers)
-                return .handled
             }
             .onKeyPress(.tab, phases: .down) { keyPress in
                 handleTabKey(isShiftPressed: keyPress.modifiers.contains(.shift))
-                return .handled
             }
         #endif
     }
 
     private var editorContent: some View {
         Group {
-            if store.filteredRows.isEmpty && !showingAddField && store.searchText.isEmpty {
+            if store.filteredRows.isEmpty && store.addPlacement == nil && store.searchText.isEmpty {
                 emptyState
-            } else if store.filteredRows.isEmpty && !showingAddField {
+            } else if store.filteredRows.isEmpty && store.addPlacement == nil {
                 ContentUnavailableView.search(text: store.searchText)
             } else {
                 outlineList
             }
         }
         .outlineSearch(text: $store.searchText)
-        .onChange(of: addRequest) { _, newValue in
-            if let newValue {
-                addRequest = nil
-                beginAdding(newValue.placement)
+        .onAppear {
+            // If this view was recreated while a rename was already active
+            // (the onChange below won't fire for an unchanged value), seed
+            // the draft buffer from the item.
+            if let editingID = store.editingItemID,
+               let item = store.items.first(where: { $0.id == editingID }) {
+                editingText = item.title
             }
         }
-        .confirmationDialog(
-            "Delete Item?",
-            isPresented: isConfirmingItemDeletion,
-            titleVisibility: .visible
-        ) {
-            if let confirmation = itemPendingDeletion {
-                Button("Delete Item", role: .destructive) {
-                    store.deleteItem(id: confirmation.id, undoManager: undoManager)
+        .onChange(of: store.editingItemID) { oldValue, newValue in
+            if let newValue, let item = store.items.first(where: { $0.id == newValue }) {
+                editingText = item.title
+            } else if let oldValue, newValue == nil {
+                // Editing was ended by something other than this view's own
+                // commit/cancel (both consume the draft first) — e.g. the
+                // store enforcing add/rename exclusivity. Commit the
+                // stranded draft rather than silently discarding it.
+                let text = editingText.trimmingCharacters(in: .whitespaces)
+                editingText = ""
+                if !text.isEmpty {
+                    store.updateItemTitle(id: oldValue, title: text, undoManager: undoManager)
                 }
-                .keyboardShortcut(.defaultAction)
-
-                Button("Cancel", role: .cancel) {
-                    itemPendingDeletion = nil
-                }
-                .keyboardShortcut(.cancelAction)
             }
-        } message: {
-            if let confirmation = itemPendingDeletion {
-                Text("“\(confirmation.title)” and all of its child items will be deleted.")
+        }
+        .onChange(of: store.selectedItemIDs) { _, newValue in
+            // Click-away commits an in-progress rename, Finder-style.
+            if let editingID = store.editingItemID, !newValue.contains(editingID) {
+                commitEdit(editingID)
+            }
+            // Any selection change — including deselecting by clicking empty
+            // space — dismisses a pending add, except when the change is the
+            // add flow itself selecting the item it just created.
+            if store.addPlacement != nil, newValue != selectionFromAddFlow {
+                dismissPendingAdd()
             }
         }
     }
@@ -138,10 +104,10 @@ struct OutlineEditorView: View {
         ContentUnavailableView {
             Label("No Items", systemImage: "text.badge.plus")
         } description: {
-            Text("Add your first item, or paste multiple lines.")
+            Text("Add your first item to start building this list.")
         } actions: {
             Button("Add Item") {
-                beginAdding(.root)
+                store.beginAdding(.root)
             }
             .buttonStyle(.borderedProminent)
             .accessibilityIdentifier("editor.addFirstItem")
@@ -151,85 +117,100 @@ struct OutlineEditorView: View {
     private var outlineList: some View {
         List(selection: $store.selectedItemIDs) {
             ForEach(store.filteredRows) { row in
-                HStack(spacing: 8) {
-                    OutlineRowView(
-                        row: row,
-                        isSelected: store.selectedItemIDs.contains(row.id),
-                        isEditing: editingItemID == row.id,
-                        notePreviewLineCount: notePreviewLineCount,
-                        editingText: editingItemID == row.id ? $editingText : .constant(""),
-                        onToggleExpand: { store.toggleExpanded(row.id) },
-                        onCommitEdit: { commitEdit(row.id) },
-                        onShowDetails: { showDetails(for: row) },
-                        onSelect: { select(row) }
-                    )
-
-                    Menu {
-                        rowContextMenu(row)
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
-                            .imageScale(.large)
+                outlineRow(row)
+                    .tag(row.id)
+                    .listRowInsets(EdgeInsets(
+                        top: 4,
+                        leading: 16 + Double(row.depth) * 20,
+                        bottom: 4,
+                        trailing: 16
+                    ))
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button(role: .destructive) {
+                            store.pendingDeletionIDs = [row.id]
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
                     }
-                    .buttonStyle(.borderless)
-                    .accessibilityLabel("Actions for \(row.item.title)")
-                    .accessibilityIdentifier("editor.rowActions")
-
-                    Button(role: .destructive) {
-                        requestDelete(row)
-                    } label: {
-                        Image(systemName: "trash")
-                            .imageScale(.large)
-                    }
-                    .buttonStyle(.borderless)
-                    .accessibilityLabel("Delete \(row.item.title)")
-                    .accessibilityIdentifier("editor.deleteItem")
-                }
-                .contentShape(Rectangle())
-                .onTapGesture { select(row) }
-                .tag(row.id)
-                .listRowInsets(EdgeInsets(
-                    top: 4,
-                    leading: 16 + Double(row.depth) * 20,
-                    bottom: 4,
-                    trailing: 16
-                ))
-                .contextMenu { rowContextMenu(row) }
-                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                    Button(role: .destructive) {
-                        requestDelete(row)
-                    } label: {
-                        Label("Delete", systemImage: "trash")
-                    }
-                }
 
                 if let addFieldDepth = addFieldPlacement(after: row) {
                     addItemField(depth: addFieldDepth)
                 }
             }
 
-            if showingAddField, addPlacement == .root {
+            if shouldShowRootAddField {
                 addItemField(depth: 0)
             }
         }
         .listStyle(.sidebar)
-        .animation(.default, value: store.flatRows.map(\.id))
+        .animation(.default, value: store.filteredRows.map(\.id))
+        .modifier(OutlineContextMenuModifier(
+            store: store,
+            onShowDetails: showDetails(itemID:)
+        ))
+    }
+
+    private func outlineRow(_ row: FlatRow) -> some View {
+        HStack(spacing: 8) {
+            OutlineRowView(
+                row: row,
+                isEditing: store.editingItemID == row.id,
+                notePreviewLineCount: notePreviewLineCount,
+                editingText: store.editingItemID == row.id ? $editingText : .constant(""),
+                onToggleExpand: { store.toggleExpanded(row.id) },
+                onCommitEdit: { commitEdit(row.id) },
+                onCancelEdit: {
+                    editingText = ""
+                    store.cancelEditing()
+                }
+            )
+
+            Menu {
+                // Hints off: this menu targets the row, while the displayed
+                // shortcuts act on the selection — they may differ.
+                ItemActionsMenu(
+                    store: store,
+                    itemIDs: [row.id],
+                    showsShortcutHints: false,
+                    onShowDetails: showDetails(itemID:)
+                )
+            } label: {
+                Image(systemName: "ellipsis.circle")
+                    .imageScale(.large)
+            }
+            .buttonStyle(.borderless)
+            .accessibilityLabel("Actions for \(row.item.title)")
+            .accessibilityIdentifier("editor.rowActions")
+
+            Button(role: .destructive) {
+                store.pendingDeletionIDs = [row.id]
+            } label: {
+                Image(systemName: "trash")
+                    .imageScale(.large)
+            }
+            .buttonStyle(.borderless)
+            .accessibilityLabel("Delete \(row.item.title)")
+            .accessibilityIdentifier("editor.deleteItem")
+        }
+        .contentShape(Rectangle())
+        .modifier(RowSelectionTapModifier(rowID: row.id, onSelect: selectRow(_:)))
     }
 
     #if os(iOS)
     @ViewBuilder
     private var selectedItemActionBar: some View {
-        if let row = selectedRow, !showingAddField {
+        if let row = selectedRow, store.addPlacement == nil {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
                     Button {
-                        beginAdding(.below(row.id))
+                        store.beginAdding(.below(row.id))
                     } label: {
                         Label("Below", systemImage: "plus")
                     }
                     .accessibilityIdentifier("editor.ios.addBelow")
 
                     Button {
-                        beginAdding(.child(row.id))
+                        store.beginAdding(.child(row.id))
                     } label: {
                         Label("Child", systemImage: "arrow.turn.down.right")
                     }
@@ -264,14 +245,14 @@ struct OutlineEditorView: View {
                     .accessibilityIdentifier("editor.ios.moveDown")
 
                     Button {
-                        showDetails(for: row)
+                        showDetails(itemID: row.id)
                     } label: {
                         Label("Details", systemImage: "info.circle")
                     }
                     .accessibilityIdentifier("editor.ios.details")
 
                     Button(role: .destructive) {
-                        requestDelete(row)
+                        store.pendingDeletionIDs = [row.id]
                     } label: {
                         Label("Delete", systemImage: "trash")
                     }
@@ -303,6 +284,7 @@ struct OutlineEditorView: View {
                     cancelAdding()
                     return .handled
                 }
+                .onAppear { addFieldFocused = true }
         }
         .listRowInsets(EdgeInsets(
             top: 4,
@@ -313,9 +295,8 @@ struct OutlineEditorView: View {
     }
 
     private func addFieldPlacement(after row: FlatRow) -> Int? {
-        guard showingAddField else { return nil }
-        switch addPlacement {
-        case .root:
+        switch store.addPlacement {
+        case nil, .root:
             return nil
         case .below(let itemID):
             return row.id == itemID ? row.depth : nil
@@ -324,218 +305,115 @@ struct OutlineEditorView: View {
         }
     }
 
-    private func select(_ row: FlatRow) {
-        addFieldFocused = false
-        if showingAddField && newItemText.isEmpty {
-            cancelAdding()
-        }
-        store.selectedItemIDs = [row.id]
-        inspectorItemID = row.id
-        editorFocused = true
-    }
-
-    private func beginAdding(_ placement: OutlineAddPlacement) {
-        addPlacement = placement
-        newItemText = ""
-        showingAddField = true
-        if case .child(let itemID) = placement {
-            store.expandedIDs.insert(itemID)
-        }
-        addFieldFocused = true
-    }
-
-    private func beginAddingAndFocus(_ placement: OutlineAddPlacement) {
-        beginAdding(placement)
-        Task { @MainActor in
-            addFieldFocused = true
+    /// The add field must always be reachable while adding is active. If its
+    /// anchor row is hidden (search filter, collapsed ancestor), fall back to
+    /// the root slot rather than leaving an active entry with no field.
+    private var shouldShowRootAddField: Bool {
+        switch store.addPlacement {
+        case nil:
+            return false
+        case .root:
+            return true
+        case .below(let itemID), .child(let itemID):
+            return !store.filteredRows.contains { $0.id == itemID }
         }
     }
 
     private func cancelAdding() {
-        showingAddField = false
-        addPlacement = .root
+        store.cancelAdding()
         newItemText = ""
-    }
-
-    private func startEdit(_ row: FlatRow) {
-        editingItemID = row.id
-        editingText = row.item.title
     }
 
     private func commitEdit(_ id: UUID) {
         let text = editingText.trimmingCharacters(in: .whitespaces)
-        editingItemID = nil
+        editingText = ""
+        store.cancelEditing()
         guard !text.isEmpty else { return }
         store.updateItemTitle(id: id, title: text, undoManager: undoManager)
     }
 
     private func commitNewItem() {
+        guard let placement = store.addPlacement else { return }
         let text = newItemText.trimmingCharacters(in: .whitespaces)
         guard !text.isEmpty else {
             cancelAdding()
             return
         }
-        let newID: UUID
-        switch addPlacement {
-        case .root:
-            newID = store.addItem(title: text, undoManager: undoManager)
-        case .below(let itemID):
-            newID = store.addItem(title: text, afterItemID: itemID, undoManager: undoManager)
-        case .child(let itemID):
-            newID = store.addChild(parentID: itemID, title: text, undoManager: undoManager)
-        }
-        store.selectedItemIDs = [newID]
-        inspectorItemID = newID
-        addPlacement = .below(newID)
+        let newID = insertPendingItem(text, at: placement)
+        // Keep the flow going: the next entry lands below the item just added.
+        selectionFromAddFlow = [newID]
+        store.beginAdding(.below(newID))
         newItemText = ""
-        Task { @MainActor in
-            addFieldFocused = true
+        addFieldFocused = true
+    }
+
+    /// Dismiss the add flow on click-away: commit typed text as a final
+    /// item, or cancel an empty field — never leave a dangling entry field.
+    private func dismissPendingAdd() {
+        guard let placement = store.addPlacement else { return }
+        let text = newItemText.trimmingCharacters(in: .whitespaces)
+        if !text.isEmpty {
+            _ = insertPendingItem(text, at: placement)
+        }
+        cancelAdding()
+    }
+
+    private func insertPendingItem(_ text: String, at placement: OutlineAddPlacement) -> UUID {
+        switch placement {
+        case .root:
+            store.addItem(title: text, undoManager: undoManager)
+        case .below(let itemID):
+            store.addItem(title: text, afterItemID: itemID, undoManager: undoManager)
+        case .child(let itemID):
+            store.addChild(parentID: itemID, title: text, undoManager: undoManager)
         }
     }
 
-    @ViewBuilder
-    private func rowContextMenu(_ row: FlatRow) -> some View {
-        Button {
-            beginAddingAndFocus(.below(row.id))
-        } label: {
-            Label("Add Below", systemImage: "plus")
+    /// A user tap always dismisses a pending add (commit-or-cancel), even if
+    /// the tapped row is the item the add flow just created — the intent is
+    /// "done entering, work with this row".
+    private func selectRow(_ id: UUID) {
+        if store.addPlacement != nil {
+            dismissPendingAdd()
         }
-        .keyboardShortcut(.return, modifiers: [])
-
-        Button {
-            store.insertAbove(referenceID: row.id, title: "New Item", undoManager: undoManager)
-        } label: {
-            Label("Add Above", systemImage: "arrow.up")
-        }
-        .keyboardShortcut(.return, modifiers: [.shift])
-
-        Button {
-            beginAddingAndFocus(.child(row.id))
-        } label: {
-            Label("Add Child", systemImage: "arrow.turn.down.right")
-        }
-        .keyboardShortcut(.return, modifiers: [.command])
-
-        Divider()
-
-        Button {
-            store.indent(itemID: row.id, undoManager: undoManager)
-        } label: {
-            Label("Indent", systemImage: "increase.indent")
-        }
-        .keyboardShortcut(.tab, modifiers: [])
-
-        Button {
-            store.outdent(itemID: row.id, undoManager: undoManager)
-        } label: {
-            Label("Outdent", systemImage: "decrease.indent")
-        }
-        .keyboardShortcut(.tab, modifiers: [.shift])
-
-        Divider()
-
-        Button {
-            store.moveUp(itemID: row.id, undoManager: undoManager)
-        } label: {
-            Label("Move Up", systemImage: "arrow.up")
-        }
-        .keyboardShortcut(.upArrow, modifiers: [.command, .option])
-
-        Button {
-            store.moveDown(itemID: row.id, undoManager: undoManager)
-        } label: {
-            Label("Move Down", systemImage: "arrow.down")
-        }
-        .keyboardShortcut(.downArrow, modifiers: [.command, .option])
-
-        Divider()
-
-        Button { startEdit(row) } label: {
-            Label("Rename", systemImage: "pencil")
-        }
-
-        Button { showDetails(for: row) } label: {
-            Label("Details", systemImage: "info.circle")
-        }
-
-        Divider()
-
-        Button(role: .destructive) {
-            requestDelete(row)
-        } label: {
-            Label("Delete", systemImage: "trash")
-        }
-        .keyboardShortcut(.delete, modifiers: [.command])
+        store.selectedItemIDs = [id]
     }
 
-    private func showDetails(for row: FlatRow) {
-        select(row)
-        inspectorItemID = row.id
+    private func showDetails(itemID: UUID) {
+        store.selectedItemIDs = [itemID]
         showInspector = true
     }
 
-    private func moveSelection(delta: Int) {
-        let rows = store.filteredRows
-        guard !rows.isEmpty else { return }
-
-        if store.selectedItemIDs.count == 1,
-           let selectedID = store.selectedItemIDs.first,
-           let index = rows.firstIndex(where: { $0.id == selectedID }) {
-            let nextIndex = min(max(index + delta, rows.startIndex), rows.index(before: rows.endIndex))
-            select(rows[nextIndex])
-        } else {
-            select(delta < 0 ? rows[rows.index(before: rows.endIndex)] : rows[rows.startIndex])
+    #if os(macOS)
+    private func handleReturnKey(modifiers: EventModifiers) -> KeyPress.Result {
+        guard store.editingItemID == nil, store.addPlacement == nil else { return .ignored }
+        if modifiers.contains(.command) {
+            // ⌘Return belongs to the Add Child menu command.
+            return .ignored
         }
-    }
-
-    private func handleReturnKey(modifiers: EventModifiers) {
-        guard editingItemID == nil else { return }
-        if showingAddField {
-            commitNewItem()
-            return
-        }
-        if modifiers.contains(.command), let row = selectedRow {
-            beginAddingAndFocus(.child(row.id))
-        } else if modifiers.contains(.shift), let row = selectedRow {
+        if modifiers.contains(.shift) {
+            guard let row = selectedRow else { return .ignored }
             let newID = store.insertAbove(referenceID: row.id, title: "New Item", undoManager: undoManager)
-            startEditingNewItem(id: newID)
-        } else {
-            beginAddingAndFocus(selectedRow.map { .below($0.id) } ?? .root)
+            store.beginEditing(itemID: newID)
+            return .handled
         }
+        store.beginAdding(selectedRow.map { .below($0.id) } ?? .root)
+        return .handled
     }
 
-    private func handleTabKey(isShiftPressed: Bool) {
-        if showingAddField {
-            commitNewItem()
-            return
+    private func handleTabKey(isShiftPressed: Bool) -> KeyPress.Result {
+        guard store.editingItemID == nil, store.addPlacement == nil,
+              let row = selectedRow else {
+            return .ignored
         }
-        guard editingItemID == nil, let row = selectedRow else { return }
         if isShiftPressed {
             store.outdent(itemID: row.id, undoManager: undoManager)
         } else {
             store.indent(itemID: row.id, undoManager: undoManager)
         }
-        store.selectedItemIDs = [row.id]
-        inspectorItemID = row.id
-        editorFocused = true
+        return .handled
     }
-
-    private func startEditingNewItem(id: UUID) {
-        guard let row = store.filteredRows.first(where: { $0.id == id }) else { return }
-        select(row)
-        startEdit(row)
-    }
-
-    private func requestDelete(_ row: FlatRow) {
-        itemPendingDeletion = ItemDeletionConfirmation(row)
-    }
-
-    private var isConfirmingItemDeletion: Binding<Bool> {
-        Binding(
-            get: { itemPendingDeletion != nil },
-            set: { if !$0 { itemPendingDeletion = nil } }
-        )
-    }
+    #endif
 
     private var selectedRow: FlatRow? {
         guard store.selectedItemIDs.count == 1,
@@ -546,8 +424,8 @@ struct OutlineEditorView: View {
     }
 
     private var addPlaceholder: String {
-        switch addPlacement {
-        case .root:
+        switch store.addPlacement {
+        case nil, .root:
             "New item"
         case .below:
             "New item below"
@@ -557,21 +435,83 @@ struct OutlineEditorView: View {
     }
 
     private func cancelTextEntry() {
-        if showingAddField {
+        if store.addPlacement != nil {
             cancelAdding()
         }
-        if editingItemID != nil {
-            editingItemID = nil
+        if store.editingItemID != nil {
             editingText = ""
+            store.cancelEditing()
         }
     }
 
     private func commitTextEntry() {
-        if let editingItemID {
+        if let editingItemID = store.editingItemID {
             commitEdit(editingItemID)
-        } else if showingAddField {
+        } else if store.addPlacement != nil {
             commitNewItem()
         }
+    }
+}
+
+/// Selection-driven context menu. On macOS the double-click primary action
+/// starts a rename, Finder-style. Shortcut hints are on: this menu's target
+/// IS the selection, so the hints tell the truth.
+private struct OutlineContextMenuModifier: ViewModifier {
+    @Bindable var store: ListStore
+    let onShowDetails: (UUID) -> Void
+    @Environment(\.undoManager) private var undoManager
+
+    func body(content: Content) -> some View {
+        #if os(macOS)
+        content
+            .contextMenu(forSelectionType: UUID.self) { ids in
+                menuContent(ids)
+            } primaryAction: { ids in
+                if ids.count == 1, let id = ids.first {
+                    store.beginEditing(itemID: id)
+                }
+            }
+        #else
+        content
+            .contextMenu(forSelectionType: UUID.self) { ids in
+                menuContent(ids)
+            }
+        #endif
+    }
+
+    @ViewBuilder
+    private func menuContent(_ ids: Set<UUID>) -> some View {
+        if ids.isEmpty {
+            Button {
+                store.beginAdding(.root)
+            } label: {
+                Label("Add Item", systemImage: "plus")
+            }
+        } else {
+            ItemActionsMenu(
+                store: store,
+                itemIDs: ids,
+                showsShortcutHints: true,
+                onShowDetails: onShowDetails
+            )
+        }
+    }
+}
+
+/// iOS selects by row tap (List selection outside edit mode is a macOS
+/// affordance); macOS relies on native List selection and adds nothing.
+private struct RowSelectionTapModifier: ViewModifier {
+    let rowID: UUID
+    let onSelect: (UUID) -> Void
+
+    func body(content: Content) -> some View {
+        #if os(iOS)
+        content.onTapGesture {
+            onSelect(rowID)
+        }
+        #else
+        content
+        #endif
     }
 }
 
@@ -632,28 +572,15 @@ private struct KeyboardAccessoryModifier: ViewModifier {
     }
 }
 
-private struct ItemDeletionConfirmation: Identifiable {
-    let id: UUID
-    let title: String
-
-    init(_ row: FlatRow) {
-        id = row.id
-        title = row.item.title
-    }
-}
-
 #if DEBUG
 private struct OutlineEditorPreview: View {
-    @State private var inspectorItemID: UUID?
-    @State private var addRequest: OutlineAddRequest?
+    @State private var showInspector = false
     @State private var store = PreviewFixtures.listStore()
 
     var body: some View {
         OutlineEditorView(
             store: store,
-            inspectorItemID: $inspectorItemID,
-            showInspector: .constant(false),
-            addRequest: $addRequest,
+            showInspector: $showInspector,
             notePreviewLineCount: 1
         )
     }
@@ -664,11 +591,15 @@ private struct OutlineEditorPreview: View {
 }
 #endif
 
-
 private extension View {
     @ViewBuilder
     func outlineSearch(text: Binding<String>) -> some View {
         #if os(macOS)
+        // Deliberately NOT .searchable here: the sidebar already owns this
+        // window's search toolbar item, and a second .searchable in the same
+        // NavigationSplitView crashes NSToolbar (duplicate item insertion).
+        // In-list search on macOS needs its own affordance (e.g. a filter
+        // field above the outline) — tracked as a known gap.
         self
         #else
         searchable(text: text, prompt: "Search Items")

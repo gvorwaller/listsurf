@@ -6,6 +6,9 @@ import Observation
 @Observable
 public final class AppErrorStore {
     public private(set) var current: AppErrorPresentation?
+    // Later errors queue rather than clobber: replacing the current error
+    // would silently discard its retry action mid-flow.
+    private var pending: [AppErrorPresentation] = []
 
     public init() {}
 
@@ -14,21 +17,30 @@ public final class AppErrorStore {
         retryTitle: String? = nil,
         retry: (@MainActor () -> Void)? = nil
     ) {
-        current = AppErrorPresentation(
+        let presentation = AppErrorPresentation(
             error: error,
             retryTitle: retryTitle,
             retry: retry
         )
+        if current == nil {
+            current = presentation
+        } else {
+            pending.append(presentation)
+        }
     }
 
     public func dismiss() {
-        current = nil
+        advance()
     }
 
     public func retryCurrent() {
         let action = current?.retry
-        current = nil
+        advance()
         action?()
+    }
+
+    private func advance() {
+        current = pending.isEmpty ? nil : pending.removeFirst()
     }
 }
 

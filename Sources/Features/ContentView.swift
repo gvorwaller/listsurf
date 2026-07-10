@@ -23,46 +23,48 @@ public struct ContentView: View {
         Group {
             if let presentation = appStore.errorStore.current,
                case .storeCorrupted = presentation.error {
+                // Recovery mode gets NO app commands and no presentation
+                // hosts: an enabled ⌘N here would arm a sheet with nowhere
+                // to present, which then pops unprompted after recovery.
                 StoreRecoveryView(presentation: presentation)
             } else {
-                NavigationSplitView {
-                    LibrarySidebar(
-                        onNewList: beginNewList,
-                        onImportBackup: beginImportBackup,
-                        onExportBackup: beginExportBackup,
-                        onShowSettings: showSettings,
-                        onShowHelp: showHelp
-                    )
-                } detail: {
-                    if let selectedID = appStore.selectedListID {
-                        ListDetailView(listID: selectedID)
-                    } else {
-                        ContentUnavailableView(
-                            "Select a List",
-                            systemImage: "list.bullet.indent",
-                            description: Text("Choose a list from the sidebar, or create a new one.")
-                        )
-                    }
-                }
-                .safeAreaInset(edge: .top, spacing: 0) {
-                    if let presentation = appStore.errorStore.current {
-                        ErrorBannerView(presentation: presentation) {
-                            appStore.errorStore.retryCurrent()
-                        } onDismiss: {
-                            appStore.errorStore.dismiss()
-                        }
-                    }
-                }
-                .sheet(isPresented: $showingNewList) {
-                    NewListSheet(
-                        title: $newListTitle,
-                        notes: $newListNotes,
-                        icon: $newListIcon,
-                        colorName: $newListColorName,
-                        onCreate: createList,
-                        onCancel: cancelNewList
-                    )
-                    .presentationDetents([.medium, .large])
+                libraryView
+            }
+        }
+        .task {
+            if case .storeCorrupted = appStore.errorStore.current?.error {
+                return
+            }
+            await appStore.loadLists()
+        }
+    }
+
+    private var libraryView: some View {
+        NavigationSplitView {
+            LibrarySidebar(
+                onNewList: beginNewList,
+                onImportBackup: beginImportBackup,
+                onExportBackup: beginExportBackup,
+                onShowSettings: showSettings,
+                onShowHelp: showHelp
+            )
+        } detail: {
+            if let selectedID = appStore.selectedListID {
+                ListDetailView(listID: selectedID)
+            } else {
+                ContentUnavailableView(
+                    "Select a List",
+                    systemImage: "list.bullet.indent",
+                    description: Text("Choose a list from the sidebar, or create a new one.")
+                )
+            }
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if let presentation = appStore.errorStore.current {
+                ErrorBannerView(presentation: presentation) {
+                    appStore.errorStore.retryCurrent()
+                } onDismiss: {
+                    appStore.errorStore.dismiss()
                 }
             }
         }
@@ -75,6 +77,17 @@ public struct ContentView: View {
                 showHelp: showHelp
             )
         )
+        .sheet(isPresented: $showingNewList) {
+            NewListSheet(
+                title: $newListTitle,
+                notes: $newListNotes,
+                icon: $newListIcon,
+                colorName: $newListColorName,
+                onCreate: createList,
+                onCancel: cancelNewList
+            )
+            .presentationDetents([.medium, .large])
+        }
         .fileImporter(
             isPresented: $showingImporter,
             allowedContentTypes: [.json],
@@ -110,26 +123,9 @@ public struct ContentView: View {
             }
         }
         .sheet(isPresented: $showingSettings) {
-            NavigationStack {
-                ListsurfSettingsView()
-                    .navigationTitle("Settings")
-                    #if os(iOS)
-                    .navigationBarTitleDisplayMode(.inline)
-                    #endif
-                    .toolbar {
-                        ToolbarItem(placement: .confirmationAction) {
-                            Button("Done") {
-                                showingSettings = false
-                            }
-                        }
-                    }
+            ListsurfSettingsSheet {
+                showingSettings = false
             }
-        }
-        .task {
-            if case .storeCorrupted = appStore.errorStore.current?.error {
-                return
-            }
-            await appStore.loadLists()
         }
     }
 
@@ -147,15 +143,10 @@ public struct ContentView: View {
 
     private func beginExportBackup() {
         Task {
-            do {
-                exportDocument = ListsurfBackupDocument(
-                    data: try await appStore.exportLibrary(appVersion: appVersion)
-                )
-                exportFilename = backupFilename()
-                showingExporter = true
-            } catch {
-                // AppStore already presents the export failure through the shared error store.
-            }
+            guard let data = await appStore.exportLibrary() else { return }
+            exportDocument = ListsurfBackupDocument(data: data)
+            exportFilename = backupFilename()
+            showingExporter = true
         }
     }
 
@@ -201,11 +192,6 @@ public struct ContentView: View {
         )
     }
 
-    private var appVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
-            ?? "0.1.0"
-    }
-
     private func backupFilename(date: Date = Date()) -> String {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
@@ -237,7 +223,7 @@ public struct ContentView: View {
         guard let pendingImport else { return }
         self.pendingImport = nil
         Task {
-            try await appStore.importLibrary(from: pendingImport.data)
+            await appStore.importLibrary(from: pendingImport.data)
         }
     }
 

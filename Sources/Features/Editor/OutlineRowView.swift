@@ -1,16 +1,16 @@
 import SwiftUI
 import Domain
 
+/// Pure row content. Carries no gestures and no selection painting:
+/// selection, click handling, and highlight all belong to the owning List.
 struct OutlineRowView: View {
     let row: FlatRow
-    let isSelected: Bool
     let isEditing: Bool
     let notePreviewLineCount: Int
     @Binding var editingText: String
     let onToggleExpand: () -> Void
     let onCommitEdit: () -> Void
-    let onShowDetails: () -> Void
-    let onSelect: () -> Void
+    let onCancelEdit: () -> Void
     @FocusState private var isFocused: Bool
 
     var body: some View {
@@ -23,17 +23,8 @@ struct OutlineRowView: View {
 
             trailingInfo
         }
-        .contentShape(Rectangle())
         .padding(.vertical, 2)
         .padding(.horizontal, 4)
-        .background {
-            if isSelected {
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(.selection.opacity(0.18))
-            }
-        }
-        .onTapGesture { onSelect() }
-        .onTapGesture(count: 2) { onShowDetails() }
     }
 
     @ViewBuilder
@@ -42,7 +33,12 @@ struct OutlineRowView: View {
             TextField("Title", text: $editingText)
                 .focused($isFocused)
                 .onSubmit { onCommitEdit() }
+                .onKeyPress(.escape) {
+                    onCancelEdit()
+                    return .handled
+                }
                 .onAppear { isFocused = true }
+                .accessibilityIdentifier("editor.renameField")
         } else {
             VStack(alignment: .leading, spacing: 2) {
                 Text(row.item.title.isEmpty ? "Untitled" : row.item.title)
@@ -54,8 +50,6 @@ struct OutlineRowView: View {
                     NotePreviewView(notes: notes, lineCount: notePreviewLineCount)
                 }
             }
-            .onTapGesture { onSelect() }
-            .onTapGesture(count: 2) { onShowDetails() }
         }
     }
 

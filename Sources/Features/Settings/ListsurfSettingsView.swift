@@ -11,8 +11,8 @@ public struct ListsurfSettingsView: View {
 
     public var body: some View {
         let lineLimitBinding = Binding(
-            get: { max(1, self.notesPreviewLineLimit) },
-            set: { self.notesPreviewLineLimit = max(1, $0) }
+            get: { max(0, self.notesPreviewLineLimit) },
+            set: { self.notesPreviewLineLimit = max(0, $0) }
         )
 
         #if os(macOS)
@@ -44,6 +44,7 @@ public struct ListsurfSettingsView: View {
     private func displaySection(notesPreviewLineLimit: Binding<Int>) -> some View {
         Section("Display") {
             Picker("Notes under items", selection: notesPreviewLineLimit) {
+                Text("Off").tag(0)
                 Text("1 line").tag(1)
                 Text("2 lines").tag(2)
                 Text("3 lines").tag(3)
@@ -51,7 +52,7 @@ public struct ListsurfSettingsView: View {
                 Text("5 lines").tag(5)
             }
 
-            Text("Controls the visible height of the scrollable notes area in edit and check mode rows.")
+            Text("Shows the first lines of an item's notes beneath its title in edit and check mode. When off, items with notes show a small note icon instead.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }
@@ -72,6 +73,33 @@ public struct ListsurfSettingsView: View {
             return "\(version) (\(build))"
         }
         return version
+    }
+}
+
+/// Sheet presentation of Settings for iOS. Owns its own chrome, matching the
+/// convention that sheet content builds its navigation and dismissal
+/// (the bare ListsurfSettingsView stays chrome-free for the macOS Settings scene).
+public struct ListsurfSettingsSheet: View {
+    let onClose: () -> Void
+
+    public init(onClose: @escaping () -> Void) {
+        self.onClose = onClose
+    }
+
+    public var body: some View {
+        NavigationStack {
+            ListsurfSettingsView()
+                .navigationTitle("Settings")
+                #if os(iOS)
+                .navigationBarTitleDisplayMode(.inline)
+                #endif
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done", action: onClose)
+                            .accessibilityIdentifier("settings.done")
+                    }
+                }
+        }
     }
 }
 

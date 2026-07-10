@@ -162,6 +162,90 @@ final class ListStorePersistenceTests: XCTestCase {
     }
 
     @MainActor
+    func testPersistenceRetryRequeuesTheFailedMutation() async {
+        // The retry for a failed background save must re-queue the SAME
+        // mutation — a reload would discard the user's in-memory edit.
+        let list = ListItem(title: "Test")
+        let item = OutlineItem(listID: list.id, title: "Original")
+        let errorStore = AppErrorStore()
+        let outlineRepository = FlakyOutlineRepository(items: [item], failures: 1)
+        let store = ListStore(
+            listID: list.id,
+            outlineRepo: outlineRepository,
+            listRepo: StubListRepository(list: list),
+            errorStore: errorStore
+        )
+        store.items = [item]
+
+        store.updateItemTitle(id: item.id, title: "Changed")
+        await store.waitForPendingPersistence()
+
+        XCTAssertNotNil(errorStore.current, "First attempt fails and presents")
+        errorStore.retryCurrent()
+        await store.waitForPendingPersistence()
+
+        let persisted = try? await outlineRepository.fetchItems(forList: list.id)
+        XCTAssertEqual(persisted?.first?.title, "Changed", "Retry must persist the original edit")
+        XCTAssertEqual(store.items.first?.title, "Changed", "In-memory edit must survive the failure")
+    }
+
+    @MainActor
+    func testBeginAddingAndBeginEditingAreMutuallyExclusive() {
+        let list = ListItem(title: "Test")
+        let item = OutlineItem(listID: list.id, title: "Item")
+        let store = ListStore(
+            listID: list.id,
+            outlineRepo: DelayedOutlineRepository(items: [item]),
+            listRepo: StubListRepository(list: list)
+        )
+        store.items = [item]
+
+        store.beginEditing(itemID: item.id)
+        store.beginAdding(.below(item.id))
+        XCTAssertNil(store.editingItemID, "Starting an add must end an active rename")
+
+        store.beginEditing(itemID: item.id)
+        XCTAssertNil(store.addPlacement, "Starting a rename must end an active add")
+    }
+
+    @MainActor
+    func testEnteringCheckModeClearsTextEntryState() {
+        let list = ListItem(title: "Test")
+        let item = OutlineItem(listID: list.id, title: "Item")
+        let store = ListStore(
+            listID: list.id,
+            outlineRepo: DelayedOutlineRepository(items: [item]),
+            listRepo: StubListRepository(list: list)
+        )
+        store.items = [item]
+
+        store.beginAdding(.below(item.id))
+        store.isCheckMode = true
+
+        XCTAssertNil(store.addPlacement)
+        XCTAssertFalse(store.isTextInputActive, "Check mode must not inherit phantom text-entry state")
+    }
+
+    @MainActor
+    func testBoundaryIndentRegistersNoUndo() {
+        let list = ListItem(title: "Test")
+        let first = OutlineItem(listID: list.id, title: "First", position: 1)
+        let second = OutlineItem(listID: list.id, title: "Second", position: 2)
+        let store = ListStore(
+            listID: list.id,
+            outlineRepo: DelayedOutlineRepository(items: [first, second]),
+            listRepo: StubListRepository(list: list)
+        )
+        store.items = [first, second]
+        let undoManager = UndoManager()
+
+        store.indent(itemID: first.id, undoManager: undoManager)
+        RunLoop.current.run(until: Date())
+
+        XCTAssertFalse(undoManager.canUndo, "A boundary no-op must not consume the next ⌘Z")
+    }
+
+    @MainActor
     func testErrorStoreRetryRunsActionAndDismissesCurrentError() {
         let errorStore = AppErrorStore()
         var didRetry = false
@@ -189,31 +273,16 @@ private actor DelayedOutlineRepository: OutlineRepository {
         items.filter { $0.listID == listID }
     }
 
-    func fetch(id: UUID) async throws -> OutlineItem? {
-        items.first { $0.id == id }
-    }
-
-    func save(_ item: OutlineItem) async throws {
-        try await saveAll([item])
-    }
-
-    func saveAll(_ newItems: [OutlineItem]) async throws {
+    func applyChanges(saving newItems: [OutlineItem], deletingIDs: [UUID]) async throws {
         saveCount += 1
         let call = saveCount
         try await Task.sleep(for: call == 1 ? .milliseconds(150) : .milliseconds(5))
         savedTitles.append(contentsOf: newItems.map(\.title))
-        let ids = Set(newItems.map(\.id))
-        items.removeAll { ids.contains($0.id) }
+        let savedIDs = Set(newItems.map(\.id))
+        items.removeAll { savedIDs.contains($0.id) }
         items.append(contentsOf: newItems)
-    }
-
-    func delete(id: UUID) async throws {
-        items.removeAll { $0.id == id }
-    }
-
-    func deleteAll(ids: [UUID]) async throws {
-        let ids = Set(ids)
-        items.removeAll { ids.contains($0.id) }
+        let deleted = Set(deletingIDs)
+        items.removeAll { deleted.contains($0.id) }
     }
 }
 
@@ -225,11 +294,35 @@ private actor FailingOutlineRepository: OutlineRepository {
     }
 
     func fetchItems(forList listID: UUID) async throws -> [OutlineItem] { items }
-    func fetch(id: UUID) async throws -> OutlineItem? { items.first { $0.id == id } }
-    func save(_ item: OutlineItem) async throws { throw TestFailure.intentional }
-    func saveAll(_ items: [OutlineItem]) async throws { throw TestFailure.intentional }
-    func delete(id: UUID) async throws { throw TestFailure.intentional }
-    func deleteAll(ids: [UUID]) async throws { throw TestFailure.intentional }
+    func applyChanges(saving items: [OutlineItem], deletingIDs: [UUID]) async throws {
+        throw TestFailure.intentional
+    }
+}
+
+private actor FlakyOutlineRepository: OutlineRepository {
+    private var items: [OutlineItem]
+    private var remainingFailures: Int
+
+    init(items: [OutlineItem], failures: Int) {
+        self.items = items
+        self.remainingFailures = failures
+    }
+
+    func fetchItems(forList listID: UUID) async throws -> [OutlineItem] {
+        items.filter { $0.listID == listID }
+    }
+
+    func applyChanges(saving newItems: [OutlineItem], deletingIDs: [UUID]) async throws {
+        if remainingFailures > 0 {
+            remainingFailures -= 1
+            throw TestFailure.intentional
+        }
+        let savedIDs = Set(newItems.map(\.id))
+        items.removeAll { savedIDs.contains($0.id) }
+        items.append(contentsOf: newItems)
+        let deleted = Set(deletingIDs)
+        items.removeAll { deleted.contains($0.id) }
+    }
 }
 
 private actor StubListRepository: ListRepository {
@@ -252,7 +345,9 @@ private actor StubListRepository: ListRepository {
             list = first
         }
     }
-    func delete(id: UUID) async throws {}
+    func fetchLibraryArchive() async throws -> LibraryArchive {
+        LibraryArchive(lists: [ArchivedList(list: list, items: [])])
+    }
     func deleteListAndItems(id: UUID) async throws {}
 }
 

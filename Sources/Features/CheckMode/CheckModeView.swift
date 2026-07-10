@@ -81,7 +81,7 @@ struct CheckModeView: View {
             }
         }
         .listStyle(.plain)
-        .animation(.default, value: store.flatRows.map(\.id))
+        .animation(.default, value: store.filteredRows.map(\.id))
     }
 
     @ViewBuilder
