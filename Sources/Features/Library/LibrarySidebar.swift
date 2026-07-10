@@ -82,7 +82,7 @@ struct LibrarySidebar: View {
                             .accessibilityIdentifier("library.listActions")
                         }
                             .tag(list.id)
-                            .contextMenu { listContextMenu(list) }
+                            .contextMenu { listActionMenu(list) }
                     }
                 }
             }
@@ -102,10 +102,11 @@ struct LibrarySidebar: View {
                 Button {
                     showingArchive = true
                 } label: {
+                    // No .badge here: it renders on list rows and menu items,
+                    // not on toolbar buttons.
                     Label("Archived Lists", systemImage: "archivebox")
                 }
-                .badge(appStore.archivedLists.count)
-                .help("View archived lists")
+                .help(archiveHelpText)
 
                 settingsButton
 
@@ -198,15 +199,14 @@ struct LibrarySidebar: View {
             Button {
                 showingArchive = true
             } label: {
-                Label("Archived Lists", systemImage: "archivebox")
+                Label(archiveButtonTitle, systemImage: "archivebox")
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .badge(appStore.archivedLists.count)
             .buttonStyle(.borderless)
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .accessibilityIdentifier("library.archive.sidebar")
-            .help("View archived lists")
+            .help(archiveHelpText)
             #endif
         }
     }
@@ -244,6 +244,16 @@ struct LibrarySidebar: View {
         }
     }
 
+    private var archiveButtonTitle: String {
+        let count = appStore.archivedLists.count
+        return count > 0 ? "Archived Lists (\(count))" : "Archived Lists"
+    }
+
+    private var archiveHelpText: String {
+        let count = appStore.archivedLists.count
+        return count > 0 ? "View \(count) archived lists" : "View archived lists"
+    }
+
     @ViewBuilder
     private var settingsButton: some View {
         #if os(macOS)
@@ -259,11 +269,6 @@ struct LibrarySidebar: View {
         }
         .accessibilityIdentifier("library.settings")
         #endif
-    }
-
-    @ViewBuilder
-    private func listContextMenu(_ list: ListItem) -> some View {
-        listActionMenu(list)
     }
 
     @ViewBuilder

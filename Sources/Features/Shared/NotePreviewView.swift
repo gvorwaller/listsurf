@@ -1,23 +1,18 @@
 import SwiftUI
 
+/// Truncated notes preview under an item title. A plain line-limited Text:
+/// no nested scrolling (which steals list scrolling on macOS) and no fixed
+/// heights (which clip under Dynamic Type). Full notes live in the inspector.
 struct NotePreviewView: View {
     let notes: String
     let lineCount: Int
 
-    private var previewHeight: CGFloat {
-        CGFloat(max(1, lineCount)) * 16
-    }
-
     var body: some View {
-        ScrollView(.vertical) {
-            Text(notes)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .textSelection(.enabled)
-        }
-        .scrollIndicators(.visible)
-        .frame(maxHeight: previewHeight, alignment: .topLeading)
-        .accessibilityIdentifier("note.preview")
+        Text(notes)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .lineLimit(max(1, lineCount))
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityIdentifier("note.preview")
     }
 }

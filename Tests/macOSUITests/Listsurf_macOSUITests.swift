@@ -83,7 +83,7 @@ final class Listsurf_macOSUITests: XCTestCase {
 
         XCTAssertTrue(app.staticTexts["Listsurf Help"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Start here"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Mac use"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Mac keyboard"].waitForExistence(timeout: 5))
         app.buttons["help.done"].click()
         XCTAssertFalse(app.staticTexts["Listsurf Help"].waitForExistence(timeout: 2))
     }

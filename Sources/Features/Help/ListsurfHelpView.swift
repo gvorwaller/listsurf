@@ -33,8 +33,9 @@ struct ListsurfHelpView: View {
                         HelpItem("Tap a row", "Selects it and shows item controls."),
                         HelpItem("Below", "Starts a new item under the selected row at the same outline level."),
                         HelpItem("Child", "Starts a nested item inside the selected row."),
-                        HelpItem("Details", "Opens notes, title, and item metadata."),
-                        HelpItem("Trash", "Deletes the selected item after confirmation.")
+                        HelpItem("Rename", "Edits the item title in place — from the row menu, or double-click on Mac."),
+                        HelpItem("Details", "Opens notes, quantity, and item metadata in the inspector."),
+                        HelpItem("Trash", "Deletes the item after confirmation.")
                     ]
                 )
 
@@ -43,9 +44,11 @@ struct ListsurfHelpView: View {
                     systemImage: "books.vertical",
                     items: [
                         HelpItem("New List", "Creates a list. Use this for a separate project, packing list, workflow, or reusable checklist."),
-                        HelpItem("Archive", "Moves old lists out of the main Library without deleting them."),
+                        HelpItem("Duplicate", "Copies a list under a new name — with or without its checks — so a refined list can be reused."),
+                        HelpItem("Archived Lists", "Archiving moves old lists out of the main Library without deleting them. Open Archived Lists and use Restore to bring one back."),
                         HelpItem("Import Backup", "Replaces the current local library with a previously exported JSON backup."),
-                        HelpItem("Export Backup", "Writes a full-library JSON backup you can inspect or save elsewhere.")
+                        HelpItem("Export Backup", "Writes a full-library JSON backup you can inspect or save elsewhere."),
+                        HelpItem("Settings", "Display options, including how many lines of an item's notes appear beneath its title.")
                     ]
                 )
 
@@ -53,20 +56,30 @@ struct ListsurfHelpView: View {
                     title: "Check mode",
                     systemImage: "checkmark.circle",
                     items: [
-                        HelpItem("Toggle Check Mode", "Switches from editing the outline to checking items off."),
+                        HelpItem("Toggle Check Mode", "Switches from editing the outline to checking items off. On Mac: Shift-Command-E."),
                         HelpItem("Parent items", "Parents summarize child progress so a nested checklist is easier to scan."),
+                        HelpItem("Filters", "Show all, only unchecked, or only checked items."),
                         HelpItem("Back to Edit", "Use the mode button again to return to outline editing.")
                     ]
                 )
 
                 HelpSection(
-                    title: "Mac use",
+                    title: "Mac keyboard",
                     systemImage: "keyboard",
                     items: [
-                        HelpItem("Bulk entry", "The Mac app is useful for entering many items quickly with a hardware keyboard."),
-                        HelpItem("Return", "Adds an item below."),
-                        HelpItem("Command-Return", "Adds a child item."),
-                        HelpItem("Tab / Shift-Tab", "Indent or outdent the selected item.")
+                        HelpItem("Arrow keys", "Move the selection up and down the outline. Command-click or Shift-click selects multiple items."),
+                        HelpItem("Return", "Starts a new item below the selection."),
+                        HelpItem("Shift-Return", "Inserts an item above the selection and renames it."),
+                        HelpItem("Command-Return", "Starts a child item inside the selection."),
+                        HelpItem("Tab / Shift-Tab", "Indents or outdents the selected item (also Command-] / Command-[ from the Item menu)."),
+                        HelpItem("Command-Option-Up / Down", "Moves the selected item among its siblings."),
+                        HelpItem("Double-click", "Renames the item in place. Escape cancels; clicking elsewhere commits."),
+                        HelpItem("Command-Delete", "Deletes the selected items after confirmation."),
+                        HelpItem("Command-Z / Shift-Command-Z", "Undo and redo any edit, including checks."),
+                        HelpItem("Shift-Command-E", "Toggles Check Mode."),
+                        HelpItem("Option-Command-I", "Toggles the inspector."),
+                        HelpItem("Command-N", "Creates a new list."),
+                        HelpItem("Command-Comma", "Opens Settings.")
                     ]
                 )
             }
@@ -107,7 +120,15 @@ private struct HelpSection: View {
     let title: String
     let systemImage: String
     let items: [HelpItem]
-    @State private var isExpanded = true
+    // Persisted per section so collapse choices survive reopening Help.
+    @AppStorage private var isExpanded: Bool
+
+    init(title: String, systemImage: String, items: [HelpItem]) {
+        self.title = title
+        self.systemImage = systemImage
+        self.items = items
+        _isExpanded = AppStorage(wrappedValue: true, "help.expanded.\(title)")
+    }
 
     var body: some View {
         DisclosureGroup(isExpanded: $isExpanded) {
