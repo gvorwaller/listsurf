@@ -121,4 +121,30 @@ final class ExportTests: XCTestCase {
             }
         }
     }
+
+    func testPermitInvalidPolicyAllowsMissingParentButStillRejectsDuplicateIDs() throws {
+        let listID = UUID()
+        let itemID = UUID()
+        let missingParentID = UUID()
+        let item = OutlineItem(id: itemID, listID: listID, parentID: missingParentID, title: "Child")
+        let export = service.export(
+            lists: [(ListItem(id: listID, title: "List"), [item])],
+            appVersion: "1.0"
+        )
+
+        XCTAssertNoThrow(try service.validate(export, parentPolicy: .permitInvalid))
+
+        let dupID = UUID()
+        let dupItem = OutlineItem(id: dupID, listID: listID, title: "Dup")
+        let dupExport = service.export(
+            lists: [(ListItem(id: listID, title: "List"), [dupItem, dupItem])],
+            appVersion: "1.0"
+        )
+
+        XCTAssertThrowsError(try service.validate(dupExport, parentPolicy: .permitInvalid)) { error in
+            guard case ExportValidationError.duplicateItemID(dupID) = error else {
+                return XCTFail("Unexpected error: \(error)")
+            }
+        }
+    }
 }

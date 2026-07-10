@@ -87,6 +87,14 @@ public struct ExportedOutlineItem: Codable, Sendable {
     }
 }
 
+/// Controls how `ExportService.validate` treats item `parentID`s that don't resolve
+/// within the same list. `.reject` is today's strict behavior (replace-all import);
+/// `.permitInvalid` is used by `ImportPlanner`, which repairs instead of rejecting.
+public enum ParentValidationPolicy: Sendable {
+    case reject
+    case permitInvalid
+}
+
 public struct ExportService: Sendable {
     public init() {}
 
@@ -160,7 +168,7 @@ public struct ExportService: Sendable {
         return LibraryArchive(lists: lists)
     }
 
-    public func validate(_ export: ListsurfExport) throws {
+    public func validate(_ export: ListsurfExport, parentPolicy: ParentValidationPolicy = .reject) throws {
         guard export.format == "listsurf" else {
             throw ExportValidationError.unsupportedFormat(export.format)
         }
@@ -202,12 +210,14 @@ public struct ExportService: Sendable {
                 }
             }
 
-            for item in exportedList.items {
-                if let parentID = item.parentID, !localItemIDs.contains(parentID) {
-                    throw ExportValidationError.missingParent(item.id, parentID)
+            if parentPolicy == .reject {
+                for item in exportedList.items {
+                    if let parentID = item.parentID, !localItemIDs.contains(parentID) {
+                        throw ExportValidationError.missingParent(item.id, parentID)
+                    }
                 }
+                try validateAcyclicItems(exportedList.items)
             }
-            try validateAcyclicItems(exportedList.items)
         }
     }
 
