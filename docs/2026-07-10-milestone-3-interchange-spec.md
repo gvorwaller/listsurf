@@ -7,6 +7,8 @@
 
 **Exit criterion for the milestone**: a faithful CarbonFin Outliner round-trip — title, nesting, notes, and checked state survive importing a real CarbonFin OPML export, and a Listsurf OPML export opens correctly in CarbonFin (Task M3-9).
 
+**Rev 2 (2026-07-10)**: amended after CODEX2 hostile review — BOM-tolerant sniffing (D11), unknown-element SAX rules (§4.1), spelled-out public init (§4.5), mandatory collision preflight in `addListsAndItems` (§5.1–5.2 — the merge policy would otherwise silently upsert), loaded-store URL for diagnostics (§5.4), retry-recomputation documented as intentional (§6.2), MainActor note (§7.4), broadened escaping tests and baseline wording (§10).
+
 ---
 
 ## 0. What this milestone delivers
@@ -109,7 +111,7 @@ Sources: [CarbonFin FAQ](https://carbonfin.com/faq.html), [CarbonFin Help](https
 
 **D10 — File naming**: per-list exports are `"{sanitized title}.json"` / `"{sanitized title}.opml"` (sanitize: replace `/` and `:` with `-`, trim whitespace, fallback `"List"`). Library backup keeps the existing `"Listsurf Backup {date}.json"` (`ContentView.swift:195-200`).
 
-**D11 — Format detection by content, not extension**: first non-whitespace byte `{` → JSON, `<` → OPML, else actionable error. LLM-produced files routinely get the wrong extension; content sniffing makes "Import List…" forgiving.
+**D11 — Format detection by content, not extension**: strip a UTF-8 BOM (`EF BB BF`) if present, then skip ASCII/Unicode whitespace; first remaining byte `{` → JSON, `<` → OPML, else actionable error. LLM-produced and Windows-saved files routinely carry a BOM and/or the wrong extension; both must sniff correctly (unit-test BOM-prefixed JSON and OPML).
 
 **D12 — iOS vs macOS presentation**: identical flows. `fileExporter`/`fileImporter` and `ShareLink` are available on both platforms at the app's minimum OS. The only platform forks: "Reveal in Finder" (macOS-only, `#if os(macOS)`, via Platform), the Settings presentation that already exists, and pasteboard implementation (UIPasteboard/NSPasteboard in Platform).
 
@@ -196,6 +198,10 @@ public struct OPMLCodec: Sendable {
   - checked, first match wins: `_status` (`"checked"` → true; `"unchecked"`/`"indeterminate"`/anything else → false), else `_complete`, else `complete`, else `checked` — each true iff value lowercased ∈ {`"true"`, `"yes"`, `"1"`, `"checked"`}.
   - `_quantity` → `Int`, used only if ≥ 1; malformed/absent → 1 (a malformed `_quantity` is treated as an unknown attribute — ignored, per "unknown attributes must not invalidate the document").
   - **All other attributes ignored** (`type`, `created`, `expansionState` in head, `_complete` companions, etc.).
+- **Unknown elements (load-bearing for invariant 10 — specify, don't improvise)**:
+  - The node stack is keyed on `<outline>` elements ONLY. Any `<outline>` attaches to the nearest ancestor `<outline>` on the stack, else to the document root — so outlines nested under unknown wrapper elements (`<body><section><outline …/></section></body>`) are still accepted, parented correctly.
+  - `foundCharacters`/`foundCDATA` are accumulated ONLY while the element path is exactly `opml > head > title`. Text anywhere else (including inside `<head><expansionState>`, `<ownerName>`, or unknown body elements) is discarded — it must never leak into the list title.
+  - All non-`outline`, non-`head`, non-`title`, non-`body`, non-`opml` elements are ignored entirely (no error, no stack effect).
 - On `parser.parse() == false`: if the delegate stored a semantic error, throw that; otherwise throw `.malformedXML(line: parser.lineNumber, column: parser.columnNumber, detail: parser.parserError?.localizedDescription ?? "unknown")`.
   **Trap**: `abortParsing()` makes `parserError` report `NSXMLParserDelegateAbortedParseError` (code 512) — always check the delegate's stored error *first* or every semantic error masquerades as malformed XML.
 - After parse: if no outline nodes were collected → throw `.emptyOutline`.
@@ -296,7 +302,22 @@ public struct DiagnosticsSnapshot: Equatable, Sendable {
     public let activeListCount: Int
     public let archivedListCount: Int
     public let itemCount: Int
-    public init(...)                   // memberwise public init
+
+    // Swift does NOT synthesize a public memberwise init for a public
+    // struct — Persistence could not construct this without it.
+    public init(
+        storeURL: URL?,
+        storeSizeBytes: Int64?,
+        activeListCount: Int,
+        archivedListCount: Int,
+        itemCount: Int
+    ) {
+        self.storeURL = storeURL
+        self.storeSizeBytes = storeSizeBytes
+        self.activeListCount = activeListCount
+        self.archivedListCount = archivedListCount
+        self.itemCount = itemCount
+    }
 }
 
 public protocol DiagnosticsReading: Sendable {
@@ -314,12 +335,15 @@ public protocol DiagnosticsReading: Sendable {
 /// Insert-only append for additive import. Every list and item in the archive
 /// carries a freshly minted UUID (the import planner guarantees this), so this
 /// is a pure insert: one transaction, and a failed import writes nothing.
+/// Throws if any incoming ID already exists — it must never mutate a row.
 func addListsAndItems(with archive: LibraryArchive) async throws
 ```
 
 ### 5.2 `Sources/Persistence/Repositories/CoreDataListRepository.swift` — implement
 
 Copy `replaceAllListsAndItems` (`:116-160`) minus the two delete loops (`:120-130`): new background context, `context.perform`, the insert loop verbatim from `:132-152`, `try context.save()`, `catch { context.rollback(); throw error }`.
+
+**MANDATORY collision preflight (same transaction, before the insert loop).** The background context uses `NSMergePolicy.mergeByPropertyObjectTrump` (`PersistenceStack.swift:65-69`), which means a save that violates the `id` uniqueness constraints (`CoreDataModel.swift`) does NOT throw — Core Data resolves it by **silently updating the existing row**. A planner regression that failed to remint even one ID class would therefore mutate user data with no error, violating invariant 1 undetectably. So: fetch counts for incoming list IDs (`id IN %@` on `ListEntity`) and item IDs (on `OutlineItemEntity`); if either count > 0, throw a descriptive error (e.g. `CocoaError(.validationMultipleErrors)`-style custom error naming the collision) and write nothing. This converts a silent upsert into a loud, tested failure.
 
 ### 5.3 Update every other `ListRepository` conformance (compiler will enforce)
 
@@ -337,7 +361,7 @@ public final class CoreDataDiagnostics: DiagnosticsReading, @unchecked Sendable 
 }
 ```
 
-- `storeURL`: `stack.container.persistentStoreDescriptions.first` — if `type == NSInMemoryStoreType` or `url` is nil/`/dev/null`, report `nil` (`PersistenceStack.swift:19-40` shows both description shapes).
+- `storeURL`: read the **loaded** store — `stack.container.persistentStoreCoordinator.persistentStores.first?.url` — falling back to `persistentStoreDescriptions.first?.url`. The production path never sets a custom description (`PersistenceStack.swift:18-41`), so the post-load store object is the authoritative source; the description default happens to carry a URL but the loaded store cannot lie. If the store type is `NSInMemoryStoreType` or the URL is nil/`/dev/null`, report `nil`.
 - Counts on `stack.newBackgroundContext().perform`: `count(for:)` with `NSFetchRequest<NSNumber>`-style count requests — `ListEntity` with `archivedAt == nil`, `ListEntity` with `archivedAt != nil`, `OutlineItemEntity` unfiltered (predicates mirror `CoreDataListRepository.swift:24,33`).
 - `storeSizeBytes`: for suffixes `["", "-wal", "-shm"]`, `FileManager.default.attributesOfItem(atPath:)[.size]`, summing what exists; all-missing → `nil`. Comment explicitly: metadata only; never open or read the SQLite file (cs.md).
 
@@ -380,9 +404,11 @@ public func commitAdditiveImport(_ plan: AdditiveImportPlan) async -> Bool
 - Catch `ExportValidationError` and `OPMLDecodeError` → `.importValidation(message: error.localizedDescription)`. Catch `DecodingError` → `.importValidation(message: decodingFailureMessage(error))` (§6.3). Unknown errors → `presentSaveError` retry pattern is wrong here (nothing to retry safely); use `.importValidation` with the localized description.
 
 `commitAdditiveImport`:
+- `await drainPendingItemWrites()` first — imports are library-level writes and must not interleave with queued item saves (same contract as export/delete; §6 preamble). While implementing, ALSO add the missing drain to the existing replace-all `importLibrary` (`AppStore.swift:170-191`, currently undrained) — the deleted-list write guard makes the race non-corrupting, but draining makes ordering deterministic.
 - Compute `basePosition = (lists + archivedLists).map(\.position).max() ?? 0` once (rationale in `nextListPosition`, `AppStore.swift:197-201` — but computed once because the new lists aren't in `lists` yet); assign `basePosition + 1.0, + 2.0, …` in archive order.
 - Titles per D9: maintain `var existing = Set((lists + archivedLists).map(\.title))`; for each list, if title collides, first available of `"{t} (Imported)"`, `"{t} (Imported N)"` (N from 2); insert chosen title into `existing` so a multi-list file can't self-collide.
 - `try await listRepo.addListsAndItems(with: adjustedArchive)`; on throw → `presentSaveError(..., operation: "import list", retryTitle: "Try Again") { await self?.commitAdditiveImport(plan) }` (retry re-runs commit — safe: nothing was written, rollback is transaction-level).
+- **Retry semantics (intentional, do not "fix")**: retry re-runs the whole commit, INCLUDING recomputing titles/positions against the then-current library. If the user created a list while the error banner sat open, the retried import may get a different "(Imported N)" suffix or position — that is correct behavior: recomputation is what prevents the retried import from colliding with the interim list. The prepared plan (content + minted UUIDs) is what "the failed operation" means here; placement metadata is commit-time by design.
 - `await loadLists()`; `selectedListID = first imported list with archivedAt == nil` (leave selection alone if all imported lists are archived); return true.
 
 ### 6.3 Actionable `DecodingError` mapping (private helper)
@@ -480,6 +506,8 @@ Task {
     }
 }
 ```
+
+  (Actor note: `View` is `@MainActor`-annotated, so a plain `Task { }` in a ContentView method inherits MainActor — this matches every existing async flow in the file, e.g. `importPendingBackup`. If the compiler under a future language mode disagrees, annotate `Task { @MainActor in … }`; do not restructure.)
 
 - Import summary sheet: `.sheet(item: $pendingAdditiveImport)` presenting a new small view `ImportSummaryView(filename:summary:onAccept:onDiscard:)` (new file `Sources/Features/Library/ImportSummaryView.swift`): title "Import Needs Review", body `"Imported \(itemCount) item(s) into “\(first list title)”. \(repairedParentCount) had invalid parent references and were placed at the root level."`, prominent **Add to Library** (commits, then clears state) and **Discard Import** (clears state only). `presentationDetents([.medium])`; ids `import.summary.accept` / `import.summary.discard`. (Sheet, not `confirmationDialog` — V1 plan line 231 calls it a summary sheet and the text exceeds dialog comfort.)
 - `beginExportList(list:format:)` mirrors `beginExportBackup` (`:144-151`):
@@ -591,8 +619,9 @@ Here is my list:
 ### Unit tests (string-literal fixtures only — no bundle resources; the three xcodegen logic-test targets share source paths and have no resource plumbing)
 
 **`Tests/DomainTests/OPMLCodecTests.swift`**
-- Encode→decode round-trip: 3-deep nesting, notes containing `\n`, `&`, `<`, `"`, emoji; mixed checked; quantity 1 and 4; order preserved.
+- Encode→decode round-trip: 3-deep nesting, notes containing `\n`, `\r\n`, `\t`, `&`, `<`, `>`, `"`, the literal text `&amp;`, emoji; mixed checked; quantity 1 and 4; order preserved. (Round-trip equality is the assertion — the same literal strings come back; this rules out double-escaping.)
 - Encoded output contains `&#10;` for note newlines and never a raw newline inside an attribute value.
+- Unknown ELEMENTS (not just attributes): `<head><expansionState>1,2</expansionState><ownerName>X</ownerName></head>` must not pollute the title; `<body><section><outline text="A"/></section></body>` still yields node A at root; text content inside unknown elements is discarded.
 - Encode writes `_status` on every outline; `_quantity` only when > 1; no `_note` when notes nil.
 - Decode a CarbonFin-shaped literal: CDATA `<title>`, `expansionState` in head, `_note` + `_status="checked"`, unknown attributes (`created`, `type="link"`) → ignored, values correct.
 - Decode variants: `_complete="true"`, `checked="true"`, legacy `title=` attribute fallback, `_status="indeterminate"` → unchecked.
@@ -617,11 +646,13 @@ Here is my list:
 - Title collision → `"Packing (Imported)"`; second import → `"Packing (Imported 2)"`.
 - OPML data (string literal) through prepare+commit → hierarchy persisted (parent/child relationship via new IDs).
 - Garbage data → prepare returns nil, `.importValidation` presented, `addCount() == 0`.
+- BOM-prefixed JSON and BOM-prefixed OPML both sniff and import correctly (D11).
 - Plan with repairs: prepare alone writes nothing (`addCount() == 0` until commit).
 - `exportListJSON/OPML/Markdown`: happy path content checks; repo-throw → nil + error presented (add a throwing-fetch flag to the outline fake).
 
 **`Tests/PersistenceTests/`** (real in-memory Core Data via `PersistenceStack.inMemory()`, style of `PersistenceStackTests.swift`)
 - `addListsAndItems` inserts alongside pre-existing rows; both fetchable afterward.
+- **Collision preflight (guards invariant 1 against the silent-upsert merge policy)**: `addListsAndItems` with an archive reusing an EXISTING list ID → throws, and the existing row is unchanged afterward; same for an existing item ID.
 - `CoreDataDiagnostics.snapshot()`: counts match seeded data; in-memory store → `storeURL == nil`, `storeSizeBytes == nil`.
 
 ### Manual verification checklist (both platforms unless noted)
@@ -636,7 +667,7 @@ Here is my list:
 8. **CarbonFin round-trip (exit criterion, M3-9)**: real CarbonFin OPML export imports faithfully; Listsurf OPML export uploads/opens in CarbonFin (outliner.carbonfin.com) with hierarchy, notes, and checks intact. If CarbonFin's attribute names differ from `_status`/`_note`, fix the constants in `OPMLCodec.swift` and add a fixture-literal regression test.
 
 ### Build verification
-`swift test` (baseline 112 green — grow, never shrink), then `xcodebuild test` for both test plans (`Listsurf_macOS.xctestplan`, `Listsurf_iOS.xctestplan`) and both app schemes build. Note memory rule: don't run tests/builds if Codex is working in parallel without checking with the user first.
+Record the pre-M3 `swift test` count at task start (112 at spec time — but measure, don't trust this number); the count must only grow, never shrink except for explicitly removed tests. Then `xcodebuild test` for both test plans (`Listsurf_macOS.xctestplan`, `Listsurf_iOS.xctestplan`) and both app schemes build. Note memory rule: don't run tests/builds if Codex is working in parallel without checking with the user first.
 
 ---
 
