@@ -723,3 +723,14 @@ M3-1 through M3-4 are mutually independent (parallelizable). M3-7 and M3-8 can p
 ## 13. Open item deliberately left to M3-9
 
 Only one: whether CarbonFin's real exports use exactly `_status="checked"/"unchecked"`. All research points there (§2), the parser already accepts three checked-attribute spellings, and the attribute names are constants in one file. Everything else in this spec is decided.
+
+## 14. Real CarbonFin fixture facts (rev 3, 2026-07-10 — `docs/fixtures/Maine_packing_list.opml`)
+
+A real CarbonFin export is now in the repo. Verified facts, binding on M3-1:
+
+- `<opml version='1.0'>` — NOT 2.0, and attributes are single-quoted. The decoder must accept any or missing `version` attribute (never validate it) — `XMLParser` handles both quote styles natively. Our encoder still writes 2.0/double quotes (both valid XML; CarbonFin reads standard XML).
+- `_note` confirmed in the wild, exactly as §2 predicted.
+- `_status` is ABSENT — the exported list simply has no checked items, so the checked-state attribute remains unverified until M3-9 does a round-trip with checked items. The multi-spelling import tolerance (§4.1) stands.
+- Head contains only `<title>`; childless outlines are self-closed (` />`).
+- The "From Notes" item's `_note` is a multi-line note flattened to one line with space runs — real-world proof of the attribute newline-normalization trap (§4.1); CarbonFin's own encoder loses newlines, ours must not.
+- Add to `OPMLCodecTests`: a reduced CarbonFin-shape string literal (version='1.0', single-quoted attributes, `_note`, 4-deep nesting, self-closed leaves) asserting title, hierarchy depth, and note values decode correctly.

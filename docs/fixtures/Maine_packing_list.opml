@@ -1,0 +1,93 @@
+<opml version='1.0'>
+ <head>
+  <title>Maine packing list</title>
+ </head>
+ <body>
+  <outline text='Gaylon'>
+   <outline text='Credit cards - USAA Visa and Apple Mastercard' />
+   <outline text='PASSPORT and driver license' />
+   <outline text='Umbrella (from 4Runner) ?' />
+   <outline text='Food items'>
+    <outline text='Creatine' />
+    <outline text='Protein powder?' _note='Or buy there?' />
+    <outline text='Egg poacher' />
+    <outline text='Immi ?' />
+   </outline>
+   <outline text='Clothing'>
+    <outline text='Underwear' />
+    <outline text='Socks'>
+     <outline text='FITS crew - 2' />
+     <outline text='low top socks - 1' />
+    </outline>
+    <outline text='Shoes'>
+     <outline text='walking shoes' _note='waterproof the shoes' />
+    </outline>
+    <outline text='pants'>
+     <outline text='jeans (wear)' />
+     <outline text='OR pants' />
+     <outline text='shorts' />
+    </outline>
+    <outline text='shirts'>
+     <outline text='sun shirt?' />
+    </outline>
+    <outline text='outer wear'>
+     <outline text='Outer wind-breaker / raincoat (gray jacket)' />
+     <outline text='fleece vest' />
+    </outline>
+    <outline text='work out clothes (1)' />
+    <outline text='swim suit' />
+    <outline text='hat(s)' />
+    <outline text='Gloves' />
+   </outline>
+   <outline text='electronics'>
+    <outline text='adapter for Norway / Sweden' />
+    <outline text='phone' />
+    <outline text='laptop ?' />
+    <outline text='iPad' />
+    <outline text='AirPods max ?' />
+    <outline text='battery pack' />
+    <outline text='chargers' />
+    <outline text='two prong plugs' />
+    <outline text='From Notes' _note='Electronics   Traveling - plane - charging - iPhone (2) (USB C - lightning) - iPad (2) (USB C - C) -     1 USB C Apple Watch charger  -     Hyperjuice 245W USB-C Battery Pack  Bring with:        Hyperjuice 4 port USB C desk charger  Cables:   6 - USB-C to USB-C (i-Pads, battery pack, multi-device charging stands)               1 USB C to lightning AirPods Max   1 - USB-C to Mac               1 - USB C to A (camera battery)  Charging:   2 - charging stands (phone, watch, AirPods)   For the car (car interface) 1 USB C - lightning 1 USB A - lightning ' />
+   </outline>
+   <outline text='vitamins' />
+   <outline text='walking sticks (one each)' />
+   <outline text='first aid stuff' />
+   <outline text='Umbrella (?)' />
+  </outline>
+  <outline text='Madonna'>
+   <outline text='PASSPORT and driver license' />
+   <outline text='Food items'>
+    <outline text='Stevia packets' />
+    <outline text='Almonds' />
+   </outline>
+   <outline text='Clothing'>
+    <outline text='Underwear' />
+    <outline text='Socks' />
+    <outline text='Shoes'>
+     <outline text='walking shoes' _note='waterproof the shoes' />
+     <outline text='church shoes' />
+    </outline>
+    <outline text='Dress' />
+    <outline text='pants' />
+    <outline text='shirts' />
+    <outline text='swim suit' />
+    <outline text='workout outfit' />
+    <outline text='outer wear'>
+     <outline text='wool pants and shirts' />
+     <outline text='Outer wind-breaker / raincoat' />
+     <outline text='fleece vest or jacket' />
+    </outline>
+    <outline text='hat(s)' />
+   </outline>
+   <outline text='electronics'>
+    <outline text='phone' />
+    <outline text='iPad' />
+   </outline>
+   <outline text='Cosmetic kit' />
+   <outline text='purse' />
+   <outline text='vitamins' />
+   <outline text='Stevia packets' />
+  </outline>
+ </body>
+</opml>
