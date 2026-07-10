@@ -401,11 +401,21 @@ public struct TreeEngine: Sendable {
         guard let idx = group.firstIndex(where: { $0.id == itemID }), idx > 0 else { return nil }
 
         let above = group[idx - 1]
+        // Midpoint between the two neighbors the item lands between. A fixed
+        // ±0.5 offset can TIE an existing sibling when midpoint inserts have
+        // produced sub-1.0 gaps; the UUID tie-break then decides order and
+        // the item may leap two slots instead of one.
+        let newPosition: Double
+        if idx >= 2 {
+            newPosition = (group[idx - 2].position + above.position) / 2
+        } else {
+            newPosition = above.position - 1.0
+        }
         let now = Date()
 
         let moved = items.map { i in
             if i.id == itemID {
-                var u = i; u.position = above.position - 0.5; u.updatedAt = now; return u
+                var u = i; u.position = newPosition; u.updatedAt = now; return u
             }
             return i
         }
@@ -417,11 +427,17 @@ public struct TreeEngine: Sendable {
         guard let idx = group.firstIndex(where: { $0.id == itemID }), idx < group.count - 1 else { return nil }
 
         let below = group[idx + 1]
+        let newPosition: Double
+        if idx + 2 < group.count {
+            newPosition = (below.position + group[idx + 2].position) / 2
+        } else {
+            newPosition = below.position + 1.0
+        }
         let now = Date()
 
         let moved = items.map { i in
             if i.id == itemID {
-                var u = i; u.position = below.position + 0.5; u.updatedAt = now; return u
+                var u = i; u.position = newPosition; u.updatedAt = now; return u
             }
             return i
         }
@@ -431,9 +447,14 @@ public struct TreeEngine: Sendable {
     // MARK: - Indent / Outdent
 
     public func indent(itemID: UUID, in items: [OutlineItem]) throws -> [OutlineItem] {
+        guard items.contains(where: { $0.id == itemID }) else {
+            throw TreeError.itemNotFound(itemID)
+        }
         let group = sortedSiblingGroup(of: itemID, in: items)
         guard let idx = group.firstIndex(where: { $0.id == itemID }), idx > 0 else {
-            throw TreeError.itemNotFound(itemID)
+            // First sibling has nothing to indent under: a boundary no-op,
+            // not corrupt data — an error here would lie to diagnostics.
+            return items
         }
 
         let newParent = group[idx - 1]
@@ -458,7 +479,8 @@ public struct TreeEngine: Sendable {
             throw TreeError.itemNotFound(itemID)
         }
         guard let currentParentID = item.parentID else {
-            throw TreeError.itemNotFound(itemID)
+            // Root items have nowhere to outdent to: boundary no-op.
+            return items
         }
         guard let currentParent = itemMap[currentParentID] else {
             throw TreeError.itemNotFound(currentParentID)
@@ -546,16 +568,21 @@ public struct TreeEngine: Sendable {
         newItem: OutlineItem,
         in items: [OutlineItem]
     ) -> [OutlineItem] {
-        let children = items.filter { $0.parentID == parentID }
-        let position = nextPosition(among: children)
-
         let itemMap = Dictionary(uniqueKeysWithValues: items.map { ($0.id, $0) })
-        let listID = itemMap[parentID]?.listID ?? newItem.listID
+        guard let parent = itemMap[parentID] else {
+            // The engine must never mint an orphan: a missing parent (stale
+            // snapshot, deleted in another window) degrades to a root append.
+            var positioned = newItem
+            positioned.parentID = nil
+            positioned.position = nextPosition(among: items.filter { $0.parentID == nil })
+            return normalizeSiblingPositions(in: items + [positioned], parentID: nil)
+        }
 
+        let children = items.filter { $0.parentID == parentID }
         var positioned = newItem
         positioned.parentID = parentID
-        positioned.position = position
-        positioned.listID = listID
+        positioned.position = nextPosition(among: children)
+        positioned.listID = parent.listID
         return normalizeSiblingPositions(in: items + [positioned], parentID: parentID)
     }
 
@@ -585,11 +612,6 @@ public struct TreeEngine: Sendable {
     }
 
     // MARK: - Orphan repair
-
-    public func repairOrphans(in items: [OutlineItem]) -> (repaired: [OutlineItem], orphanCount: Int) {
-        let result = repairInvalidParents(in: items)
-        return (result.repaired, result.orphanCount)
-    }
 
     public func repairInvalidParents(
         in items: [OutlineItem]

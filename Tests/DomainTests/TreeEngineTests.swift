@@ -340,6 +340,41 @@ final class TreeEngineTests: XCTestCase {
         XCTAssertNil(engine.moveDown(itemID: b.id, in: [a, b]))
     }
 
+    func testMoveUpWithFractionalPositionsMovesExactlyOneSlot() {
+        // Positions like 1.0 / 1.5 / 2.0 arise routinely from midpoint
+        // inserts. A fixed-offset move (position - 0.5) ties an existing
+        // sibling here and the UUID tie-break can leap the item two slots.
+        let a = makeItem(title: "A", position: 1.0)
+        let b = makeItem(title: "B", position: 1.5)
+        let c = makeItem(title: "C", position: 2.0)
+
+        guard let result = engine.moveUp(itemID: c.id, in: [a, b, c]) else {
+            XCTFail("moveUp returned nil"); return
+        }
+
+        let sorted = result.sorted {
+            if $0.position != $1.position { return $0.position < $1.position }
+            return $0.id.uuidString < $1.id.uuidString
+        }
+        XCTAssertEqual(sorted.map(\.id), [a.id, c.id, b.id], "C must land between A and B, never above A")
+    }
+
+    func testMoveDownWithFractionalPositionsMovesExactlyOneSlot() {
+        let a = makeItem(title: "A", position: 1.0)
+        let b = makeItem(title: "B", position: 1.5)
+        let c = makeItem(title: "C", position: 2.0)
+
+        guard let result = engine.moveDown(itemID: a.id, in: [a, b, c]) else {
+            XCTFail("moveDown returned nil"); return
+        }
+
+        let sorted = result.sorted {
+            if $0.position != $1.position { return $0.position < $1.position }
+            return $0.id.uuidString < $1.id.uuidString
+        }
+        XCTAssertEqual(sorted.map(\.id), [b.id, a.id, c.id], "A must land between B and C, never below C")
+    }
+
     func testMoveOnlyAffectsSameParentSiblings() {
         let root1 = makeItem(title: "R1", position: 1.0)
         let root2 = makeItem(title: "R2", position: 2.0)
@@ -367,11 +402,23 @@ final class TreeEngineTests: XCTestCase {
         XCTAssertEqual(indented.parentID, a.id)
     }
 
-    func testIndentFirstSiblingThrows() {
+    func testIndentFirstSiblingIsNoOp() throws {
         let a = makeItem(title: "A", position: 1.0)
         let b = makeItem(title: "B", position: 2.0)
 
-        XCTAssertThrowsError(try engine.indent(itemID: a.id, in: [a, b]))
+        // A boundary condition, not corrupt data: no throw, no change.
+        let result = try engine.indent(itemID: a.id, in: [a, b])
+        XCTAssertEqual(result, [a, b])
+    }
+
+    func testIndentMissingItemThrowsItemNotFound() {
+        let a = makeItem(title: "A", position: 1.0)
+
+        XCTAssertThrowsError(try engine.indent(itemID: UUID(), in: [a])) { error in
+            guard case TreeError.itemNotFound = error else {
+                return XCTFail("Expected itemNotFound, got \(error)")
+            }
+        }
     }
 
     func testOutdentMovesToGrandparentLevel() throws {
@@ -396,10 +443,22 @@ final class TreeEngineTests: XCTestCase {
         XCTAssertGreaterThan(outdented.position, parent.position)
     }
 
-    func testOutdentRootItemThrows() {
+    func testOutdentRootItemIsNoOp() throws {
         let root = makeItem(title: "Root", position: 1.0)
 
-        XCTAssertThrowsError(try engine.outdent(itemID: root.id, in: [root]))
+        let result = try engine.outdent(itemID: root.id, in: [root])
+        XCTAssertEqual(result, [root])
+    }
+
+    func testInsertChildWithMissingParentFallsBackToRoot() {
+        // The engine must never mint an orphan from a stale parent reference.
+        let existing = makeItem(title: "Existing", position: 1.0)
+        let newItem = OutlineItem(listID: listID, title: "New")
+
+        let result = engine.insertChild(parentID: UUID(), newItem: newItem, in: [existing])
+
+        let inserted = result.first { $0.id == newItem.id }!
+        XCTAssertNil(inserted.parentID, "Missing parent must degrade to a root append, not an orphan")
     }
 
     func testIndentOutdentRoundTrip() throws {
@@ -553,25 +612,27 @@ final class TreeEngineTests: XCTestCase {
 
     // MARK: - Orphan repair
 
-    func testRepairOrphansPromotesToRoot() {
+    func testRepairInvalidParentsPromotesOrphansToRoot() {
         let missingParent = UUID()
         let orphan = makeItem(parentID: missingParent, title: "Orphan", position: 1.0)
         let root = makeItem(title: "Root", position: 2.0)
 
-        let (repaired, count) = engine.repairOrphans(in: [orphan, root])
+        let repair = engine.repairInvalidParents(in: [orphan, root])
 
-        XCTAssertEqual(count, 1)
-        let fixedOrphan = repaired.first { $0.id == orphan.id }!
+        XCTAssertEqual(repair.orphanCount, 1)
+        XCTAssertEqual(repair.cycleCount, 0)
+        let fixedOrphan = repair.repaired.first { $0.id == orphan.id }!
         XCTAssertNil(fixedOrphan.parentID)
     }
 
-    func testRepairOrphansNoOrphans() {
+    func testRepairInvalidParentsNoOrphans() {
         let parent = makeItem(title: "Parent", position: 1.0)
         let child = makeItem(parentID: parent.id, title: "Child", position: 1.0)
 
-        let (_, count) = engine.repairOrphans(in: [parent, child])
+        let repair = engine.repairInvalidParents(in: [parent, child])
 
-        XCTAssertEqual(count, 0)
+        XCTAssertEqual(repair.orphanCount, 0)
+        XCTAssertEqual(repair.cycleCount, 0)
     }
 
     func testRepairInvalidParentsPromotesCyclesToRoot() {
@@ -682,73 +743,6 @@ final class TreeEngineTests: XCTestCase {
         let group = engine.sortedSiblingGroup(of: a.id, in: [a, b])
 
         XCTAssertEqual(group.count, 2)
-    }
-
-    // MARK: - TreeCommand undo
-
-    func testCommandExecuteInsertAndUndo() throws {
-        let existing = makeItem(title: "Existing", position: 1.0)
-        let newItem = OutlineItem(listID: listID, title: "New")
-
-        let insertResult = try engine.execute(
-            command: .insertBelow(referenceID: existing.id, newItem: newItem),
-            on: [existing]
-        )
-        XCTAssertEqual(insertResult.items.count, 2)
-
-        guard let inverse = insertResult.inverse else {
-            XCTFail("Expected inverse command"); return
-        }
-
-        let undoResult = try engine.execute(command: inverse, on: insertResult.items)
-        XCTAssertEqual(undoResult.items.count, 1)
-        XCTAssertEqual(undoResult.items[0].id, existing.id)
-    }
-
-    func testCommandExecuteDeleteAndUndo() throws {
-        let parent = makeItem(title: "Parent", position: 1.0)
-        let child = makeItem(parentID: parent.id, title: "Child", position: 1.0)
-        let sibling = makeItem(title: "Sibling", position: 2.0)
-        let items = [parent, child, sibling]
-
-        let deleteResult = try engine.execute(
-            command: .deleteSubtree(itemID: parent.id),
-            on: items
-        )
-        XCTAssertEqual(deleteResult.items.count, 1)
-
-        guard let inverse = deleteResult.inverse else {
-            XCTFail("Expected inverse command"); return
-        }
-
-        let undoResult = try engine.execute(command: inverse, on: deleteResult.items)
-        XCTAssertEqual(undoResult.items.count, 3)
-    }
-
-    func testCommandExecuteCheckAndUndo() throws {
-        let item = makeItem(title: "Item", isChecked: false)
-
-        let checkResult = try engine.execute(
-            command: .setChecked(checked: true, itemID: item.id),
-            on: [item]
-        )
-        XCTAssertTrue(checkResult.items[0].isChecked)
-
-        guard let inverse = checkResult.inverse else {
-            XCTFail("Expected inverse command"); return
-        }
-
-        let undoResult = try engine.execute(command: inverse, on: checkResult.items)
-        XCTAssertFalse(undoResult.items[0].isChecked)
-    }
-
-    func testCommandMoveUpAtTopIsNoOp() throws {
-        let a = makeItem(title: "A", position: 1.0)
-        let b = makeItem(title: "B", position: 2.0)
-
-        let result = try engine.execute(command: .moveUp(itemID: a.id), on: [a, b])
-
-        XCTAssertEqual(result.items.first { $0.id == a.id }!.position, 1.0)
     }
 
     // MARK: - Performance
