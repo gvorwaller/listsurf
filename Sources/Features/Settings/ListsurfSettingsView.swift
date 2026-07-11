@@ -2,6 +2,7 @@ import SwiftUI
 
 enum ListsurfSettingsKey {
     static let notesPreviewLineLimit = "notesPreviewLineLimit"
+    static let lastExportAt = "diagnostics.lastExportAt"
 }
 
 public struct ListsurfSettingsView: View {

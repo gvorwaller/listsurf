@@ -21,6 +21,12 @@ public struct ListsurfCommands: Commands {
             }
             .disabled(appCommands == nil)
 
+            // No keyboard shortcut — bare-key/menu-equivalent trap (spec §11).
+            Button("Import List…") {
+                appCommands?.importList()
+            }
+            .disabled(appCommands == nil)
+
             Button("Export Library Backup…") {
                 appCommands?.exportBackup()
             }

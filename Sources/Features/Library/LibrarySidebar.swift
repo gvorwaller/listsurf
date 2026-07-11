@@ -8,6 +8,9 @@ struct LibrarySidebar: View {
     let onExportBackup: () -> Void
     let onShowSettings: () -> Void
     let onShowHelp: () -> Void
+    let onImportList: () -> Void
+    let onExportList: (ListItem, ListExportFileFormat) -> Void
+    let onShareListMarkdown: (ListItem) -> Void
     @State private var searchText = ""
     @State private var showingArchive = false
     @State private var listPendingDeletion: ListDeletionConfirmation?
@@ -18,13 +21,19 @@ struct LibrarySidebar: View {
         onImportBackup: @escaping () -> Void = {},
         onExportBackup: @escaping () -> Void = {},
         onShowSettings: @escaping () -> Void = {},
-        onShowHelp: @escaping () -> Void = {}
+        onShowHelp: @escaping () -> Void = {},
+        onImportList: @escaping () -> Void = {},
+        onExportList: @escaping (ListItem, ListExportFileFormat) -> Void = { _, _ in },
+        onShareListMarkdown: @escaping (ListItem) -> Void = { _ in }
     ) {
         self.onNewList = onNewList
         self.onImportBackup = onImportBackup
         self.onExportBackup = onExportBackup
         self.onShowSettings = onShowSettings
         self.onShowHelp = onShowHelp
+        self.onImportList = onImportList
+        self.onExportList = onExportList
+        self.onShareListMarkdown = onShareListMarkdown
     }
 
     var body: some View {
@@ -37,6 +46,13 @@ struct LibrarySidebar: View {
                     Label("Import Backup…", systemImage: "square.and.arrow.down")
                 }
                 .accessibilityIdentifier("library.importBackup.visible")
+
+                Button {
+                    onImportList()
+                } label: {
+                    Label("Import List…", systemImage: "square.and.arrow.down.on.square")
+                }
+                .accessibilityIdentifier("library.importList.visible")
 
                 Button {
                     onExportBackup()
@@ -145,6 +161,13 @@ struct LibrarySidebar: View {
                     .accessibilityIdentifier("library.importBackup")
 
                     Button {
+                        onImportList()
+                    } label: {
+                        Label("Import List…", systemImage: "square.and.arrow.down.on.square")
+                    }
+                    .accessibilityIdentifier("library.importList")
+
+                    Button {
                         onExportBackup()
                     } label: {
                         Label("Export Backup…", systemImage: "square.and.arrow.up")
@@ -238,6 +261,9 @@ struct LibrarySidebar: View {
                 Button("Import Backup…", action: onImportBackup)
                     .accessibilityIdentifier("library.importFirstBackup")
 
+                Button("Import List…", action: onImportList)
+                    .accessibilityIdentifier("library.importFirstList")
+
                 Button("Help", action: onShowHelp)
                     .accessibilityIdentifier("library.help.empty")
             }
@@ -290,6 +316,15 @@ struct LibrarySidebar: View {
         } label: {
             Label("Duplicate & Reset Checks", systemImage: "doc.on.doc.fill")
         }
+
+        Divider()
+
+        Button { onExportList(list, .json) } label: { Label("Export List (JSON)…", systemImage: "square.and.arrow.up") }
+            .accessibilityIdentifier("library.list.exportJSON")
+        Button { onExportList(list, .opml) } label: { Label("Export List (OPML)…", systemImage: "square.and.arrow.up") }
+            .accessibilityIdentifier("library.list.exportOPML")
+        Button { onShareListMarkdown(list) } label: { Label("Share as Markdown…", systemImage: "square.and.arrow.up.on.square") }
+            .accessibilityIdentifier("library.list.shareMarkdown")
 
         Divider()
 

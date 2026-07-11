@@ -16,6 +16,10 @@ public struct ContentView: View {
     @State private var exportDocument = ListsurfBackupDocument()
     @State private var exportFilename = "Listsurf Backup.json"
     @State private var pendingImport: PendingLibraryImport?
+    @State private var importMode: LibraryImportMode = .replaceLibrary
+    @State private var exportContentType: UTType = .json
+    @State private var pendingAdditiveImport: PendingAdditiveImport?
+    @State private var markdownShare: MarkdownShareItem?
 
     public init() {}
 
@@ -46,7 +50,10 @@ public struct ContentView: View {
                 onImportBackup: beginImportBackup,
                 onExportBackup: beginExportBackup,
                 onShowSettings: showSettings,
-                onShowHelp: showHelp
+                onShowHelp: showHelp,
+                onImportList: beginImportList,
+                onExportList: beginExportList,
+                onShareListMarkdown: beginShareListMarkdown
             )
         } detail: {
             if let selectedID = appStore.selectedListID {
@@ -74,7 +81,8 @@ public struct ContentView: View {
                 newList: beginNewList,
                 importBackup: beginImportBackup,
                 exportBackup: beginExportBackup,
-                showHelp: showHelp
+                showHelp: showHelp,
+                importList: beginImportList
             )
         )
         .sheet(isPresented: $showingNewList) {
@@ -90,7 +98,7 @@ public struct ContentView: View {
         }
         .fileImporter(
             isPresented: $showingImporter,
-            allowedContentTypes: [.json],
+            allowedContentTypes: importMode == .replaceLibrary ? [.json] : [.json, .opml, .xml],
             allowsMultipleSelection: false,
             onCompletion: handleImportSelection
         )
@@ -110,10 +118,26 @@ public struct ContentView: View {
                 Text("Importing “\(pendingImport.filename)” will replace every current list and item. Export a backup first if you need to preserve the current library.")
             }
         }
+        .sheet(item: $pendingAdditiveImport) { pending in
+            ImportSummaryView(
+                filename: pending.filename,
+                listTitle: pending.plan.archive.lists.first?.list.title ?? pending.filename,
+                summary: pending.plan.summary,
+                onAccept: {
+                    let plan = pending.plan
+                    pendingAdditiveImport = nil
+                    Task { await appStore.commitAdditiveImport(plan) }
+                },
+                onDiscard: {
+                    pendingAdditiveImport = nil
+                }
+            )
+            .presentationDetents([.medium])
+        }
         .fileExporter(
             isPresented: $showingExporter,
             document: exportDocument,
-            contentType: .json,
+            contentType: exportContentType,
             defaultFilename: exportFilename,
             onCompletion: handleExportCompletion
         )
@@ -127,6 +151,12 @@ public struct ContentView: View {
                 showingSettings = false
             }
         }
+        .sheet(item: $markdownShare) { item in
+            MarkdownShareView(listTitle: item.listTitle, text: item.text) {
+                markdownShare = nil
+            }
+            .presentationDetents([.medium, .large])
+        }
     }
 
     private func beginNewList() {
@@ -138,6 +168,12 @@ public struct ContentView: View {
     }
 
     private func beginImportBackup() {
+        importMode = .replaceLibrary
+        showingImporter = true
+    }
+
+    private func beginImportList() {
+        importMode = .additiveList
         showingImporter = true
     }
 
@@ -146,7 +182,33 @@ public struct ContentView: View {
             guard let data = await appStore.exportLibrary() else { return }
             exportDocument = ListsurfBackupDocument(data: data)
             exportFilename = backupFilename()
+            exportContentType = .json
             showingExporter = true
+        }
+    }
+
+    private func beginExportList(_ list: ListItem, format: ListExportFileFormat) {
+        Task {
+            let data: Data?
+            switch format {
+            case .json:
+                data = await appStore.exportListJSON(id: list.id)
+            case .opml:
+                data = await appStore.exportListOPML(id: list.id)
+            }
+            guard let data else { return }
+            exportDocument = ListsurfBackupDocument(data: data)
+            exportFilename = exportFilename(for: list.title, ext: format == .json ? "json" : "opml")
+            exportContentType = format == .json ? .json : .opml
+            showingExporter = true
+        }
+    }
+
+    private func beginShareListMarkdown(_ list: ListItem) {
+        Task {
+            if let text = await appStore.exportListMarkdown(id: list.id) {
+                markdownShare = MarkdownShareItem(listTitle: list.title, text: text)
+            }
         }
     }
 
@@ -199,6 +261,21 @@ public struct ContentView: View {
         return "Listsurf Backup \(formatter.string(from: date)).json"
     }
 
+    /// D10 file naming: sanitize a list title into a filename by replacing
+    /// "/" and ":" (both illegal or awkward in filenames) with "-", trimming
+    /// whitespace, and falling back to "List" if that leaves nothing usable.
+    /// Non-private so it is independently unit-testable (@testable import Features).
+    func exportFilename(for title: String, ext: String) -> String {
+        var sanitized = title
+            .replacingOccurrences(of: "/", with: "-")
+            .replacingOccurrences(of: ":", with: "-")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if sanitized.isEmpty {
+            sanitized = "List"
+        }
+        return "\(sanitized).\(ext)"
+    }
+
     private func handleImportSelection(_ result: Result<[URL], Error>) {
         do {
             guard let url = try result.get().first else { return }
@@ -208,10 +285,26 @@ public struct ContentView: View {
                     url.stopAccessingSecurityScopedResource()
                 }
             }
-            pendingImport = PendingLibraryImport(
-                filename: url.lastPathComponent,
-                data: try Data(contentsOf: url)
-            )
+            let data = try Data(contentsOf: url)
+            switch importMode {
+            case .replaceLibrary:
+                pendingImport = PendingLibraryImport(
+                    filename: url.lastPathComponent,
+                    data: data
+                )
+            case .additiveList:
+                // View is @MainActor-annotated, so this plain Task inherits
+                // MainActor — matches every existing async flow in this file
+                // (e.g. importPendingBackup).
+                Task {
+                    guard let plan = await appStore.prepareAdditiveImport(from: data, filename: url.lastPathComponent) else { return }
+                    if plan.summary.repairedParentCount > 0 {
+                        pendingAdditiveImport = PendingAdditiveImport(filename: url.lastPathComponent, plan: plan)
+                    } else {
+                        await appStore.commitAdditiveImport(plan)
+                    }
+                }
+            }
         } catch {
             appStore.errorStore.present(
                 .importValidation(message: error.localizedDescription)
@@ -228,7 +321,13 @@ public struct ContentView: View {
     }
 
     private func handleExportCompletion(_ result: Result<URL, Error>) {
-        if case .failure(let error) = result {
+        switch result {
+        case .success:
+            UserDefaults.standard.set(
+                Date().timeIntervalSinceReferenceDate,
+                forKey: ListsurfSettingsKey.lastExportAt
+            )
+        case .failure(let error):
             appStore.errorStore.present(
                 .backupExportFailed(message: error.localizedDescription)
             )
@@ -236,10 +335,27 @@ public struct ContentView: View {
     }
 }
 
+private enum LibraryImportMode {
+    case replaceLibrary
+    case additiveList
+}
+
 private struct PendingLibraryImport: Identifiable {
     let id = UUID()
     let filename: String
     let data: Data
+}
+
+private struct PendingAdditiveImport: Identifiable {
+    let id = UUID()
+    let filename: String
+    let plan: AdditiveImportPlan
+}
+
+private struct MarkdownShareItem: Identifiable {
+    let id = UUID()
+    let listTitle: String
+    let text: String
 }
 
 private extension String {
