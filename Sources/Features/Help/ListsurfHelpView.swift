@@ -1,7 +1,28 @@
 import SwiftUI
+import Platform
 
 struct ListsurfHelpView: View {
     let onClose: () -> Void
+    @State private var showingCopiedConfirmation = false
+
+    static let llmImportPrompt = """
+        Convert the list I paste below into an OPML 2.0 file that the Listsurf app can import.
+
+        Rules:
+        - Output only the XML document — no explanations and no Markdown code fences.
+        - Start with: <?xml version="1.0" encoding="UTF-8"?>
+        - Root element: <opml version="2.0"> containing <head><title>NAME OF LIST</title></head> and a <body>.
+        - Every list item is an <outline> element with a text attribute, e.g. <outline text="Socks"/>.
+        - Nest sub-items as child <outline> elements inside their parent's <outline>.
+        - Optional attributes on any item:
+          - _note="extra details" for notes
+          - _status="checked" or _status="unchecked" for checkbox state
+          - _quantity="4" when more than one is needed
+        - Escape &, <, and double quotes inside attribute values (&amp; &lt; &quot;), and use &#10; for line breaks inside _note.
+        - Every item must have a non-empty text attribute.
+
+        Here is my list:
+        """
 
     var body: some View {
         NavigationStack {
@@ -46,11 +67,42 @@ struct ListsurfHelpView: View {
                         HelpItem("New List", "Creates a list. Use this for a separate project, packing list, workflow, or reusable checklist."),
                         HelpItem("Duplicate", "Copies a list under a new name — with or without its checks — so a refined list can be reused."),
                         HelpItem("Archived Lists", "Archiving moves old lists out of the main Library without deleting them. Open Archived Lists and use Restore to bring one back."),
-                        HelpItem("Import Backup", "Replaces the current local library with a previously exported JSON backup."),
+                        HelpItem("Import Backup", "Replaces your entire library with a previously exported JSON backup. This is different from Import List, which only adds — use Import List to add lists without replacing anything."),
                         HelpItem("Export Backup", "Writes a full-library JSON backup you can inspect or save elsewhere."),
                         HelpItem("Settings", "Display options, including how many lines of an item's notes appear beneath its title.")
                     ]
                 )
+
+                HelpSection(
+                    title: "Import & Export",
+                    systemImage: "square.and.arrow.up.on.square",
+                    items: [
+                        HelpItem("Export a list", "Each list's menu can export JSON (lossless, re-importable), OPML (for outliner apps like CarbonFin Outliner or OmniOutliner), or share Markdown checkboxes into Messages, Mail, or Notes."),
+                        HelpItem("Import List", "Adds lists from a Listsurf JSON or OPML file to your library. Existing lists are never touched, and imported items get fresh identities — importing twice creates two copies."),
+                        HelpItem("Import Backup", "Different from Import List: replaces your entire library with a full JSON backup."),
+                        HelpItem("OPML details", "Titles, nesting, notes, and checked state survive OPML round-trips. Quantities are Listsurf-specific and other apps may drop them."),
+                        HelpItem("If an import fails", "The error message names the exact problem and location. If an AI generated the file, paste the error back into the same chat and ask it to fix the file.")
+                    ]
+                )
+
+                Section {
+                    Text("Paste this prompt into any AI chat, then paste your rough list after it. Import the file it returns with Import List.")
+                        .foregroundStyle(.secondary)
+                    Text(Self.llmImportPrompt)
+                        .font(.footnote.monospaced())
+                        .textSelection(.enabled)
+                    Button(showingCopiedConfirmation ? "Copied" : "Copy Prompt") {
+                        GeneralPasteboard.copy(Self.llmImportPrompt)
+                        showingCopiedConfirmation = true
+                        Task {
+                            try? await Task.sleep(for: .seconds(2))
+                            showingCopiedConfirmation = false
+                        }
+                    }
+                    .accessibilityIdentifier("help.copyPrompt")
+                } header: {
+                    Label("LLM Prompt", systemImage: "sparkles")
+                }
 
                 HelpSection(
                     title: "Check mode",

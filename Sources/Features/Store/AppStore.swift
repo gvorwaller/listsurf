@@ -13,6 +13,7 @@ public final class AppStore {
 
     private let listRepo: any ListRepository
     private let outlineRepo: any OutlineRepository
+    private let diagnostics: (any DiagnosticsReading)?
     private let logger = Logger(subsystem: "net.vorwaller.listsurf", category: "ui")
     private let exportService = ExportService()
     private let opmlCodec = OPMLCodec()
@@ -25,11 +26,13 @@ public final class AppStore {
     public init(
         listRepository: any ListRepository,
         outlineRepository: any OutlineRepository,
-        errorStore: AppErrorStore = AppErrorStore()
+        errorStore: AppErrorStore = AppErrorStore(),
+        diagnostics: (any DiagnosticsReading)? = nil
     ) {
         self.listRepo = listRepository
         self.outlineRepo = outlineRepository
         self.errorStore = errorStore
+        self.diagnostics = diagnostics
     }
 
     public func loadLists() async {
@@ -243,6 +246,21 @@ public final class AppStore {
         } catch {
             logger.error("Failed to fetch items for export: \(error.localizedDescription)")
             errorStore.present(.persistenceLoad(underlying: error.localizedDescription))
+            return nil
+        }
+    }
+
+    // MARK: - Diagnostics (§7.5)
+
+    /// nil when unavailable (no diagnostics reader was injected) or on
+    /// failure (logged) — the read-only Settings → Data screen shows an
+    /// inline "unavailable" state instead of an error banner.
+    public func loadDiagnostics() async -> DiagnosticsSnapshot? {
+        guard let diagnostics else { return nil }
+        do {
+            return try await diagnostics.snapshot()
+        } catch {
+            logger.error("Failed to load diagnostics: \(error.localizedDescription)")
             return nil
         }
     }

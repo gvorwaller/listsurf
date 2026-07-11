@@ -54,7 +54,6 @@ struct InspectorView: View {
             }
         }
         .formStyle(.grouped)
-        .navigationTitle("Item Details")
     }
 
     private var listInspector: some View {
@@ -80,7 +79,6 @@ struct InspectorView: View {
             }
         }
         .formStyle(.grouped)
-        .navigationTitle("List Info")
     }
 
     private func titleBinding(_ item: OutlineItem) -> Binding<String> {

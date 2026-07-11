@@ -1,4 +1,6 @@
 import SwiftUI
+import Domain
+import Platform
 
 enum ListsurfSettingsKey {
     static let notesPreviewLineLimit = "notesPreviewLineLimit"
@@ -26,17 +28,27 @@ public struct ListsurfSettingsView: View {
             }
 
             Form {
+                DataSectionView()
+            }
+            .tabItem {
+                Label("Data", systemImage: "externaldrive")
+            }
+
+            Form {
                 aboutSection
             }
             .tabItem {
                 Label("About", systemImage: "info.circle")
             }
         }
-        .frame(width: 460, height: 260)
+        .frame(width: 480, height: 340)
         .scenePadding()
         #else
         Form {
             displaySection(notesPreviewLineLimit: lineLimitBinding)
+            Section("Data") {
+                DataSectionView()
+            }
             aboutSection
         }
         #endif
@@ -104,6 +116,74 @@ public struct ListsurfSettingsSheet: View {
     }
 }
 
+/// Settings → Data (spec §7.5): read-only counts, store size, store path, and
+/// last-export date. `snapshot` uses a double-optional so the view can tell
+/// "still loading" (nil) apart from "loaded and unavailable" (`.some(nil)`)
+/// from a genuine failed/missing diagnostics reading.
+private struct DataSectionView: View {
+    @Environment(AppStore.self) private var appStore
+    @AppStorage(ListsurfSettingsKey.lastExportAt) private var lastExportAt = 0.0
+    @State private var snapshot: DiagnosticsSnapshot??
+
+    var body: some View {
+        Group {
+            switch snapshot {
+            case .none:
+                ProgressView()
+            case .some(.none):
+                Text("Diagnostics unavailable.")
+                    .foregroundStyle(.secondary)
+            case .some(.some(let snapshot)):
+                LabeledContent(
+                    "Lists",
+                    value: "\(snapshot.activeListCount) active, \(snapshot.archivedListCount) archived"
+                )
+                LabeledContent("Items", value: "\(snapshot.itemCount)")
+                LabeledContent("Database Size", value: sizeText(for: snapshot.storeSizeBytes))
+
+                if let storeURL = snapshot.storeURL {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Store Location")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                        Text(storeURL.path)
+                            .font(.footnote.monospaced())
+                            .truncationMode(.middle)
+                            .lineLimit(2)
+                            .textSelection(.enabled)
+                    }
+
+                    #if os(macOS)
+                    Button("Reveal in Finder") {
+                        FileReveal.revealInFinder(storeURL)
+                    }
+                    .accessibilityIdentifier("settings.revealStore")
+                    #endif
+                }
+
+                LabeledContent("Last Export", value: lastExportText)
+            }
+        }
+        .task {
+            snapshot = await appStore.loadDiagnostics()
+        }
+    }
+
+    private func sizeText(for bytes: Int64?) -> String {
+        guard let bytes else { return "—" }
+        return bytes.formatted(.byteCount(style: .file))
+    }
+
+    private var lastExportText: String {
+        guard lastExportAt != 0 else { return "Never" }
+        let date = Date(timeIntervalSinceReferenceDate: lastExportAt)
+        return date.formatted(.dateTime.day().month().year().hour().minute())
+    }
+}
+
+#if DEBUG
 #Preview {
     ListsurfSettingsView()
+        .environment(PreviewFixtures.appStore())
 }
+#endif

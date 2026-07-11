@@ -24,7 +24,8 @@ struct ListsurfApp: App {
         let appStore = AppStore(
             listRepository: CoreDataListRepository(stack: stack),
             outlineRepository: CoreDataOutlineRepository(stack: stack),
-            errorStore: errorStore
+            errorStore: errorStore,
+            diagnostics: CoreDataDiagnostics(stack: stack)
         )
         if let storeLoadError = stack.storeLoadError {
             errorStore.present(
@@ -51,6 +52,7 @@ struct ListsurfApp: App {
         #if os(macOS)
         Settings {
             ListsurfSettingsView()
+                .environment(appStore)
         }
         #endif
     }
