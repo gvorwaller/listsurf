@@ -722,7 +722,7 @@ M3-1 through M3-4 are mutually independent (parallelizable). M3-7 and M3-8 can p
 
 ## 13. Open item deliberately left to M3-9
 
-Only one: whether CarbonFin's real exports use exactly `_status="checked"/"unchecked"`. All research points there (§2), the parser already accepts three checked-attribute spellings, and the attribute names are constants in one file. Everything else in this spec is decided.
+~~Only one: whether CarbonFin's real exports use exactly `_status="checked"/"unchecked"`.~~ **RESOLVED (rev 4, 2026-07-10)** by a second real fixture, `docs/fixtures/Maine_packing_list checkoffs.opml`: CarbonFin writes `_status='checked'` on checked rows, `_status='indeterminate'` on partially-checked parents (the OmniOutliner convention), and NO `_status` attribute on unchecked rows. The shipped codec handles all three with no changes (absent → unchecked; `indeterminate` → unchecked, correct because Listsurf derives parent tri-state from leaves). M3-9's remaining job is the export direction only: confirm CarbonFin reads back our `_status="checked"/"unchecked"`-on-every-row output.
 
 ## 14. Real CarbonFin fixture facts (rev 3, 2026-07-10 — `docs/fixtures/Maine_packing_list.opml`)
 
