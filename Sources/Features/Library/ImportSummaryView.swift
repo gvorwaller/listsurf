@@ -36,7 +36,13 @@ struct ImportSummaryView: View {
     }
 
     private var bodyText: String {
-        "Imported \(summary.itemCount) item(s) into \u{201C}\(listTitle)\u{201D}. \(summary.repairedParentCount) had invalid parent references and were placed at the root level."
+        // A multi-list archive (e.g. a full backup fed to Import List) adds
+        // EVERY list in the plan — naming only the first would misdescribe
+        // what "Add to Library" is about to do.
+        let destination = summary.listCount == 1
+            ? "into \u{201C}\(listTitle)\u{201D}"
+            : "across \(summary.listCount) lists"
+        return "Imported \(summary.itemCount) item(s) \(destination). \(summary.repairedParentCount) had invalid parent references and were placed at the root level."
     }
 }
 

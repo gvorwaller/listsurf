@@ -123,11 +123,7 @@ public struct ContentView: View {
                 filename: pending.filename,
                 listTitle: pending.plan.archive.lists.first?.list.title ?? pending.filename,
                 summary: pending.plan.summary,
-                onAccept: {
-                    let plan = pending.plan
-                    pendingAdditiveImport = nil
-                    Task { await appStore.commitAdditiveImport(plan) }
-                },
+                onAccept: acceptPendingAdditiveImport,
                 onDiscard: {
                     pendingAdditiveImport = nil
                 }
@@ -170,6 +166,18 @@ public struct ContentView: View {
     private func beginImportBackup() {
         importMode = .replaceLibrary
         showingImporter = true
+    }
+
+    /// One-shot by construction: the plan is consumed from @State (not from
+    /// the sheet's captured item), so a second tap on "Add to Library" before
+    /// the sheet dismisses finds nil and does nothing. Without this, two
+    /// commits of the same minted UUIDs can race the repository's collision
+    /// preflight in separate background contexts — the silent-upsert class of
+    /// failure the preflight cannot see across transactions.
+    private func acceptPendingAdditiveImport() {
+        guard let pending = pendingAdditiveImport else { return }
+        pendingAdditiveImport = nil
+        Task { await appStore.commitAdditiveImport(pending.plan) }
     }
 
     private func beginImportList() {
