@@ -207,29 +207,34 @@ struct LibrarySidebar: View {
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             #if os(macOS)
-            Button {
-                onNewList()
-            } label: {
-                Label("New List", systemImage: "plus")
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .buttonStyle(.borderless)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .accessibilityIdentifier("library.newList.sidebar")
-            .help("Create a new list")
+            // Explicit VStack: multiple sibling views in a safeAreaInset
+            // builder compose as an overlay, not a stack — the two buttons
+            // rendered on top of each other without it.
+            VStack(alignment: .leading, spacing: 0) {
+                Button {
+                    onNewList()
+                } label: {
+                    Label("New List", systemImage: "plus")
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .buttonStyle(.borderless)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .accessibilityIdentifier("library.newList.sidebar")
+                .help("Create a new list")
 
-            Button {
-                showingArchive = true
-            } label: {
-                Label(archiveButtonTitle, systemImage: "archivebox")
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                Button {
+                    showingArchive = true
+                } label: {
+                    Label(archiveButtonTitle, systemImage: "archivebox")
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .buttonStyle(.borderless)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .accessibilityIdentifier("library.archive.sidebar")
+                .help(archiveHelpText)
             }
-            .buttonStyle(.borderless)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .accessibilityIdentifier("library.archive.sidebar")
-            .help(archiveHelpText)
             #endif
         }
     }
