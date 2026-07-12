@@ -323,6 +323,27 @@ public final class ListStore {
         persistInBackground(from: oldItems, to: moved)
     }
 
+    /// Handles a flat-list drag from `.onMove`. Same-parent clamp semantics
+    /// (spec D2). Refused/identity drags return silently: no undo entry, no
+    /// persistence, and SwiftUI animates the row back on its own.
+    public func moveRows(from source: IndexSet, to destination: Int, undoManager: UndoManager? = nil) {
+        guard searchText.isEmpty, !isTextInputActive else { return }   // D5 defense-in-depth; keeps D9's invariant
+        guard source.count == 1, let sourceIndex = source.first else {
+            logger.debug("Drag move ignored: multi-index selection drags are not supported")
+            return
+        }
+        guard let moved = engine.moveVisibleRow(
+            at: sourceIndex,
+            toVisibleDestination: destination,
+            visibleRows: filteredRows,
+            in: items
+        ) else { return }
+        let oldItems = items
+        registerUndo(undoManager: undoManager, oldItems: oldItems)
+        applyChanges(to: moved)
+        persistInBackground(from: oldItems, to: moved)
+    }
+
     public func indent(itemID: UUID, undoManager: UndoManager? = nil) {
         do {
             let oldItems = items
