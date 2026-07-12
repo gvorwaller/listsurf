@@ -24,6 +24,14 @@ struct ListsurfHelpView: View {
         Here is my list:
         """
 
+    private static var dragReorderHelpText: String {
+        #if os(macOS)
+        "Drag a row to reorder it among its siblings."
+        #else
+        "Touch and hold a row, then drag to reorder."
+        #endif
+    }
+
     var body: some View {
         NavigationStack {
             List {
@@ -56,7 +64,8 @@ struct ListsurfHelpView: View {
                         HelpItem("Child", "Starts a nested item inside the selected row."),
                         HelpItem("Rename", "Edits the item title in place — from the row menu, or double-click on Mac."),
                         HelpItem("Details", "Opens notes, quantity, and item metadata in the inspector."),
-                        HelpItem("Trash", "Deletes the item after confirmation.")
+                        HelpItem("Trash", "Deletes the item after confirmation."),
+                        HelpItem("Reorder", Self.dragReorderHelpText)
                     ]
                 )
 

@@ -38,6 +38,67 @@ final class Listsurf_iOSUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Persistent UI List"].waitForExistence(timeout: 5))
     }
 
+    @MainActor func testDragReordersSiblings() {
+        continueAfterFailure = false
+        let app = launchApp(store: "ios-drag-reorder", reset: true)
+        createList(named: "Drag Reorder List", in: app)
+
+        // One tap arms the add flow; each "\n" commits and keeps the field
+        // armed below the new item, so three items need no further buttons.
+        let addItem = firstExisting(
+            app.buttons["editor.addFirstItem"],
+            app.buttons["editor.addItem"]
+        )
+        XCTAssertTrue(addItem.waitForExistence(timeout: 5))
+        addItem.tap()
+        // Each "\n" commits and RECREATES the field below the new item, so
+        // the element reference must be re-resolved per line.
+        for title in ["Alpha", "Bravo", "Charlie"] {
+            let itemField = app.textFields["editor.newItem"]
+            XCTAssertTrue(itemField.waitForExistence(timeout: 5))
+            itemField.tap()   // the recreated field's focus re-grab can race the test
+            itemField.typeText("\(title)\n")
+            XCTAssertTrue(app.staticTexts[title].waitForExistence(timeout: 5))
+        }
+        // Dismiss the continuing add field so drag isn't disabled by the
+        // text-entry guard (.moveDisabled while isTextInputActive). Tapping a
+        // row is the click-away dismissal and doesn't depend on the keyboard
+        // accessory being visible.
+        app.staticTexts["Alpha"].tap()
+        RunLoop.current.run(until: Date().addingTimeInterval(1.0))
+
+        let alpha = app.staticTexts["Alpha"]
+        let bravo = app.staticTexts["Bravo"]
+        let charlie = app.staticTexts["Charlie"]
+        XCTAssertTrue(charlie.waitForExistence(timeout: 5))
+        XCTAssertLessThan(alpha.frame.minY, bravo.frame.minY)
+        XCTAssertLessThan(bravo.frame.minY, charlie.frame.minY)
+
+        // Short press: rows also carry a context menu, and a stationary hold
+        // ≥0.5s opens it instead of lifting the row for reorder. Slow drag +
+        // destination hold lets the reorder interaction track the move.
+        charlie.press(
+            forDuration: 0.6,
+            thenDragTo: alpha,
+            withVelocity: .slow,
+            thenHoldForDuration: 0.5
+        )
+
+        XCTAssertTrue(waitUntil(timeout: 5) { charlie.frame.minY < bravo.frame.minY })
+        XCTAssertLessThan(charlie.frame.minY, bravo.frame.minY, "Charlie should have moved above Bravo")
+    }
+
+    /// Polls `condition` until true or timeout — reorder geometry settles
+    /// only after the drop animation completes.
+    private func waitUntil(timeout: TimeInterval, condition: () -> Bool) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if condition() { return true }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        }
+        return condition()
+    }
+
     @MainActor func testCoreActionsAreVisible() {
         continueAfterFailure = false
         let app = launchApp(store: "ios-visible-actions", reset: true)

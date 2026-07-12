@@ -132,10 +132,18 @@ struct OutlineEditorView: View {
                             Label("Delete", systemImage: "trash")
                         }
                     }
+                    // D5/D9: drag disabled while searching (filtered rows are
+                    // a non-contiguous excerpt) or while text entry is active
+                    // (protects the rename field and guarantees the add-field
+                    // row never coexists with an enabled drag).
+                    .moveDisabled(store.isTextInputActive || !store.searchText.isEmpty)
 
                 if let addFieldDepth = addFieldPlacement(after: row) {
                     addItemField(depth: addFieldDepth)
                 }
+            }
+            .onMove { source, destination in
+                store.moveRows(from: source, to: destination, undoManager: undoManager)
             }
 
             if shouldShowRootAddField {

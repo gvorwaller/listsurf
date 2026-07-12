@@ -88,6 +88,56 @@ final class Listsurf_macOSUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts["Listsurf Help"].waitForExistence(timeout: 2))
     }
 
+    @MainActor func testDragReordersSiblings() {
+        continueAfterFailure = false
+        let app = launchApp(store: "mac-drag-reorder", reset: true)
+        createList(named: "Mac Drag Reorder List", in: app)
+
+        addItem(named: "Alpha", in: app)
+        addItem(named: "Bravo", in: app)
+        addItem(named: "Charlie", in: app)
+
+        // Committing with Return re-arms the add flow, and rows are
+        // .moveDisabled while text entry is active — dismiss it first.
+        app.typeKey(.escape, modifierFlags: [])
+
+        let alpha = app.staticTexts["Alpha"]
+        let bravo = app.staticTexts["Bravo"]
+        let charlie = app.staticTexts["Charlie"]
+        XCTAssertTrue(charlie.waitForExistence(timeout: 5))
+        XCTAssertTrue(alpha.waitForExistence(timeout: 5))
+        XCTAssertTrue(bravo.waitForExistence(timeout: 5))
+
+        // Precondition: insertion order is Alpha, Bravo, Charlie top to bottom.
+        XCTAssertLessThan(alpha.frame.minY, bravo.frame.minY)
+        XCTAssertLessThan(bravo.frame.minY, charlie.frame.minY)
+
+        charlie.click(forDuration: 0.3, thenDragTo: alpha)
+
+        XCTAssertTrue(waitUntil(timeout: 5) { charlie.frame.minY < bravo.frame.minY })
+        XCTAssertLessThan(charlie.frame.minY, bravo.frame.minY, "Charlie should have moved above Bravo")
+
+        app.typeKey("z", modifierFlags: .command)
+
+        XCTAssertTrue(waitUntil(timeout: 5) {
+            alpha.frame.minY < bravo.frame.minY && bravo.frame.minY < charlie.frame.minY
+        })
+        XCTAssertLessThan(alpha.frame.minY, bravo.frame.minY, "Undo should restore Alpha above Bravo")
+        XCTAssertLessThan(bravo.frame.minY, charlie.frame.minY, "Undo should restore Bravo above Charlie")
+    }
+
+    /// Polls `condition` until it's true or `timeout` elapses. Row-reorder
+    /// geometry only settles after SwiftUI's drop/undo animation completes,
+    /// so a single frame read right after the gesture can race the layout.
+    private func waitUntil(timeout: TimeInterval, condition: () -> Bool) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if condition() { return true }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        }
+        return condition()
+    }
+
     @MainActor private func launchApp(store: String, reset: Bool) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchEnvironment["LISTSURF_UI_TEST_STORE"] = store
