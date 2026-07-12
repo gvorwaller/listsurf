@@ -45,3 +45,101 @@ Handoff doc for completing the build-2 review swap. Written after ~2 hours; the 
 - Safari front tab: macOS version page (`.../distribution/macos/version/inflight`), scrolled to the empty screenshots section.
 - Sidebar states at handoff: iOS App "1.0 Waiting for Review" (build 2, submitted); macOS App "1.0 Ready for Review" (build 1 in draft — WRONG, see Remaining #1).
 - TestFlight: both platform build 2s carry Internal Dogfood + External Beta, beta review submitted.
+
+## COMPLETED BY CODEX (3:11 PM)
+
+The remaining macOS submission repair is complete and verified in App Store Connect:
+
+1. Deleted the incorrect macOS draft containing `1.0.0 (1)`, which unlocked the version.
+2. Restored `docs/screenshots/app-store/macos-library.png`; the version page persisted `1 of 10 Screenshots`.
+3. Removed build `1.0.0 (1)`, attached `1.0.0 (2)`, and re-read the saved Build row to verify `1.0.0 (2)` with upload date Jul 11, 2026 at 1:34 PM.
+4. Added the corrected version for review, verified the draft item said `macOS App 1.0 / 1.0.0 (2)`, and submitted it.
+5. Verified the resulting submission record is `Waiting for Review`, submitted Jul 11, 2026 at 3:11 PM, submission ID `7be6202f-7e25-4fff-b609-09a73fe52834`.
+
+Both iOS and macOS 1.0 are now Waiting for Review with build 2.
+
+## EXTERNAL TESTER INVITE REPAIR (8:47 PM REPORT)
+
+Marcus reported TestFlight’s “This invitation has been revoked or is invalid” error from the earlier invite. App Store Connect showed iOS build 2 as `Testing`, the External Beta group attached, and Marcus (`marcus@vorwaller.net`) present with status `Invited`. Used the tester row’s **Reinvite → Resend** action; App Store Connect accepted the resend and returned to the group with Marcus still in the expected pre-acceptance `Invited` state. Marcus should use the newest TestFlight email rather than the earlier invalid link.
+
+## CODEX TAKEOVER NOTES — REPRODUCIBLE ASC RECOVERY
+
+These are the details that made the recovery reliable and should be reused in future App Store Connect sessions.
+
+### Safari document targeting
+
+Safari had two windows but only one scriptable document. `current tab of front window` and `document 1 of window 1` both failed. The reliable target was the application-level document:
+
+```sh
+osascript -e 'tell application "Safari" to do JavaScript "document.body.innerText" in document 1'
+```
+
+Likewise, direct navigation worked reliably with:
+
+```sh
+osascript -e 'tell application "Safari" to set URL of document 1 to "https://appstoreconnect.apple.com/..."'
+```
+
+### ASC synthetic clicks worked in this session
+
+Contrary to the earlier blanket conclusion that ASC ignored synthetic clicks, React controls responded when the exact live element was selected and `.click()` was called. This worked for opening the draft, deleting it, removing the attached build, opening Add Build, acknowledging the screenshot-localization notice, selecting build 2, saving, adding for review, submitting, and reinviting Marcus.
+
+Example pattern:
+
+```js
+const button = [...document.querySelectorAll("button")]
+  .find(element => element.innerText.trim() === "Add Build");
+button.click();
+```
+
+The critical rule is still to inspect the resulting page state after every click. A successful JavaScript return value only proves the event was dispatched; it does not prove ASC persisted the intended mutation.
+
+### Safe identification of icon-only Delete controls
+
+The macOS version page contained two `button[aria-label=Delete]` elements: one for the screenshot and one for the attached build. The correct build control was identified by walking its ancestors and confirming that ancestor text contained `1.0.0 (1)` and its upload date. Never select a Delete button by global label or ordinal without first checking its owning ancestor.
+
+### Restoring the screenshot without the native file picker
+
+The native Choose File path remained unreliable. The working approach was:
+
+1. Click `Choose File` synthetically so ASC creates its hidden media `input[type=file]`.
+2. Base64-encode `docs/screenshots/app-store/macos-library.png` locally.
+3. Transfer the payload to the Safari page in 40,000-character chunks through `do JavaScript`.
+4. Reconstruct a `File`, place it in a `DataTransfer`, assign `input.files`, and dispatch a bubbling `change` event.
+5. Verify the page persisted `1 of 10 Screenshots`; verify again after Save.
+
+The media input was distinguishable from the optional App Review attachment input because its `accept` attribute contained `.jpg,.jpeg,.png,.mov,.m4v,.mp4`.
+
+### Build-selection verification sequence
+
+For Add Build, the only trustworthy sequence was:
+
+1. Read both build radio controls and their parent text.
+2. Click the radio whose parent text is `1.0.0 (2)`.
+3. Re-read both `checked` properties; confirm build 2 is true and build 1 is false.
+4. Click Done.
+5. Re-read the underlying version-page Build row and confirm `1.0.0 (2)`.
+6. Click Save.
+7. Re-read the Build row again.
+8. After Add for Review, inspect the draft ancestor text and confirm `macOS App 1.0 / 1.0.0 (2)` before submitting.
+
+Final proof was the submission detail page, not a toast or transient modal:
+
+- Status: `Waiting for Review`
+- Item: `macOS App 1.0 / 1.0.0 (2)`
+- Submitted: Jul 11, 2026 at 3:11 PM
+- Submission ID: `7be6202f-7e25-4fff-b609-09a73fe52834`
+
+### TestFlight invalid-invite recovery
+
+An `Invited` tester row does not prove the tester’s existing email link is valid. Marcus’s TestFlight screenshot explicitly said the invitation was revoked or invalid even though ASC still showed him as `Invited`.
+
+The verified recovery was:
+
+1. Confirm iOS build 2 shows `Testing` and External Beta is attached.
+2. Open External Beta group `c4d358c5-3563-4ee9-af83-5dd5f756b3a0`.
+3. Select the tester row for `marcus@vorwaller.net`.
+4. Use **Reinvite**, then confirm **Resend**.
+5. Tell the tester to use only the newest email; the old token remains invalid.
+
+The group correctly remains at status `Invited` until Marcus accepts the new invitation. `Invited` after the resend is expected, not evidence that the resend failed.
