@@ -245,6 +245,38 @@ final class ListStorePersistenceTests: XCTestCase {
         XCTAssertFalse(undoManager.canUndo, "A boundary no-op must not consume the next ⌘Z")
     }
 
+    /// Phase 1 item 6 (spec §5, Rev 2.2): `indent` reparents an item under
+    /// its previous sibling but must also expand that sibling — otherwise
+    /// the newly-nested row is immediately invisible (expandedIDs starts
+    /// empty), which is indistinguishable from indent silently failing.
+    @MainActor
+    func testIndentExpandsNewParent() {
+        let list = ListItem(title: "Test")
+        let first = OutlineItem(listID: list.id, title: "First", position: 1)
+        let second = OutlineItem(listID: list.id, title: "Second", position: 2)
+        let store = ListStore(
+            listID: list.id,
+            outlineRepo: DelayedOutlineRepository(items: [first, second]),
+            listRepo: StubListRepository(list: list)
+        )
+        store.items = [first, second]
+        let undoManager = UndoManager()
+
+        store.indent(itemID: second.id, undoManager: undoManager)
+
+        XCTAssertEqual(store.items.first(where: { $0.id == second.id })?.parentID, first.id)
+        XCTAssertTrue(
+            store.flatRows.contains { $0.id == second.id },
+            "Second must stay visible after indenting under First — First should auto-expand, mirroring addChild"
+        )
+        XCTAssertTrue(store.filteredRows.contains { $0.id == second.id })
+
+        undoManager.undo()
+
+        XCTAssertNil(store.items.first(where: { $0.id == second.id })?.parentID, "Undo should restore Second to root")
+        XCTAssertTrue(store.flatRows.contains { $0.id == second.id })
+    }
+
     @MainActor
     func testErrorStoreRetryRunsActionAndDismissesCurrentError() {
         let errorStore = AppErrorStore()

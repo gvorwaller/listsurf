@@ -351,6 +351,13 @@ public final class ListStore {
             // Boundary no-op: nothing to undo, nothing to persist. An undo
             // entry here would make the next ⌘Z consume a do-nothing step.
             guard indented != oldItems else { return }
+            // The engine reparents itemID under its previous sibling. Without
+            // this, the new parent stays collapsed (expandedIDs starts
+            // empty) and the just-indented row silently vanishes — mirrors
+            // addChild's expandedIDs.insert(parentID) above.
+            if let newParentID = indented.first(where: { $0.id == itemID })?.parentID {
+                expandedIDs.insert(newParentID)
+            }
             registerUndo(undoManager: undoManager, oldItems: oldItems)
             applyChanges(to: indented)
             persistInBackground(from: oldItems, to: indented)
