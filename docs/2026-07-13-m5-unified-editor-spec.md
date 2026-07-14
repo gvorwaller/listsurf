@@ -1,6 +1,6 @@
 # M5 — Unified Editor UX Overhaul (macOS-first) — Implementation Spec
 
-**Rev 2.2 (2026-07-13).** (2.2: D10 hover state moved row-local after Phase 1 implementation evidence — shared ancestor @State re-diffs the List and kills the in-flight AppKit drag session; Phase 1 gains item 6, the pre-existing indent()-collapses-item bug.) (2.1 folds in Gaylon's prototype-testing notes: iOS keyboard-dismiss affordance, iOS undo exposure check, platform-scoped help.) Baseline: commit `b9a87a1` (M4 Stage 1 shipped; 192 unit tests, 7 macOS + 5 iOS UI tests green). Planner: Fable (research + design agent), coordinated by CC2. Executor: implementer agent — everything needed is here; `cs.md` rules override defaults. Decisions are final unless marked as an open question; stop-and-report on any spec/code conflict.
+**Rev 2.4 (2026-07-14).** (2.2: D10 hover state moved row-local; Phase 1 gains item 6, the indent()-collapses-item bug. 2.4, after Gate M1 failed and four gating designs were falsified empirically: **D10 hover-gated drag arming is RETIRED** — macOS List reads `.moveDisabled` only from the ForEach's direct content and only at diff time; no hover-driven runtime flip can arm a row without risking the in-flight drag session. Drag is armed at rest as M4 shipped; `blocked` terms (text entry, search, multi-selection) are editor-computed and work. B1 click latency is re-judged at the gate and investigated on its own evidence if it regresses. Also from Gate M1 diagnostics: editor-level Escape fallback (field Escape is focus-dependent and the deferred-focus window can eat it), ⇧Tab arrives as backtab U+0019 and needs explicit matching, and clicking the already-selected row cannot dismiss the add flow via selection-change — Escape is that story until Phase 2 revisits.) (2.1 folds in Gaylon's prototype-testing notes: iOS keyboard-dismiss affordance, iOS undo exposure check, platform-scoped help.) Baseline: commit `b9a87a1` (M4 Stage 1 shipped; 192 unit tests, 7 macOS + 5 iOS UI tests green). Planner: Fable (research + design agent), coordinated by CC2. Executor: implementer agent — everything needed is here; `cs.md` rules override defaults. Decisions are final unless marked as an open question; stop-and-report on any spec/code conflict.
 
 **Fixed user decisions**: (1) unify edit/check modes into one outline view; (2) Things 3 is the feel benchmark; (3) **Return on a selected row = rename in place**.
 
@@ -34,8 +34,7 @@ All rows always show: disclosure chevron · **checkbox** · title/notes · quant
 | Click checkbox | Toggles that row's branch check (existing `toggleCheck` semantics: parent toggles subtree; tri-state `mixed` renders `minus.circle.fill` orange). Does **not** change selection. |
 | Double-click title | Rename in place (existing `contextMenu primaryAction` — kept; consistent with Return). |
 | Right-click | Selection context menu (`ItemActionsMenu`, hints on). Right-click on an unselected row natively selects it first. |
-| Click-drag a row | Reorder (M4 Stage 1) — drag arms **only while hovering the title/notes region** (B1 fix, M4 spec D10) and never when the row is part of a multi-selection (B6 fix). |
-| Hover | Sets `hoveredDraggableRowID` (drag-arming only; no visual change in this overhaul). |
+| Click-drag a row | Reorder (M4 Stage 1) — armed at rest (hover gating retired, Rev 2.4); never lifts when the row is part of a multi-selection (B6 fix), during text entry, or while searching. |
 
 ### 1.2 Keyboard (macOS) — final map
 

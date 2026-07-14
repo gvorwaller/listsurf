@@ -9,6 +9,27 @@ enum EditorFocus: Hashable {
     case rename(UUID)
 }
 
+
+/// Applies the drag gate at the row's content root — the ONLY place List
+/// honors the move trait (a `.moveDisabled` on a nested child is silently
+/// ignored; proven at Gate M1, 2026-07-14). `blocked` is editor-computed,
+/// so changes re-diff the List and re-register correctly.
+///
+/// Hover-gated arming (M4 spec D10) is RETIRED (spec Rev 2.4): four designs
+/// failed empirically — a runtime `.moveDisabled` flip driven by hover never
+/// arms an already-diffed row without also risking the in-flight drag
+/// session. Drag is armed at rest, as M4 shipped; click latency is judged
+/// at the gate and investigated on its own evidence if it regresses.
+struct RowMoveDisabled: ViewModifier {
+    /// Editor-owned terms: text entry active, active search, row is part
+    /// of a multi-selection.
+    let blocked: Bool
+
+    func body(content: Content) -> some View {
+        content.moveDisabled(blocked)
+    }
+}
+
 /// Pure row content. Carries no gestures and no selection painting:
 /// selection, click handling, and highlight all belong to the owning List.
 struct OutlineRowView: View {
@@ -20,19 +41,6 @@ struct OutlineRowView: View {
     let onToggleExpand: () -> Void
     let onCommitEdit: () -> Void
     let onCancelEdit: () -> Void
-    /// Non-hover drag-block terms owned by the editor (text entry active,
-    /// active search, multi-selection). The row combines this with its own
-    /// hover state (macOS) to produce the final `.moveDisabled` value.
-    let dragBlocked: Bool
-    /// B1 fix (spec §2, Rev 2.2): row-local, not ancestor-shared. A shared
-    /// `hoveredDraggableRowID` in the parent re-diffs the whole List on every
-    /// hover change and was found (via live instrumentation) to invalidate
-    /// the in-flight AppKit drag session — `moveRows` never fired. Row-local
-    /// state only re-renders this one row, so the native drag survives.
-    #if os(macOS)
-    @State private var isContentHovered = false
-    #endif
-
     var body: some View {
         HStack(spacing: 6) {
             disclosureIndicator
@@ -45,11 +53,6 @@ struct OutlineRowView: View {
         }
         .padding(.vertical, 2)
         .padding(.horizontal, 4)
-        #if os(macOS)
-        .moveDisabled(dragBlocked || !isContentHovered)
-        #else
-        .moveDisabled(dragBlocked)
-        #endif
     }
 
     @ViewBuilder
@@ -77,11 +80,6 @@ struct OutlineRowView: View {
                 }
             }
         }
-        #if os(macOS)
-        .onHover { hovering in
-            isContentHovered = hovering
-        }
-        #endif
     }
 
     @ViewBuilder

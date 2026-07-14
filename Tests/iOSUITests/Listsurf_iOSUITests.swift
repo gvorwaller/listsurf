@@ -99,6 +99,31 @@ final class Listsurf_iOSUITests: XCTestCase {
         return condition()
     }
 
+    /// Phase 1 focus promise (Gate M1 iOS finding, 2026-07-14: on hardware
+    /// the add field appeared WITHOUT the keyboard). The store-driven
+    /// EditorFocus must focus the add field on its own — this test types
+    /// immediately with NO tap-the-field workaround. If this fails, the
+    /// task-deferred focus is losing and the spec's escalation rule applies.
+    @MainActor func testAddFieldReceivesFocusWithoutTap() {
+        continueAfterFailure = false
+        let app = launchApp(store: "ios-addfocus", reset: true)
+        createList(named: "Focus List", in: app)
+
+        let addItem = firstExisting(
+            app.buttons["editor.addFirstItem"],
+            app.buttons["editor.addItem"]
+        )
+        XCTAssertTrue(addItem.waitForExistence(timeout: 5))
+        addItem.tap()
+
+        let itemField = app.textFields["editor.newItem"]
+        XCTAssertTrue(itemField.waitForExistence(timeout: 5))
+        // Deliberately NO itemField.tap() — typeText requires keyboard
+        // focus, so this fails loudly if the focus architecture loses.
+        itemField.typeText("Untapped\n")
+        XCTAssertTrue(app.staticTexts["Untapped"].waitForExistence(timeout: 5))
+    }
+
     @MainActor func testCoreActionsAreVisible() {
         continueAfterFailure = false
         let app = launchApp(store: "ios-visible-actions", reset: true)

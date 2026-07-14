@@ -183,6 +183,95 @@ final class Listsurf_macOSUITests: XCTestCase {
         )
     }
 
+    /// Gate M1 failure repro (2026-07-14): a multi-selected row must never
+    /// lift into a drag — the pre-fix nested `.moveDisabled` was inert, so
+    /// the drag lifted with a "2" badge and snapped back.
+    @MainActor func testMultiSelectDragDoesNotReorder() {
+        continueAfterFailure = false
+        let app = launchApp(store: "mac-multidrag-refusal", reset: true)
+        createList(named: "Multi Drag List", in: app)
+        addItem(named: "Alpha", in: app)
+        addItem(named: "Bravo", in: app)
+        addItem(named: "Charlie", in: app)
+        app.typeKey(.escape, modifierFlags: [])
+
+        let alpha = app.staticTexts["Alpha"]
+        let bravo = app.staticTexts["Bravo"]
+        XCTAssertTrue(bravo.waitForExistence(timeout: 5))
+
+        alpha.click()
+        XCUIElement.perform(withKeyModifiers: .shift) { bravo.click() }
+
+        // Hover arms single-drag; it must NOT arm a multi-selected row.
+        bravo.hover()
+        let alphaY = alpha.frame.minY
+        bravo.click(forDuration: 0.3, thenDragTo: alpha)
+
+        // Order unchanged: Alpha still above Bravo, at the same position.
+        XCTAssertTrue(waitUntil(timeout: 3) { abs(alpha.frame.minY - alphaY) < 3 })
+        XCTAssertLessThan(alpha.frame.minY, bravo.frame.minY,
+                          "A multi-selected row must not drag-reorder")
+    }
+
+    /// Gate M1 failure repro (2026-07-14, note #4): Gaylon's flow has NO
+    /// Escape — the armed add flow is dismissed by clicking a row directly
+    /// (click-away). ⌘] must act on the clicked row, not the last-added one.
+    @MainActor func testCommandBracketAfterClickAwayDismissal() {
+        continueAfterFailure = false
+        let app = launchApp(store: "mac-clickaway-bracket", reset: true)
+        createList(named: "Click Away List", in: app)
+        addItem(named: "Alpha", in: app)
+        addItem(named: "Bravo", in: app)
+        addItem(named: "Charlie", in: app)
+        // NO Escape here — clicking Bravo IS the dismissal.
+
+        let alpha = app.staticTexts["Alpha"]
+        let bravo = app.staticTexts["Bravo"]
+        let charlie = app.staticTexts["Charlie"]
+        XCTAssertTrue(charlie.waitForExistence(timeout: 5))
+
+        bravo.click()
+        let bravoMinX = bravo.frame.minX
+        let charlieMinX = charlie.frame.minX
+        app.typeKey("]", modifierFlags: .command)
+
+        XCTAssertTrue(waitUntil(timeout: 5) { bravo.frame.minX > bravoMinX + 15 })
+        XCTAssertGreaterThan(bravo.frame.minX, bravoMinX + 15,
+                             "⌘] after click-away must indent the clicked row (Bravo)")
+        XCTAssertEqual(charlie.frame.minX, charlieMinX, accuracy: 2,
+                       "⌘] must not touch the last-added row (Charlie)")
+        XCTAssertEqual(alpha.frame.minX, charlieMinX, accuracy: 2)
+    }
+
+    /// Gate M1 failure repro (2026-07-14): ⇧Tab arrives as backtab (U+0019),
+    /// which `.onKeyPress(.tab)` never matched — focus traversal dumped the
+    /// user into the sidebar search field instead of outdenting.
+    @MainActor func testShiftTabOutdentsSelectedRow() {
+        continueAfterFailure = false
+        let app = launchApp(store: "mac-shifttab-outdent", reset: true)
+        createList(named: "Shift Tab List", in: app)
+        addItem(named: "Alpha", in: app)
+        addItem(named: "Bravo", in: app)
+        app.typeKey(.escape, modifierFlags: [])
+
+        let bravo = app.staticTexts["Bravo"]
+        XCTAssertTrue(bravo.waitForExistence(timeout: 5))
+        bravo.click()
+
+        let rootMinX = bravo.frame.minX
+        app.typeKey("]", modifierFlags: .command)
+        if !waitUntil(timeout: 5, condition: { bravo.frame.minX > rootMinX + 15 }) {
+            print("DIAG-SHIFTTAB-PREBRACKET \(app.debugDescription)")
+        }
+        XCTAssertTrue(bravo.frame.minX > rootMinX + 15, "⌘] indent precondition failed")
+
+        app.typeKey(.tab, modifierFlags: .shift)
+
+        XCTAssertTrue(waitUntil(timeout: 5) { abs(bravo.frame.minX - rootMinX) < 5 })
+        XCTAssertEqual(bravo.frame.minX, rootMinX, accuracy: 5,
+                       "⇧Tab must outdent the selected row, not move focus to search")
+    }
+
     /// Polls `condition` until it's true or `timeout` elapses. Row-reorder
     /// geometry only settles after SwiftUI's drop/undo animation completes,
     /// so a single frame read right after the gesture can race the layout.

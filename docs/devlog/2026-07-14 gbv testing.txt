@@ -1,0 +1,11 @@
+MacOS 
+- #4 - acts on the last row of a group, not on selected row;  #5 don't know what you mean by 'hover' - putting the cursor over a row doesn't have apparent action;  but click a row and drag works, but only at the same level and group
+- tab indents; back-tab goes to 'search' field
+- drag two rows - shows tag '2', will drag, but snaps back to original position on drop
+
+iOS
+- scroll (edit mode) list to top - shakes at top, and won't display list title
+- drag/drop doesn't work well;  long press shows context menu, keep holding, can drag ok if move finger out of context menu area;  no way (that I can see) to multiselect
+- double tap doesn't do anything - should show details (so can edit)
+- 'rename' (off context menu) - typing in the field has delays (maybe 200 ms?)
+- for this testing note from you: " Add Item, then Return-type-Return-type rapidly ×10" - no way to do that in iOS (?)

@@ -45,8 +45,32 @@ struct OutlineEditorView: View {
             .onKeyPress(.return, phases: .down) { keyPress in
                 handleReturnKey(modifiers: keyPress.modifiers)
             }
-            .onKeyPress(.tab, phases: .down) { keyPress in
-                handleTabKey(isShiftPressed: keyPress.modifiers.contains(.shift))
+            // Escape fallback: the add/rename fields own Escape while they
+            // have focus, but focus assignment is task-deferred (Phase 1) —
+            // an Escape landing in the deferral window used to vanish,
+            // leaving the add flow armed and every menu command disabled
+            // (Gate M1 diagnostic, 2026-07-14). This editor-level handler
+            // catches what the fields don't.
+            .onKeyPress(.escape, phases: .down) { _ in
+                if store.addPlacement != nil {
+                    cancelAdding()
+                    return .handled
+                }
+                if store.editingItemID != nil {
+                    editingText = ""
+                    store.cancelEditing()
+                    return .handled
+                }
+                return .ignored
+            }
+            // ⇧Tab arrives as a DIFFERENT key (backtab, U+0019) on macOS —
+            // `.onKeyPress(.tab)` never fires for it, so focus traversal used
+            // to win and dump the user in the sidebar search field (Gate M1
+            // finding, 2026-07-14). Match both keys explicitly.
+            .onKeyPress(phases: .down) { keyPress in
+                let isBacktab = keyPress.characters == "\u{19}"
+                guard keyPress.key == .tab || isBacktab else { return .ignored }
+                return handleTabKey(isShiftPressed: isBacktab || keyPress.modifiers.contains(.shift))
             }
         #endif
     }
@@ -131,6 +155,12 @@ struct OutlineEditorView: View {
         List(selection: $store.selectedItemIDs) {
             ForEach(store.filteredRows) { row in
                 outlineRow(row)
+                    // D5/D9/B6: the move trait MUST be applied here, on the
+                    // ForEach's direct content — a `.moveDisabled` inside
+                    // OutlineRowView (a nested child) is silently ignored by
+                    // List (proven at Gate M1: multi-drags lifted). Hover
+                    // gating is retired — see RowMoveDisabled's doc comment.
+                    .modifier(RowMoveDisabled(blocked: dragBlocked(row)))
                     .tag(row.id)
                     .listRowInsets(EdgeInsets(
                         top: 4,
@@ -145,10 +175,6 @@ struct OutlineEditorView: View {
                             Label("Delete", systemImage: "trash")
                         }
                     }
-                    // D5/D9/B6: `.moveDisabled` itself is applied by
-                    // OutlineRowView (Rev 2.2 — row-local hover state, see
-                    // its doc comment for why). This row only supplies the
-                    // non-hover terms via `dragBlocked`.
 
                 if let addFieldDepth = addFieldPlacement(after: row) {
                     addItemField(depth: addFieldDepth)
@@ -170,11 +196,10 @@ struct OutlineEditorView: View {
         ))
     }
 
-    /// B6 fix (spec §2): the editor-owned, non-hover half of the drag gate
-    /// — `OutlineRowView` combines this with its own row-local hover state
-    /// (macOS) to produce the final `.moveDisabled` value (Rev 2.2). Phase 1
-    /// intentionally omits the filter term (`checkFilter != .all`) — filters
-    /// are check-mode-only today and that term belongs to Phase 2.
+    /// B6 fix (spec §2): the drag gate terms, all editor-computed so trait
+    /// changes re-diff correctly (Rev 2.4). Phase 1 intentionally omits the
+    /// filter term (`checkFilter != .all`) — filters are check-mode-only
+    /// today and that term belongs to Phase 2.
     private func dragBlocked(_ row: FlatRow) -> Bool {
         if store.isTextInputActive || !store.searchText.isEmpty { return true }
         if rowInMultiSelection(row) { return true }
@@ -198,8 +223,7 @@ struct OutlineEditorView: View {
                 onCancelEdit: {
                     editingText = ""
                     store.cancelEditing()
-                },
-                dragBlocked: dragBlocked(row)
+                }
             )
 
             Menu {
