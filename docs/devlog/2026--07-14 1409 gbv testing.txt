@@ -1,0 +1,8 @@
+MacOS
+-  looking good (up to coding intent); all fixes seem to have worked
+
+iOS
+-  still getting the 'shakes' when scroll to top of list, and won't display list title;  initial render of list show the list title though
+- suprise change - drag (if I move finger out of context menu) will re-parent an item
+- question: should double tap an item do anything? 
+

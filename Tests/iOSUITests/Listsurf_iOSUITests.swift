@@ -99,6 +99,60 @@ final class Listsurf_iOSUITests: XCTestCase {
         return condition()
     }
 
+    /// M4 Stage 1 contract (spec D2): a drag can NEVER re-parent — a drop
+    /// across a parent boundary clamps to the item's own sibling group.
+    /// Gaylon reported an apparent re-parent via drag on hardware
+    /// (2026-07-14); this asserts the clamp holds under the same gesture.
+    @MainActor func testDragAcrossParentBoundaryDoesNotReparent() {
+        continueAfterFailure = false
+        let app = launchApp(store: "ios-drag-clamp", reset: true)
+        createList(named: "Clamp List", in: app)
+
+        let addItem = firstExisting(
+            app.buttons["editor.addFirstItem"],
+            app.buttons["editor.addItem"]
+        )
+        XCTAssertTrue(addItem.waitForExistence(timeout: 5))
+        addItem.tap()
+        for title in ["Parent", "Bravo"] {
+            let itemField = app.textFields["editor.newItem"]
+            XCTAssertTrue(itemField.waitForExistence(timeout: 5))
+            itemField.tap()
+            itemField.typeText("\(title)\n")
+            XCTAssertTrue(app.staticTexts[title].waitForExistence(timeout: 5))
+        }
+        // Dismiss the armed add flow, then give Parent a child.
+        app.staticTexts["Parent"].tap()
+        XCTAssertTrue(app.buttons["editor.ios.addChild"].waitForExistence(timeout: 5))
+        app.buttons["editor.ios.addChild"].tap()
+        let childField = app.textFields["editor.newItem"]
+        XCTAssertTrue(childField.waitForExistence(timeout: 5))
+        childField.tap()
+        childField.typeText("Kid\n")
+        XCTAssertTrue(app.staticTexts["Kid"].waitForExistence(timeout: 5))
+        app.staticTexts["Parent"].tap() // dismiss add flow
+
+        let bravo = app.staticTexts["Bravo"]
+        let kid = app.staticTexts["Kid"]
+        XCTAssertTrue(bravo.waitForExistence(timeout: 5))
+        let bravoRootX = bravo.frame.minX
+        XCTAssertGreaterThan(kid.frame.minX, bravoRootX + 10, "Kid must render indented")
+
+        // Drag root-level Bravo ONTO the child row inside Parent.
+        bravo.press(
+            forDuration: 0.6,
+            thenDragTo: kid,
+            withVelocity: .slow,
+            thenHoldForDuration: 0.5
+        )
+
+        // Clamp contract: Bravo may reorder among roots but must stay a
+        // root — same indent, never adopted by Parent.
+        XCTAssertTrue(waitUntil(timeout: 5) { abs(bravo.frame.minX - bravoRootX) < 5 })
+        XCTAssertEqual(bravo.frame.minX, bravoRootX, accuracy: 5,
+                       "Drag across a parent boundary must NOT re-parent (D2 clamp)")
+    }
+
     /// Phase 1 focus promise (Gate M1 iOS finding, 2026-07-14: on hardware
     /// the add field appeared WITHOUT the keyboard). The store-driven
     /// EditorFocus must focus the add field on its own — this test types
