@@ -252,34 +252,51 @@ struct ListDetailView: View {
         // instead of, or on top of, the text field's own handling.
         guard !store.isCheckMode, !store.isTextInputActive else { return actions }
 
+        // Presence (nil vs non-nil) still gates menu enablement at publish
+        // time — a republication lag can only mis-gray a menu item
+        // momentarily, never mis-target an action.
         let selectedID = singleSelectedItemID(in: store)
 
+        // B3 fix (spec §2): every closure below reads selection LIVE at
+        // invocation instead of closing over a value captured at publish
+        // time — `focusedSceneValue` republication lags, so a by-value
+        // capture of `selectedID` could act on a stale selection (⌘[/⌘]
+        // acting on the last-added row instead of the clicked one).
         actions.addBelow = {
-            store.beginAdding(selectedID.map(OutlineAddPlacement.below) ?? .root)
+            guard !store.isTextInputActive else { return }
+            let liveID = singleSelectedItemID(in: store)
+            store.beginAdding(liveID.map(OutlineAddPlacement.below) ?? .root)
         }
-        if let selectedID {
+        if selectedID != nil {
             actions.addAbove = {
-                let newID = store.insertAbove(referenceID: selectedID, title: "New Item", undoManager: undoManager)
+                guard !store.isTextInputActive, let liveID = singleSelectedItemID(in: store) else { return }
+                let newID = store.insertAbove(referenceID: liveID, title: "New Item", undoManager: undoManager)
                 store.beginEditing(itemID: newID)
             }
             actions.addChild = {
-                store.beginAdding(.child(selectedID))
+                guard !store.isTextInputActive, let liveID = singleSelectedItemID(in: store) else { return }
+                store.beginAdding(.child(liveID))
             }
             actions.indent = {
-                store.indent(itemID: selectedID, undoManager: undoManager)
+                guard !store.isTextInputActive, let liveID = singleSelectedItemID(in: store) else { return }
+                store.indent(itemID: liveID, undoManager: undoManager)
             }
             actions.outdent = {
-                store.outdent(itemID: selectedID, undoManager: undoManager)
+                guard !store.isTextInputActive, let liveID = singleSelectedItemID(in: store) else { return }
+                store.outdent(itemID: liveID, undoManager: undoManager)
             }
             actions.moveUp = {
-                store.moveUp(itemID: selectedID, undoManager: undoManager)
+                guard !store.isTextInputActive, let liveID = singleSelectedItemID(in: store) else { return }
+                store.moveUp(itemID: liveID, undoManager: undoManager)
             }
             actions.moveDown = {
-                store.moveDown(itemID: selectedID, undoManager: undoManager)
+                guard !store.isTextInputActive, let liveID = singleSelectedItemID(in: store) else { return }
+                store.moveDown(itemID: liveID, undoManager: undoManager)
             }
         }
         if !store.selectedItemIDs.isEmpty {
             actions.delete = {
+                guard !store.isTextInputActive, !store.selectedItemIDs.isEmpty else { return }
                 store.pendingDeletionIDs = store.selectedItemIDs
             }
         }

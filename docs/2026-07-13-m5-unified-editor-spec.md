@@ -1,6 +1,6 @@
 # M5 — Unified Editor UX Overhaul (macOS-first) — Implementation Spec
 
-**Rev 2.1 (2026-07-13).** (2.1 folds in Gaylon's prototype-testing notes: iOS keyboard-dismiss affordance, iOS undo exposure check, platform-scoped help.) Baseline: commit `b9a87a1` (M4 Stage 1 shipped; 192 unit tests, 7 macOS + 5 iOS UI tests green). Planner: Fable (research + design agent), coordinated by CC2. Executor: implementer agent — everything needed is here; `cs.md` rules override defaults. Decisions are final unless marked as an open question; stop-and-report on any spec/code conflict.
+**Rev 2.2 (2026-07-13).** (2.2: D10 hover state moved row-local after Phase 1 implementation evidence — shared ancestor @State re-diffs the List and kills the in-flight AppKit drag session; Phase 1 gains item 6, the pre-existing indent()-collapses-item bug.) (2.1 folds in Gaylon's prototype-testing notes: iOS keyboard-dismiss affordance, iOS undo exposure check, platform-scoped help.) Baseline: commit `b9a87a1` (M4 Stage 1 shipped; 192 unit tests, 7 macOS + 5 iOS UI tests green). Planner: Fable (research + design agent), coordinated by CC2. Executor: implementer agent — everything needed is here; `cs.md` rules override defaults. Decisions are final unless marked as an open question; stop-and-report on any spec/code conflict.
 
 **Fixed user decisions**: (1) unify edit/check modes into one outline view; (2) Things 3 is the feel benchmark; (3) **Return on a selected row = rename in place**.
 
@@ -87,14 +87,15 @@ Row tap = select (`RowSelectionTapModifier`, unchanged); checkbox tap = toggle (
 
 ## 2. Root-cause fixes woven in
 
-**B1 (click latency ~0.5s) + B4a (flaky double-click)** — apply M4 spec D10 verbatim (`docs/2026-07-11-milestone-4-drag-and-drop-spec.md:141`): macOS-only `@State private var hoveredDraggableRowID: UUID?` in `OutlineEditorView`, set by `.onHover` on the row's title/notes region (new `onContentHover: ((Bool) -> Void)?` parameter on `OutlineRowView`, applied to `titleAndNotes` only — not chevron, checkbox, or trailing buttons), and:
+**B1 (click latency ~0.5s) + B4a (flaky double-click)** — D10's gating, with **row-local hover state** (Rev 2.2 — empirically validated during Phase 1; the original shared-ancestor `hoveredDraggableRowID` in `OutlineEditorView` re-diffs the List on every hover change and invalidates the in-flight AppKit drag session, so `moveRows` never fires): `OutlineRowView` owns `@State private var isContentHovered = false` (macOS), set by `.onHover` on the title/notes region only — not chevron, checkbox, or trailing buttons — and applies the drag gate itself:
 ```swift
-.moveDisabled(isDragBlocked(row))
-// macOS: isTextInputActive || !searchText.isEmpty || checkFilter != .all
-//        || rowInMultiSelection(row) || hoveredDraggableRowID != row.id
-// iOS:   same minus the hover term
+// inside OutlineRowView (macOS): row-local hover; other terms passed in
+.moveDisabled(dragBlocked || !isContentHovered)
+// dragBlocked (from the editor): isTextInputActive || !searchText.isEmpty
+//        || checkFilter != .all (Phase 2+) || rowInMultiSelection(row)
+// iOS: .moveDisabled(dragBlocked) — no hover term
 ```
-Hover state persists through the drag (hover updates pause during drags — M4 spec research §2.2).
+Updating row-local state re-renders only that row, which is why the native drag survives. The nilcoalescing reference pattern is row-local too; M4 spec D10's shared-state phrasing is superseded by this.
 
 **B2 (Return keystrokes land in sidebar search) + B4b (rename field dead)** — replace both `.onAppear { focused = true }` grabs (`OutlineEditorView.swift:295`, `OutlineRowView.swift:40`) with one editor-owned focus architecture:
 ```swift
@@ -174,7 +175,8 @@ Interactive HTML prototype of §1 (macOS + iOS surfaces) approved by Gaylon. Dec
 2. **B6**: multi-selection rows `.moveDisabled`.
 3. **B2/B4**: `EditorFocus` architecture (both `.onAppear` grabs deleted).
 4. **B3**: live-read command closures in `ListDetailView.focusedCommandActions`.
-5. New macOS UI test `testCommandBracketIndentsSelectedRow` (B3 regression: add Alpha/Bravo, Esc, click **Bravo**, ⌘], poll `bravo.frame.minX` increased ~20pt, ⌘Z restores).
+5. New macOS UI test `testCommandBracketIndentsSelectedRow` (B3 regression: add Alpha/Bravo/Charlie, Esc, click **Bravo** — the middle row, not the last-added — ⌘], poll `bravo.frame.minX` increased ~20pt, Charlie untouched, ⌘Z restores). No Expand All workaround — item 6 makes the indented row stay visible.
+6. **(Rev 2.2) Fix the pre-existing `indent()` visibility bug**: `ListStore.indent` (`ListStore.swift:347`) reparents an item under its previous sibling but never inserts the new parent into `expandedIDs`, so indenting under a childless (hence collapsed-by-default) sibling makes the row VANISH — almost certainly a contributor to the original "⌘[/⌘] are unpredictable" complaint. Fix: after a successful engine indent, insert the new parent's id into `expandedIDs` (mirror `addChild`, `ListStore.swift:264`). Unit test `testIndentExpandsNewParent`: two root siblings, indent the second, assert it appears in `flatRows`/`filteredRows` (visible), plus undo restores.
 
 **Gate M1 (manual, macOS)**: (a) click 10 different rows — highlight instant every time; (b) toolbar Add Item → in-field Return commit-and-re-arm chain: 10 rapid tries, zero keystrokes leak to sidebar search (in-field Return is unchanged in all phases; selected-row Return is still add-below through Phases 1–2); (c) double-click rename focuses 10/10; (d) chevron/ellipsis/trash click latency imperceptible; (e) select a middle row, ⌘]/⌘[/⌘⌥↑/⌘⌥↓ act on it — never the last row — including immediately after adding items; (f) drag still reorders (M4 V1-2/V1-3 re-run); (g) with 2 rows selected, drag does not lift. If the macOS drag UI test fails to lift under hover gating, insert `charlie.hover()` before the drag in the test (what a human does anyway).
 

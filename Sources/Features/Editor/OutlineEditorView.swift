@@ -9,7 +9,7 @@ struct OutlineEditorView: View {
     @State private var editingText = ""
     @State private var newItemText = ""
     @State private var selectionFromAddFlow: Set<UUID> = []
-    @FocusState private var addFieldFocused: Bool
+    @FocusState private var focus: EditorFocus?
 
     var body: some View {
         #if os(iOS)
@@ -74,6 +74,10 @@ struct OutlineEditorView: View {
         .onChange(of: store.editingItemID) { oldValue, newValue in
             if let newValue, let item = store.items.first(where: { $0.id == newValue }) {
                 editingText = item.title
+                // Task-deferred: the assignment must land after the rename
+                // field mounts (one runloop hop), not inside the transaction
+                // that flips editingItemID (spec §2, B2/B4 fix).
+                Task { @MainActor in focus = .rename(newValue) }
             } else if let oldValue, newValue == nil {
                 // Editing was ended by something other than this view's own
                 // commit/cancel (both consume the draft first) — e.g. the
@@ -84,6 +88,15 @@ struct OutlineEditorView: View {
                 if !text.isEmpty {
                     store.updateItemTitle(id: oldValue, title: text, undoManager: undoManager)
                 }
+            }
+        }
+        .onChange(of: store.addPlacement) { _, newValue in
+            // Task-deferred for the same reason as above: nil→value always
+            // fires (cancelAdding/dismissPendingAdd nil the placement before
+            // any re-add), and the continuation flow's .below(a)→.below(b)
+            // is a value change that also fires.
+            if newValue != nil {
+                Task { @MainActor in focus = .addField }
             }
         }
         .onChange(of: store.selectedItemIDs) { _, newValue in
@@ -132,11 +145,10 @@ struct OutlineEditorView: View {
                             Label("Delete", systemImage: "trash")
                         }
                     }
-                    // D5/D9: drag disabled while searching (filtered rows are
-                    // a non-contiguous excerpt) or while text entry is active
-                    // (protects the rename field and guarantees the add-field
-                    // row never coexists with an enabled drag).
-                    .moveDisabled(store.isTextInputActive || !store.searchText.isEmpty)
+                    // D5/D9/B6: `.moveDisabled` itself is applied by
+                    // OutlineRowView (Rev 2.2 — row-local hover state, see
+                    // its doc comment for why). This row only supplies the
+                    // non-hover terms via `dragBlocked`.
 
                 if let addFieldDepth = addFieldPlacement(after: row) {
                     addItemField(depth: addFieldDepth)
@@ -158,6 +170,21 @@ struct OutlineEditorView: View {
         ))
     }
 
+    /// B6 fix (spec §2): the editor-owned, non-hover half of the drag gate
+    /// — `OutlineRowView` combines this with its own row-local hover state
+    /// (macOS) to produce the final `.moveDisabled` value (Rev 2.2). Phase 1
+    /// intentionally omits the filter term (`checkFilter != .all`) — filters
+    /// are check-mode-only today and that term belongs to Phase 2.
+    private func dragBlocked(_ row: FlatRow) -> Bool {
+        if store.isTextInputActive || !store.searchText.isEmpty { return true }
+        if rowInMultiSelection(row) { return true }
+        return false
+    }
+
+    private func rowInMultiSelection(_ row: FlatRow) -> Bool {
+        store.selectedItemIDs.count > 1 && store.selectedItemIDs.contains(row.id)
+    }
+
     private func outlineRow(_ row: FlatRow) -> some View {
         HStack(spacing: 8) {
             OutlineRowView(
@@ -165,12 +192,14 @@ struct OutlineEditorView: View {
                 isEditing: store.editingItemID == row.id,
                 notePreviewLineCount: notePreviewLineCount,
                 editingText: store.editingItemID == row.id ? $editingText : .constant(""),
+                focus: $focus,
                 onToggleExpand: { store.toggleExpanded(row.id) },
                 onCommitEdit: { commitEdit(row.id) },
                 onCancelEdit: {
                     editingText = ""
                     store.cancelEditing()
-                }
+                },
+                dragBlocked: dragBlocked(row)
             )
 
             Menu {
@@ -286,13 +315,12 @@ struct OutlineEditorView: View {
                 .foregroundStyle(.green)
             TextField(addPlaceholder, text: $newItemText)
                 .accessibilityIdentifier("editor.newItem")
-                .focused($addFieldFocused)
+                .focused($focus, equals: .addField)
                 .onSubmit { commitNewItem() }
                 .onKeyPress(.escape) {
                     cancelAdding()
                     return .handled
                 }
-                .onAppear { addFieldFocused = true }
         }
         .listRowInsets(EdgeInsets(
             top: 4,
@@ -352,7 +380,6 @@ struct OutlineEditorView: View {
         selectionFromAddFlow = [newID]
         store.beginAdding(.below(newID))
         newItemText = ""
-        addFieldFocused = true
     }
 
     /// Dismiss the add flow on click-away: commit typed text as a final

@@ -112,6 +112,14 @@ final class Listsurf_macOSUITests: XCTestCase {
         XCTAssertLessThan(alpha.frame.minY, bravo.frame.minY)
         XCTAssertLessThan(bravo.frame.minY, charlie.frame.minY)
 
+        // B1 fix: drag only arms while the row's content region is hovered
+        // (macOS-only .moveDisabled predicate). XCUITest's click(forDuration:
+        // thenDragTo:) doesn't hover first, so arm it explicitly — what a
+        // human does anyway (spec §5 Phase 1 gate authorizes this).
+        charlie.hover()
+        // Let the hover state propagate through SwiftUI's onHover → @State
+        // → .moveDisabled render cycle before the drag gesture captures it.
+        RunLoop.current.run(until: Date().addingTimeInterval(0.5))
         charlie.click(forDuration: 0.3, thenDragTo: alpha)
 
         XCTAssertTrue(waitUntil(timeout: 5) { charlie.frame.minY < bravo.frame.minY })
@@ -124,6 +132,55 @@ final class Listsurf_macOSUITests: XCTestCase {
         })
         XCTAssertLessThan(alpha.frame.minY, bravo.frame.minY, "Undo should restore Alpha above Bravo")
         XCTAssertLessThan(bravo.frame.minY, charlie.frame.minY, "Undo should restore Bravo above Charlie")
+    }
+
+    /// B3 regression (spec §2, §5 Phase 1 item 5): `focusedCommandActions`
+    /// closures must read selection LIVE at invocation. Before the fix,
+    /// ⌘[/⌘] closed over the selection captured when the focused value was
+    /// last published, so they could act on the last-added row instead of
+    /// the row the user actually clicked.
+    @MainActor func testCommandBracketIndentsSelectedRow() {
+        continueAfterFailure = false
+        let app = launchApp(store: "mac-command-bracket-indent", reset: true)
+        createList(named: "Mac Command Bracket List", in: app)
+
+        addItem(named: "Alpha", in: app)
+        addItem(named: "Bravo", in: app)
+        addItem(named: "Charlie", in: app)
+
+        // Committing with Return re-arms the add flow — dismiss it before
+        // selecting a row (same pattern as testDragReordersSiblings).
+        app.typeKey(.escape, modifierFlags: [])
+
+        let alpha = app.staticTexts["Alpha"]
+        let bravo = app.staticTexts["Bravo"]
+        let charlie = app.staticTexts["Charlie"]
+        XCTAssertTrue(alpha.waitForExistence(timeout: 5))
+        XCTAssertTrue(bravo.waitForExistence(timeout: 5))
+        XCTAssertTrue(charlie.waitForExistence(timeout: 5))
+
+        // Select the MIDDLE row, not the last-added one — Charlie (the last
+        // row added) is the row the pre-fix bug would wrongly target.
+        bravo.click()
+
+        let originalMinX = bravo.frame.minX
+        app.typeKey("]", modifierFlags: .command)
+
+        XCTAssertTrue(waitUntil(timeout: 5) { bravo.frame.minX > originalMinX + 15 })
+        XCTAssertGreaterThan(
+            bravo.frame.minX, originalMinX + 15,
+            "⌘] should indent the selected row (Bravo), not the last row"
+        )
+        // Charlie must be untouched by the indent.
+        XCTAssertEqual(charlie.frame.minX, alpha.frame.minX, accuracy: 2)
+
+        app.typeKey("z", modifierFlags: .command)
+
+        XCTAssertTrue(waitUntil(timeout: 5) { abs(bravo.frame.minX - originalMinX) < 5 })
+        XCTAssertEqual(
+            bravo.frame.minX, originalMinX, accuracy: 5,
+            "Undo should restore Bravo's original indent level"
+        )
     }
 
     /// Polls `condition` until it's true or `timeout` elapses. Row-reorder
