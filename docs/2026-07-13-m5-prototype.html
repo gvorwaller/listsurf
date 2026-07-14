@@ -1,0 +1,1054 @@
+<title>Listsurf M5 — Unified Editor Prototype</title>
+<style>
+  :root {
+    --shell-bg:#ececf0; --shell-fg:#3a3a42; --shell-muted:#82828e; --shell-card:#f7f7fa; --shell-line:#d9d9e0;
+    --accent:#0a66f5; --accent-soft:rgba(10,102,245,.12);
+    --win-bg:#f5f5f7; --win-content:#ffffff; --sidebar-bg:#e9e9ee; --toolbar-bg:#f0f0f3;
+    --fg:#1d1d1f; --fg2:#6e6e76; --line:#e3e3e8; --row-hover:#f2f2f6;
+    --sel:#0a66f5; --sel-fg:#ffffff; --sel-inactive:#dcdce2;
+    --green:#1f9d4d; --orange:#e8890c; --red:#e5484d;
+    --kbd-bg:#ffffff; --kbd-line:#cfcfd8; --menu-bg:#ffffff; --menu-shadow:0 10px 34px rgba(20,20,40,.22);
+    --ios-bg:#f2f2f7; --ios-card:#ffffff;
+  }
+  @media (prefers-color-scheme: dark) { :root {
+    --shell-bg:#161619; --shell-fg:#d4d4dc; --shell-muted:#8b8b96; --shell-card:#1e1e23; --shell-line:#2c2c33;
+    --accent:#3d7bfd; --accent-soft:rgba(61,123,253,.18);
+    --win-bg:#28282c; --win-content:#1f1f23; --sidebar-bg:#252529; --toolbar-bg:#2b2b30;
+    --fg:#e8e8ea; --fg2:#98989f; --line:#3a3a40; --row-hover:#2a2a30;
+    --sel:#3d7bfd; --sel-fg:#ffffff; --sel-inactive:#3a3a42;
+    --green:#30c458; --orange:#ffa423; --red:#ff5d61;
+    --kbd-bg:#26262b; --kbd-line:#45454d; --menu-bg:#2c2c31; --menu-shadow:0 10px 34px rgba(0,0,0,.5);
+    --ios-bg:#000000; --ios-card:#1c1c1e;
+  }}
+  :root[data-theme="light"] {
+    --shell-bg:#ececf0; --shell-fg:#3a3a42; --shell-muted:#82828e; --shell-card:#f7f7fa; --shell-line:#d9d9e0;
+    --accent:#0a66f5; --accent-soft:rgba(10,102,245,.12);
+    --win-bg:#f5f5f7; --win-content:#ffffff; --sidebar-bg:#e9e9ee; --toolbar-bg:#f0f0f3;
+    --fg:#1d1d1f; --fg2:#6e6e76; --line:#e3e3e8; --row-hover:#f2f2f6;
+    --sel:#0a66f5; --sel-fg:#ffffff; --sel-inactive:#dcdce2;
+    --green:#1f9d4d; --orange:#e8890c; --red:#e5484d;
+    --kbd-bg:#ffffff; --kbd-line:#cfcfd8; --menu-bg:#ffffff; --menu-shadow:0 10px 34px rgba(20,20,40,.22);
+    --ios-bg:#f2f2f7; --ios-card:#ffffff;
+  }
+  :root[data-theme="dark"] {
+    --shell-bg:#161619; --shell-fg:#d4d4dc; --shell-muted:#8b8b96; --shell-card:#1e1e23; --shell-line:#2c2c33;
+    --accent:#3d7bfd; --accent-soft:rgba(61,123,253,.18);
+    --win-bg:#28282c; --win-content:#1f1f23; --sidebar-bg:#252529; --toolbar-bg:#2b2b30;
+    --fg:#e8e8ea; --fg2:#98989f; --line:#3a3a40; --row-hover:#2a2a30;
+    --sel:#3d7bfd; --sel-fg:#ffffff; --sel-inactive:#3a3a42;
+    --green:#30c458; --orange:#ffa423; --red:#ff5d61;
+    --kbd-bg:#26262b; --kbd-line:#45454d; --menu-bg:#2c2c31; --menu-shadow:0 10px 34px rgba(0,0,0,.5);
+    --ios-bg:#000000; --ios-card:#1c1c1e;
+  }
+  * { box-sizing:border-box; }
+  body { background:var(--shell-bg); color:var(--shell-fg); font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif; margin:0; padding:24px 20px 60px; }
+  .shellhead { max-width:1240px; margin:0 auto 18px; display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; }
+  .shellhead h1 { font-size:17px; font-weight:700; margin:0; letter-spacing:-.01em; }
+  .shellhead .sub { color:var(--shell-muted); font-size:12.5px; }
+  .platform-toggle { margin-left:auto; display:flex; border:1px solid var(--shell-line); border-radius:8px; overflow:hidden; }
+  .platform-toggle button { border:0; background:transparent; color:var(--shell-fg); font:600 12.5px/1 inherit; padding:8px 16px; cursor:pointer; }
+  .platform-toggle button.on { background:var(--accent); color:#fff; }
+  .platform-toggle button:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; }
+  .stagewrap { max-width:1240px; margin:0 auto; display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap; }
+  .stage { flex:1 1 640px; min-width:0; }
+  .aside { flex:0 1 320px; min-width:270px; display:flex; flex-direction:column; gap:14px; }
+
+  /* ---------- macOS window ---------- */
+  .macwin { background:var(--win-bg); border:1px solid var(--shell-line); border-radius:12px; box-shadow:0 18px 48px rgba(15,15,35,.18); overflow:hidden; user-select:none; }
+  .titlebar { display:flex; align-items:center; height:38px; padding:0 14px; background:var(--toolbar-bg); border-bottom:1px solid var(--line); gap:8px; }
+  .lights { display:flex; gap:8px; } .lights i { width:12px; height:12px; border-radius:50%; }
+  .lights .r{background:#ff5f57}.lights .y{background:#febc2e}.lights .g{background:#28c840}
+  .wintitle { flex:1; text-align:center; font-size:13px; font-weight:600; color:var(--fg2); }
+  .menubar { display:flex; gap:2px; padding:0 10px; height:30px; align-items:stretch; background:var(--toolbar-bg); border-bottom:1px solid var(--line); font-size:13px; }
+  .menubar > button { border:0; background:none; color:var(--fg); padding:0 10px; cursor:default; border-radius:5px; font:inherit; font-size:13px; }
+  .menubar > button.applemenu { font-weight:700; }
+  .menubar > button.open, .menubar > button:hover { background:var(--accent-soft); }
+  .winbody { display:flex; min-height:520px; background:var(--win-content); }
+  .sidebar { width:190px; background:var(--sidebar-bg); border-right:1px solid var(--line); padding:12px 8px; font-size:13px; flex:none; }
+  .sidebar .sec { font-size:11px; font-weight:700; color:var(--fg2); text-transform:uppercase; letter-spacing:.06em; padding:4px 8px; }
+  .sidebar .slist { display:flex; flex-direction:column; gap:1px; margin-top:2px; }
+  .sidebar .slist button { display:flex; gap:8px; align-items:center; border:0; background:none; color:var(--fg); font:inherit; padding:6px 8px; border-radius:6px; cursor:default; text-align:left; }
+  .sidebar .slist button.cur { background:var(--accent-soft); font-weight:600; }
+  .sidebar .search { margin-top:14px; }
+  .sidebar .search input { width:100%; border:1px solid var(--line); background:var(--win-content); color:var(--fg); border-radius:6px; padding:5px 8px; font:inherit; font-size:12.5px; }
+  .detail { flex:1; display:flex; flex-direction:column; min-width:0; }
+  .toolbar { display:flex; align-items:center; gap:6px; padding:8px 12px; background:var(--toolbar-bg); border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  .toolbar .tbtn { border:1px solid transparent; background:none; color:var(--fg); border-radius:6px; padding:5px 8px; font:inherit; font-size:13px; cursor:default; display:flex; align-items:center; gap:5px; }
+  .toolbar .tbtn:hover { background:var(--row-hover); }
+  .toolbar .tbtn:focus-visible, .menubar > button:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; }
+  .toolbar .gap { flex:1; }
+  .seg { display:flex; border:1px solid var(--line); border-radius:7px; overflow:hidden; }
+  .seg button { border:0; background:var(--win-content); color:var(--fg); font:inherit; font-size:12px; padding:4px 11px; cursor:default; }
+  .seg button.on { background:var(--sel); color:var(--sel-fg); font-weight:600; }
+  .progress { font-size:12px; color:var(--fg2); font-variant-numeric:tabular-nums; padding:0 4px; }
+  .listtitle { font-size:20px; font-weight:800; letter-spacing:-.02em; padding:14px 18px 4px; color:var(--fg); }
+  .editorpane { flex:1; display:flex; min-width:0; }
+  .outline { flex:1; padding:4px 8px 22px; min-width:0; overflow:auto; }
+
+  .row { display:flex; align-items:center; gap:7px; padding:5px 10px 5px 6px; border-radius:7px; position:relative; min-height:32px; }
+  .row:hover { background:var(--row-hover); }
+  .row.sel { background:var(--sel); color:var(--sel-fg); }
+  .row.sel .meta, .row.sel .note, .row.sel .prog { color:rgba(255,255,255,.75); }
+  .row.sel .rowbtn { color:rgba(255,255,255,.85); }
+  .chev { width:18px; height:18px; flex:none; border:0; background:none; color:var(--fg2); cursor:default; font-size:10px; padding:0; border-radius:4px; }
+  .row.sel .chev { color:rgba(255,255,255,.8); }
+  .chev.leaf { visibility:hidden; }
+  .cbx { width:20px; height:20px; flex:none; border:0; background:none; padding:0; cursor:pointer; position:relative; border-radius:50%; color:var(--fg2); }
+  .row.sel .cbx, .irow.sel .cbx { color:rgba(255,255,255,.92); }
+  .irow.sel .cbx { color:var(--fg2); }
+  .cbx svg { display:block; }
+  .cbx:focus-visible, .chev:focus-visible, .rowbtn:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+  .rtext { flex:1; min-width:0; display:flex; flex-direction:column; gap:0; padding:1px 0; }
+  .rtitle { font-size:13.5px; line-height:1.35; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .row.checked .rtitle { text-decoration:line-through; color:var(--fg2); }
+  .row.sel.checked .rtitle { color:rgba(255,255,255,.72); }
+  .note { font-size:11.5px; color:var(--fg2); white-space:pre-line; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .meta { font-size:11.5px; color:var(--fg2); flex:none; font-variant-numeric:tabular-nums; }
+  .qty { border:1px solid var(--line); border-radius:9px; padding:0 6px; }
+  .row.sel .qty { border-color:rgba(255,255,255,.4); }
+  .prog { font-size:11.5px; color:var(--fg2); flex:none; font-variant-numeric:tabular-nums; }
+  .rowbtn { width:24px; height:24px; flex:none; border:0; background:none; color:var(--fg2); cursor:pointer; border-radius:5px; font-size:14px; padding:0; }
+  .rowbtn:hover { background:rgba(125,125,140,.16); }
+  .rowbtn.trash:hover { color:var(--red); }
+  .rtitle input, .addrow input, .iadd input, .irow .rtitle input { font:inherit; font-size:13.5px; border:1px solid var(--accent); border-radius:5px; padding:2px 6px; width:100%; background:var(--win-content); color:var(--fg); }
+  .addrow { display:flex; align-items:center; gap:7px; padding:5px 10px 5px 6px; min-height:32px; }
+  .addrow .plus { width:20px; height:20px; flex:none; color:var(--green); font-weight:700; text-align:center; }
+  .insline { height:2px; background:var(--accent); border-radius:1px; margin:0 10px 0 26px; }
+  .row.dragging { opacity:.35; }
+  .row.draggable-armed { cursor:grab; }
+  .allDone { text-align:center; padding:60px 20px; color:var(--fg2); }
+  .allDone .big { font-size:44px; }
+  .allDone h3 { color:var(--fg); margin:10px 0 4px; font-size:16px; }
+  .allDone button, .confirm .btns button, .sheet .btns button { font:inherit; font-size:13px; border:1px solid var(--line); background:var(--win-content); color:var(--fg); border-radius:7px; padding:6px 14px; cursor:pointer; }
+  .allDone button:hover { background:var(--row-hover); }
+
+  .inspector { width:230px; flex:none; border-left:1px solid var(--line); background:var(--win-bg); padding:14px; font-size:12.5px; display:none; }
+  .inspector.on { display:block; }
+  .inspector h4, .sheet h4 { margin:0 0 4px; font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--fg2); }
+  .inspector .fld, .sheet .fld { margin-bottom:14px; }
+  .inspector .val, .sheet .val { color:var(--fg); }
+  .inspector .ro, .sheet .ro { color:var(--fg2); font-size:11px; margin-top:2px; }
+  .inspector textarea, .sheet textarea { width:100%; min-height:56px; font:inherit; font-size:12.5px; border:1px solid var(--line); border-radius:6px; background:var(--win-content); color:var(--fg); padding:5px 7px; resize:vertical; }
+  .inspector .renbtn, .sheet .renbtn { font:inherit; font-size:12px; border:1px solid var(--line); border-radius:6px; background:var(--win-content); color:var(--fg); padding:3px 10px; cursor:pointer; margin-top:4px; }
+  .stepper { display:inline-flex; align-items:center; gap:8px; }
+  .stepper button { width:24px; height:22px; border:1px solid var(--line); border-radius:6px; background:var(--win-content); color:var(--fg); font:inherit; cursor:pointer; padding:0; }
+
+  /* menus + dialogs */
+  .menu { position:fixed; z-index:50; min-width:230px; background:var(--menu-bg); border:1px solid var(--line); border-radius:9px; box-shadow:var(--menu-shadow); padding:5px; font-size:13px; }
+  .menu .mi { display:flex; align-items:center; gap:10px; width:100%; border:0; background:none; color:var(--fg); font:inherit; font-size:13px; padding:5px 10px; border-radius:6px; cursor:default; text-align:left; }
+  .menu .mi:hover:not(:disabled) { background:var(--sel); color:var(--sel-fg); }
+  .menu .mi:hover:not(:disabled) .hint { color:rgba(255,255,255,.75); }
+  .menu .mi:disabled { color:var(--fg2); opacity:.55; }
+  .menu .mi .lbl { flex:1; }
+  .menu .mi .hint { color:var(--fg2); font-size:12px; letter-spacing:.03em; }
+  .menu .mi.danger { color:var(--red); }
+  .menu hr { border:0; border-top:1px solid var(--line); margin:5px 8px; }
+  .scrim { position:fixed; inset:0; z-index:40; }
+  .confirm-scrim, .sheet-scrim { position:fixed; inset:0; z-index:60; background:rgba(10,10,20,.35); display:flex; align-items:center; justify-content:center; }
+  .confirm, .sheet { background:var(--menu-bg); color:var(--fg); border-radius:12px; box-shadow:var(--menu-shadow); padding:20px 22px; width:340px; font-size:13px; max-height:80vh; overflow:auto; }
+  .confirm h3, .sheet h3 { margin:0 0 6px; font-size:14px; }
+  .confirm p { margin:0 0 16px; color:var(--fg2); }
+  .confirm .btns, .sheet .btns { display:flex; justify-content:flex-end; gap:8px; margin-top:6px; }
+  .confirm .btns button.default { background:var(--sel); border-color:var(--sel); color:#fff; font-weight:600; }
+
+  /* ---------- aside panels ---------- */
+  .panel { background:var(--shell-card); border:1px solid var(--shell-line); border-radius:12px; padding:14px 16px; }
+  .panel h2 { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--shell-muted); margin:0 0 10px; }
+  .keytable { width:100%; border-collapse:collapse; font-size:12.5px; }
+  .keytable td { padding:3.5px 0; vertical-align:top; }
+  .keytable td:first-child { width:106px; white-space:nowrap; }
+  kbd { display:inline-block; background:var(--kbd-bg); border:1px solid var(--kbd-line); border-bottom-width:2px; border-radius:5px; font:600 11px/1 -apple-system,system-ui,sans-serif; padding:3px 6px; margin-right:2px; color:var(--shell-fg); transition:background .12s, border-color .12s; }
+  tr.lit kbd { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .keytable .desc { color:var(--shell-muted); }
+  tr.lit .desc { color:var(--shell-fg); font-weight:600; }
+  .scen { margin:0; padding-left:18px; font-size:12.5px; color:var(--shell-muted); display:flex; flex-direction:column; gap:7px; }
+  .scen b { color:var(--shell-fg); font-weight:600; }
+  .notes { font-size:12px; color:var(--shell-muted); }
+  .notes li { margin-bottom:5px; }
+  .toast { position:fixed; bottom:26px; left:50%; transform:translateX(-50%); background:var(--menu-bg); color:var(--fg); border:1px solid var(--line); box-shadow:var(--menu-shadow); border-radius:9px; padding:9px 16px; font-size:13px; z-index:70; opacity:0; transition:opacity .18s; pointer-events:none; }
+  .toast.show { opacity:1; }
+
+  /* ---------- iOS ---------- */
+  .iphone { width:390px; max-width:100%; height:740px; margin:0 auto; background:var(--ios-bg); border:10px solid #111; border-radius:44px; box-shadow:0 18px 48px rgba(15,15,35,.25); overflow:hidden; position:relative; user-select:none; display:flex; flex-direction:column; }
+  .iphone .statusbar { height:40px; flex:none; display:flex; align-items:center; justify-content:center; }
+  .iphone .statusbar .pill { width:110px; height:26px; background:#000; border-radius:16px; }
+  .inav { flex:none; display:flex; align-items:center; padding:2px 14px 6px; gap:8px; }
+  .inav .back { color:var(--accent); font-size:20px; border:0; background:none; padding:2px 6px; }
+  .inav .icaps { margin-left:auto; display:flex; gap:2px; background:var(--ios-card); border-radius:20px; padding:4px 6px; box-shadow:0 1px 5px rgba(0,0,0,.12); }
+  .inav .icaps button { border:0; background:none; font-size:14px; color:var(--fg); padding:4px 6px; border-radius:14px; cursor:pointer; }
+  .ititle { flex:none; font-size:26px; font-weight:800; letter-spacing:-.02em; color:var(--fg); padding:0 18px 6px; }
+  .ifilterrow { flex:none; display:flex; align-items:center; gap:10px; padding:0 18px 10px; }
+  .ifilterrow .seg { flex:1; } .ifilterrow .seg button { flex:1; padding:6px 0; }
+  .iscroll { flex:1; overflow-y:auto; min-height:0; }
+  .ilist { background:var(--ios-card); margin:0 14px 14px; border-radius:14px; overflow:hidden; }
+  .irow { display:flex; align-items:center; gap:9px; padding:11px 12px 11px 8px; border-bottom:1px solid var(--line); position:relative; }
+  .irow:last-child { border-bottom:0; }
+  .irow.sel { background:var(--sel-inactive); }
+  .irow .cbx { width:24px; height:24px; }
+  .irow .rtitle { font-size:16.5px; }
+  .irow .note { font-size:12.5px; }
+  .irow.checked .rtitle { text-decoration:line-through; color:var(--fg2); }
+  .iadd { display:flex; align-items:center; gap:9px; padding:9px 12px 9px 8px; border-bottom:1px solid var(--line); }
+  .iadd .plus { color:var(--green); font-weight:700; width:24px; text-align:center; }
+  .iadd input { flex:1; font-size:16px; }
+  .ibottom { flex:none; }
+  .iactionbar { display:flex; gap:8px; padding:10px 14px 20px; justify-content:center; flex-wrap:wrap; }
+  .iactionbar button { font:inherit; font-size:13.5px; color:var(--accent); background:var(--ios-card); border:0; border-radius:18px; padding:8px 12px; box-shadow:0 1px 5px rgba(0,0,0,.12); cursor:pointer; }
+  .iaccessory { display:flex; align-items:center; gap:12px; background:var(--toolbar-bg); border-top:1px solid var(--line); padding:10px 14px 16px; font-size:15px; }
+  .iaccessory button { border:0; background:none; color:var(--accent); font:inherit; font-size:15px; cursor:pointer; }
+  .iaccessory .done { margin-left:auto; font-weight:700; }
+  .stage.hidden, .aside .mac-only.hidden { display:none; }
+  @media (prefers-reduced-motion: reduce) { .toast, kbd { transition:none; } }
+</style>
+
+<header class="shellhead">
+  <h1>Listsurf M5 — Unified Editor</h1>
+  <span class="sub">Interactive prototype of <code>docs/2026-07-13-m5-unified-editor-spec.md</code> · rev 2.1 · click, type, and drag — it behaves like the spec</span>
+  <div class="platform-toggle" role="tablist">
+    <button id="tab-mac" class="on" role="tab" aria-selected="true">macOS</button>
+    <button id="tab-ios" role="tab" aria-selected="false">iOS</button>
+  </div>
+</header>
+
+<div class="stagewrap">
+  <div class="stage" id="stage-mac">
+    <div class="macwin" id="macwin">
+      <div class="titlebar"><span class="lights"><i class="r"></i><i class="y"></i><i class="g"></i></span><span class="wintitle">Listsurf</span></div>
+      <div class="menubar" id="menubar">
+        <button class="applemenu"></button>
+        <button data-menu="app">Listsurf</button>
+        <button data-menu="file">File</button>
+        <button data-menu="edit">Edit</button>
+        <button data-menu="item">Item</button>
+        <button data-menu="view">View</button>
+        <button data-menu="help">Help</button>
+      </div>
+      <div class="winbody">
+        <div class="sidebar">
+          <div class="sec">Lists</div>
+          <div class="slist">
+            <button class="cur">🌊 Maine Packing</button>
+            <button>🛒 Groceries</button>
+          </div>
+          <div class="search"><input id="sidebarSearch" placeholder="Search Lists" aria-label="Search lists"></div>
+        </div>
+        <div class="detail">
+          <div class="toolbar">
+            <button class="tbtn" id="tb-add" title="New Item (⌘N)">＋ Add</button>
+            <button class="tbtn" id="tb-actions" title="Item Actions">⋯ Actions</button>
+            <div class="seg" id="tb-filter" role="group" aria-label="Filter">
+              <button data-f="all" class="on">All</button><button data-f="remaining">Remaining</button><button data-f="completed">Completed</button>
+            </div>
+            <span class="progress" id="tb-progress">0/0</span>
+            <span class="gap"></span>
+            <button class="tbtn" id="tb-expand" title="Expand All">⤢</button>
+            <button class="tbtn" id="tb-collapse" title="Collapse All">⤡</button>
+            <button class="tbtn" id="tb-reset" title="Reset All Checks…">↺</button>
+            <button class="tbtn" id="tb-inspector" title="Inspector (⌥⌘I)">ⓘ</button>
+            <button class="tbtn" id="tb-editlist" title="Edit List (title, icon, color)">✎</button>
+          </div>
+          <div class="listtitle">Maine Packing</div>
+          <div class="editorpane">
+            <div class="outline" id="outline" tabindex="0" aria-label="Outline"></div>
+            <div class="inspector" id="inspector">
+              <div class="fld"><h4>Title</h4><div class="val" id="insp-title">—</div><div class="ro">Read-only here — rename inline (Return, ⌘E, or double-click)</div><button class="renbtn" id="insp-rename">Rename</button></div>
+              <div class="fld"><h4>Notes</h4><textarea id="insp-notes" placeholder="Add notes…"></textarea><div class="ro">Row shows a preview (line count is a Setting, as in V1)</div></div>
+              <div class="fld"><h4>Quantity</h4><span class="stepper"><button id="qty-minus" aria-label="Decrease">−</button><span class="val" id="insp-qty">1</span><button id="qty-plus" aria-label="Increase">＋</button></span></div>
+              <div class="fld"><h4>Info</h4><div class="ro" id="insp-info">—</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="stage hidden" id="stage-ios">
+    <div class="iphone">
+      <div class="statusbar"><span class="pill"></span></div>
+      <div class="inav">
+        <button class="back">‹</button>
+        <div class="icaps">
+          <button id="ios-expand" title="Expand All">⤢</button>
+          <button id="ios-collapse" title="Collapse All">⤡</button>
+          <button id="ios-reset" title="Reset All">↺</button>
+          <button id="ios-inspector" title="Details">ⓘ</button>
+          <button id="ios-editlist" title="Edit List">✎</button>
+        </div>
+      </div>
+      <div class="ititle">Maine Packing</div>
+      <div class="ifilterrow">
+        <div class="seg" id="ios-filter"><button data-f="all" class="on">All</button><button data-f="remaining">Remaining</button><button data-f="completed">Completed</button></div>
+        <span class="progress" id="ios-progress">0/0</span>
+      </div>
+      <div class="iscroll"><div class="ilist" id="ioslist"></div></div>
+      <div class="ibottom">
+        <div class="iactionbar" id="iosactions"></div>
+        <div class="iaccessory" id="iosaccessory" style="display:none">
+          <button id="ios-cancel">Cancel</button><button id="ios-acc-below">Below</button><button id="ios-acc-child">Child</button><button id="ios-acc-indent">⇥</button><button id="ios-acc-outdent">⇤</button><button id="ios-hidekb" title="Hide keyboard">⌄</button><button class="done" id="ios-done">Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="aside">
+    <div class="panel mac-only" id="legendpanel">
+      <h2>Keyboard — lights up as you type</h2>
+      <table class="keytable" id="keylegend">
+        <tr data-k="arrows"><td><kbd>↑</kbd><kbd>↓</kbd> <kbd>⇧</kbd>+</td><td class="desc">Move selection · ⇧ extends it (multi-item select)</td></tr>
+        <tr data-k="return"><td><kbd>Return</kbd></td><td class="desc">Rename selected · empty selection: new item</td></tr>
+        <tr data-k="space"><td><kbd>Space</kbd></td><td class="desc">Toggle check on selection</td></tr>
+        <tr data-k="cmdn"><td><kbd>⌘</kbd><kbd>N</kbd></td><td class="desc">New item below (browser may steal — use ⌃N or the ＋)</td></tr>
+        <tr data-k="optcmdn"><td><kbd>⌥</kbd><kbd>⌘</kbd><kbd>N</kbd></td><td class="desc">Add item above</td></tr>
+        <tr data-k="cmdreturn"><td><kbd>⌘</kbd><kbd>Return</kbd></td><td class="desc">Add child</td></tr>
+        <tr data-k="cmde"><td><kbd>⌘</kbd><kbd>E</kbd></td><td class="desc">Rename (menu twin of Return)</td></tr>
+        <tr data-k="cmdk"><td><kbd>⌘</kbd><kbd>K</kbd></td><td class="desc">Toggle checked (multi OK)</td></tr>
+        <tr data-k="tab"><td><kbd>Tab</kbd> / <kbd>⇧</kbd><kbd>Tab</kbd></td><td class="desc">Indent / outdent</td></tr>
+        <tr data-k="brackets"><td><kbd>⌘</kbd><kbd>]</kbd> <kbd>⌘</kbd><kbd>[</kbd></td><td class="desc">Indent / outdent (menu)</td></tr>
+        <tr data-k="move"><td><kbd>⌘</kbd><kbd>⌥</kbd><kbd>↑</kbd><kbd>↓</kbd></td><td class="desc">Move among siblings</td></tr>
+        <tr data-k="delete"><td><kbd>⌘</kbd><kbd>⌫</kbd></td><td class="desc">Delete (confirms)</td></tr>
+        <tr data-k="esc"><td><kbd>Esc</kbd></td><td class="desc">Cancel typing · then clear selection</td></tr>
+        <tr data-k="filters"><td><kbd>⌥</kbd><kbd>⌘</kbd><kbd>1–3</kbd></td><td class="desc">Filter All / Remaining / Completed</td></tr>
+      </table>
+    </div>
+    <div class="panel">
+      <h2>Try this (matches the acceptance gates)</h2>
+      <ol class="scen" id="scenarios">
+        <li><b>Feel check:</b> click rows rapidly — selection is instant (the app today lags ~½s; Phase 1 fixes it to this).</li>
+        <li><b>Capture run:</b> press <b>Return</b> with nothing selected → type → Return → Return… (continuation) → Esc.</li>
+        <li><b>Things flow:</b> filter <b>Remaining</b>, select the top row, hit <b>Space-Space-Space</b> — rows vanish, selection advances, ends at “All Done!”.</li>
+        <li><b>Rename:</b> select a row, press <b>Return</b> — edit in place, Esc cancels. Also ⌘E and double-click.</li>
+        <li><b>Structure:</b> Tab/⇧Tab to indent/outdent, ⌘⌥↑↓ to move. Verify they hit the <i>highlighted</i> row (the app today hits the last row).</li>
+        <li><b>Menus:</b> right-click a row vs the ⋯ button vs the Item menu — same commands, hints shown where honest.</li>
+        <li><b>Drag:</b> hover a row's text (cursor becomes grab), drag among its siblings. Multi-select first → drag refuses.</li>
+        <li><b>Checkbox anatomy:</b> parents show tri-state (orange minus = mixed) and progress; click a parent's checkbox to check its whole branch.</li>
+        <li><b>iOS:</b> the add field appears <i>at the insertion point</i>; delete confirms; ⓘ opens Details (notes + quantity); long-press a row for its menu (incl. Add Above).</li>
+      </ol>
+    </div>
+    <div class="panel">
+      <h2>Real in the app, simplified here</h2>
+      <ul class="notes">
+        <li><b>iOS touch drag</b>: committed to main 2026-07-12 (M4), passes the simulator UI test, but has <b>never been in any TestFlight build</b> — device behavior unverified. Not simulated here.</li>
+        <li><b>Swipe-to-delete</b>: in the edit-mode code and works in the simulator; <b>absent in check mode</b> and unverified on a real device — device check is an M5 Phase 2 gate item.</li>
+        <li><b>Undo</b>: the registration pipeline exists (macOS ⌘Z works); <b>iOS has no undo affordance today</b> — M5 adds a visible Undo to the iOS toolbar overflow.</li>
+        <li><b>Edit List sheet</b> (title, notes, icon, color) is real in-app; the ✎ here just explains itself.</li>
+        <li>Browser reserves a few keys (⌘N, ⇧⌘N, sometimes ⌘K/⌘[) — ⌃ (Ctrl) works as a stand-in for ⌘ everywhere here.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  'use strict';
+  /* ---------------- data ---------------- */
+  let nextId = 1;
+  const N = (title, o={}) => ({ id: nextId++, title, checked: !!o.c, expanded: true, qty: o.qty||null, note: o.note||null, children: (o.ch||[]) });
+  function sampleData(){
+    nextId = 1;
+    return [
+      N('Clothing', { ch: [
+        N('Rain jacket'),
+        N('Fleece layers', {qty:2}),
+        N('Hiking socks', {qty:4, note:'Wool — the gray ones', c:true}),
+        N('Swimsuit', {c:true}),
+      ]}),
+      N('Gear', { ch: [
+        N('Daypack'),
+        N('Water bottles', {qty:2}),
+        N('Headlamp', {note:'Pack spare batteries'}),
+        N('Binoculars', {c:true}),
+      ]}),
+      N('Food', { ch: [
+        N('Trail mix'),
+        N('Blueberry jam', {note:'Buy in Bar Harbor'}),
+      ]}),
+      N('Documents', { ch: [
+        N('Park pass', {c:true}),
+        N('Reservations', {note:'Print two copies'}),
+        N('Maps'),
+      ]}),
+    ];
+  }
+
+  /* ------------- tree helpers ------------- */
+  function walk(nodes, fn, depth=0, parent=null){ nodes.forEach(n=>{ fn(n, depth, parent); if(n.children.length) walk(n.children, fn, depth+1, n); }); }
+  function leaves(n){ if(!n.children.length) return [n]; return n.children.flatMap(leaves); }
+  function stateOf(n){
+    if(!n.children.length) return n.checked ? 'checked' : 'unchecked';
+    const ls = leaves(n); const c = ls.filter(l=>l.checked).length;
+    return c===0 ? 'unchecked' : (c===ls.length ? 'checked' : 'mixed');
+  }
+  function setSubtree(n, val){ n.checked = val; n.children.forEach(c=>setSubtree(c,val)); }
+  function findParentList(nodes, id, parent=null){
+    for(const n of nodes){ if(n.id===id) return {list:nodes, node:n, parent};
+      const r = findParentList(n.children, id, n); if(r) return r; }
+    return null;
+  }
+  function flatRows(nodes, filter){
+    const out=[];
+    (function rec(list, depth){
+      list.forEach(n=>{
+        const st = stateOf(n);
+        const visible = filter==='all' || (filter==='remaining' ? st!=='checked' : st==='checked');
+        if(visible) out.push({n, depth});
+        if(n.children.length && n.expanded) rec(n.children, depth+1);
+      });
+    })(nodes, 0);
+    return out;
+  }
+  function progressOf(nodes){ let c=0,t=0; walk(nodes,n=>{ if(!n.children.length){ t++; if(n.checked)c++; } }); return [c,t]; }
+
+  /* ------------- shared state ------------- */
+  const mac = { data: sampleData(), sel: new Set(), anchor: null, filter:'all', editing: null, adding: null, inspector:false, hoverRow: null };
+  const ios = { data: sampleData(), sel: null, filter:'all', adding: null /* {afterId, asChild} */, editing: null };
+
+  const $ = s => document.querySelector(s);
+  const outlineEl = $('#outline');
+  const toastEl = $('#toast');
+  let toastTimer;
+  function toast(msg){ toastEl.textContent = msg; toastEl.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>toastEl.classList.remove('show'), 2400); }
+  function lit(key){ const tr = document.querySelector(`#keylegend tr[data-k="${key}"]`); if(!tr) return; tr.classList.add('lit'); setTimeout(()=>tr.classList.remove('lit'), 900); }
+
+  // unchecked circle uses currentColor so it stays visible on selected (blue) rows
+  const CHECK_SVG = {
+    checked: `<svg width="100%" height="100%" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8.5" fill="var(--green)"/><path d="M6.2 10.3l2.6 2.6 5-5.4" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    unchecked: `<svg width="100%" height="100%" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>`,
+    mixed: `<svg width="100%" height="100%" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8.5" fill="var(--orange)"/><path d="M6 10h8" stroke="#fff" stroke-width="1.9" stroke-linecap="round"/></svg>`
+  };
+
+  /* ------------- macOS render ------------- */
+  function renderMac(){
+    const rows = flatRows(mac.data, mac.filter);
+    const [c,t] = progressOf(mac.data);
+    $('#tb-progress').textContent = `${c}/${t}`;
+    document.querySelectorAll('#tb-filter button').forEach(b=>b.classList.toggle('on', b.dataset.f===mac.filter));
+    outlineEl.innerHTML = '';
+
+    const anyItems = mac.data.length>0;
+    if(!rows.length && anyItems && !mac.adding){
+      const div = document.createElement('div'); div.className='allDone';
+      if(mac.filter==='remaining'){ div.innerHTML = `<div class="big">🎉</div><h3>All Done!</h3><p>Everything on this list is checked off.</p><button id="showAllBtn">Show All</button>`; }
+      else if(mac.filter==='completed'){ div.innerHTML = `<div class="big">○</div><h3>Nothing Completed Yet</h3><p>Check items off and they'll collect here.</p><button id="showAllBtn">Show All</button>`; }
+      outlineEl.appendChild(div);
+      const btn = $('#showAllBtn'); if(btn) btn.onclick = ()=>{ mac.filter='all'; renderMac(); };
+    }
+
+    rows.forEach(({n, depth})=>{
+      outlineEl.appendChild(rowEl(n, depth));
+      if(mac.adding && mac.adding.afterId===n.id) outlineEl.appendChild(addRowEl(depth + (mac.adding.asChild?1:0)));
+    });
+    if(mac.adding && mac.adding.afterId===null) outlineEl.appendChild(addRowEl(0));
+    renderInspector();
+    focusPending();
+  }
+
+  function rowEl(n, depth){
+    const st = stateOf(n);
+    const row = document.createElement('div');
+    row.className = 'row' + (mac.sel.has(n.id)?' sel':'') + (st==='checked'?' checked':'');
+    row.style.paddingLeft = (6 + depth*22) + 'px';
+    row.dataset.id = n.id;
+
+    const chev = document.createElement('button');
+    chev.className = 'chev' + (n.children.length? '':' leaf');
+    chev.textContent = n.expanded ? '▼' : '▶';
+    chev.setAttribute('aria-label', n.expanded?'Collapse':'Expand');
+    chev.onclick = e => { e.stopPropagation(); n.expanded=!n.expanded; renderMac(); };
+
+    const cbx = document.createElement('button');
+    cbx.className='cbx'; cbx.innerHTML = CHECK_SVG[st];
+    cbx.setAttribute('aria-label', (st==='checked'?'Uncheck ':'Check ') + n.title);
+    cbx.onclick = e => { e.stopPropagation(); toggleBranch(n); };
+
+    const rtext = document.createElement('div'); rtext.className='rtext';
+    if(mac.editing===n.id){
+      const inp = document.createElement('input'); inp.value = n.title; inp.dataset.focusme='1';
+      inp.onkeydown = e => {
+        if(e.key==='Enter'){ commitRename(n, inp.value); e.stopPropagation(); }
+        if(e.key==='Escape'){ mac.editing=null; renderMac(); e.stopPropagation(); }
+      };
+      inp.onblur = () => { if(mac.editing===n.id) commitRename(n, inp.value); };
+      rtext.appendChild(inp);
+    } else {
+      const t = document.createElement('div'); t.className='rtitle'; t.textContent = n.title; rtext.appendChild(t);
+      if(n.note){ const nt=document.createElement('div'); nt.className='note'; nt.textContent=n.note; rtext.appendChild(nt); }
+      // hover arms drag ONLY on the text region (spec D10)
+      rtext.addEventListener('mouseenter', ()=>{ mac.hoverRow = n.id; row.draggable = canDrag(n); row.classList.toggle('draggable-armed', row.draggable); });
+      rtext.addEventListener('mouseleave', ()=>{ mac.hoverRow = null; row.draggable = false; row.classList.remove('draggable-armed'); });
+    }
+
+    row.appendChild(chev); row.appendChild(cbx); row.appendChild(rtext);
+    if(n.qty){ const q=document.createElement('span'); q.className='meta qty'; q.textContent='×'+n.qty; row.appendChild(q); }
+    if(n.children.length){ const ls=leaves(n); const p=document.createElement('span'); p.className='prog'; p.textContent = ls.filter(l=>l.checked).length + '/' + ls.length; row.appendChild(p); }
+    const ell = document.createElement('button'); ell.className='rowbtn'; ell.textContent='⋯'; ell.title='Actions for '+n.title;
+    ell.onclick = e => { e.stopPropagation(); openItemMenu(e.currentTarget.getBoundingClientRect(), [n.id], {hints:false, selectOnAct:true}); };
+    const trash = document.createElement('button'); trash.className='rowbtn trash'; trash.textContent='🗑'; trash.title='Delete '+n.title;
+    trash.onclick = e => { e.stopPropagation(); confirmDelete([n.id]); };
+    row.appendChild(ell); row.appendChild(trash);
+
+    row.addEventListener('mousedown', e => {
+      if(e.button===2) { if(!mac.sel.has(n.id)) { mac.sel = new Set([n.id]); mac.anchor=n.id; renderMac(); } return; }
+      if(e.target.closest('button') || e.target.tagName==='INPUT') return;
+      selectRow(n.id, e);
+    });
+    // dblclick on the row (not just the title) so the first click's re-render can't eat the second click
+    row.addEventListener('dblclick', e => {
+      if(e.target.closest('button') || e.target.tagName==='INPUT') return;
+      beginRename(n.id);
+    });
+    row.addEventListener('contextmenu', e => { e.preventDefault(); openItemMenu({left:e.clientX, top:e.clientY, bottom:e.clientY}, [...(mac.sel.has(n.id)?mac.sel:[n.id])], {hints:true}); });
+
+    // drag & drop (same-parent reorder). setData is REQUIRED for Safari to allow drops.
+    row.addEventListener('dragstart', e => {
+      if(!canDrag(n)) { e.preventDefault(); return; }
+      dragState = { id:n.id }; row.classList.add('dragging');
+      e.dataTransfer.effectAllowed='move';
+      e.dataTransfer.setData('text/plain', String(n.id));
+    });
+    row.addEventListener('dragend', () => { dragState=null; clearInsLine(); row.classList.remove('dragging'); });
+    row.addEventListener('dragover', e => {
+      if(!dragState) return;
+      const src = findParentList(mac.data, dragState.id);
+      const tgt = findParentList(mac.data, n.id);
+      if(!src||!tgt||src.list!==tgt.list||n.id===dragState.id){ clearInsLine(); return; }
+      e.preventDefault();
+      e.dataTransfer.dropEffect='move';
+      const r = row.getBoundingClientRect(); const before = (e.clientY - r.top) < r.height/2;
+      showInsLine(row, before);
+    });
+    row.addEventListener('drop', e => {
+      if(!dragState) return; e.preventDefault();
+      const src = findParentList(mac.data, dragState.id);
+      const tgt = findParentList(mac.data, n.id);
+      if(!src||!tgt||src.list!==tgt.list) return;
+      const r = row.getBoundingClientRect(); const before = (e.clientY - r.top) < r.height/2;
+      const item = src.node; const list = src.list;
+      const from = list.indexOf(item); list.splice(from,1);
+      let to = list.indexOf(tgt.node) + (before?0:1);
+      list.splice(to,0,item);
+      dragState=null; clearInsLine(); renderMac();
+    });
+    return row;
+  }
+
+  function canDrag(n){
+    if(mac.editing || mac.adding) return false;
+    if(mac.filter!=='all') return false;
+    if(mac.sel.size>1 && mac.sel.has(n.id)) return false;  // B6: multi-select never lifts
+    return true;
+  }
+  let dragState = null, insLineEl = null;
+  function showInsLine(row, before){ clearInsLine(); insLineEl=document.createElement('div'); insLineEl.className='insline'; row.parentNode.insertBefore(insLineEl, before?row:row.nextSibling); }
+  function clearInsLine(){ if(insLineEl){ insLineEl.remove(); insLineEl=null; } }
+
+  function addRowEl(depth){
+    const div = document.createElement('div'); div.className='addrow'; div.style.paddingLeft = (6+depth*22+18)+'px';
+    div.innerHTML = `<span class="plus">＋</span>`;
+    const inp = document.createElement('input'); inp.placeholder = mac.adding.afterId===null&&!mac.data.length ? 'First item' : 'New item'; inp.dataset.focusme='1';
+    inp.onkeydown = e => {
+      if(e.key==='Enter'){ e.stopPropagation(); commitAdd(inp.value); }
+      if(e.key==='Escape'){ e.stopPropagation(); mac.adding=null; renderMac(); }
+    };
+    inp.onblur = () => { if(mac.adding){ if(inp.value.trim()) commitAdd(inp.value, true); else { mac.adding=null; renderMac(); } } };
+    div.appendChild(inp);
+    return div;
+  }
+  function focusPending(){ const el = outlineEl.querySelector('[data-focusme]'); if(el){ el.focus(); el.select && el.select(); } else { outlineEl.focus({preventScroll:true}); } }
+
+  /* ------------- selection ------------- */
+  function visibleIds(){ return flatRows(mac.data, mac.filter).map(r=>r.n.id); }
+  function selectRow(id, e){
+    const plain = !(e && (e.metaKey||e.ctrlKey||e.shiftKey));
+    // already the sole selection and nothing pending → skip re-render (keeps dblclick targets alive)
+    if(plain && !mac.adding && mac.sel.size===1 && mac.sel.has(id)) return;
+    dismissAddOnClickAway();
+    if(e && (e.metaKey||e.ctrlKey)){ mac.sel.has(id) ? mac.sel.delete(id) : mac.sel.add(id); mac.anchor=id; }
+    else if(e && e.shiftKey && mac.anchor!=null){
+      const ids = visibleIds(); const a=ids.indexOf(mac.anchor), b=ids.indexOf(id);
+      if(a>-1&&b>-1){ mac.sel = new Set(ids.slice(Math.min(a,b), Math.max(a,b)+1)); }
+    } else { mac.sel = new Set([id]); mac.anchor=id; }
+    renderMac();
+  }
+  function dismissAddOnClickAway(){ if(mac.adding){ const inp = outlineEl.querySelector('.addrow input'); if(inp && inp.value.trim()){ commitAdd(inp.value, true); } else { mac.adding = null; } } }
+
+  /* ------------- mutations ------------- */
+  function toggleBranch(n){
+    noteAnchorIndex();
+    const st = stateOf(n);
+    setSubtree(n, st!=='checked');
+    afterToggleAdvance();
+    renderMac();
+  }
+  function toggleSelected(){
+    if(!mac.sel.size) return;
+    noteAnchorIndex();
+    const nodes = [...mac.sel].map(id=>findParentList(mac.data,id)?.node).filter(Boolean);
+    const allChecked = nodes.every(n=>stateOf(n)==='checked');
+    nodes.forEach(n=>setSubtree(n, !allChecked));
+    afterToggleAdvance();
+    renderMac();
+  }
+  let preAdvanceIndex = 0;
+  function noteAnchorIndex(){ const ids=visibleIds(); const first=[...mac.sel].map(id=>ids.indexOf(id)).filter(i=>i>-1).sort((a,b)=>a-b)[0]; preAdvanceIndex = first==null?0:first; }
+  function afterToggleAdvance(){
+    if(mac.filter==='all' || !mac.sel.size) return;
+    const idsNow = visibleIds();
+    const stillVisible = [...mac.sel].some(id=>idsNow.includes(id));
+    if(stillVisible) return;
+    if(!idsNow.length){ mac.sel=new Set(); mac.anchor=null; return; }
+    const idx = Math.min(preAdvanceIndex, idsNow.length-1);
+    mac.sel = new Set([idsNow[Math.max(0,idx)]]); mac.anchor = idsNow[Math.max(0,idx)];
+  }
+
+  function beginRename(id){ mac.adding=null; mac.editing=id; mac.sel=new Set([id]); mac.anchor=id; renderMac(); }
+  function commitRename(n, val){ const t=val.trim(); if(t) n.title=t; mac.editing=null; renderMac(); }
+
+  function beginAdd(afterId, asChild=false){
+    if(mac.filter==='completed'){ mac.filter='all'; toast('Filter reset to All — new items start unchecked'); }
+    mac.editing=null;
+    mac.adding = { afterId, asChild };
+    renderMac();
+  }
+  function beginAddSmart(){ if(mac.sel.size===1) beginAdd([...mac.sel][0]); else beginAdd(lastVisibleRootAnchor()); }
+  function lastVisibleRootAnchor(){ const rows=flatRows(mac.data,'all'); return rows.length? rows[rows.length-1].n.id : null; }
+  function commitAdd(val, dismissAfter=false){
+    const t = val.trim();
+    if(!t){ mac.adding=null; renderMac(); return; }
+    const item = N(t);
+    if(mac.adding.afterId===null){ mac.data.push(item); mac.adding = dismissAfter? null : { afterId: item.id, asChild:false }; }
+    else {
+      const ref = findParentList(mac.data, mac.adding.afterId);
+      if(mac.adding.asChild){ ref.node.children.push(item); ref.node.expanded=true; }
+      else { ref.list.splice(ref.list.indexOf(ref.node)+1, 0, item); }
+      mac.adding = dismissAfter? null : { afterId: item.id, asChild:false };
+    }
+    mac.sel = new Set([item.id]); mac.anchor=item.id;
+    renderMac();
+  }
+  function addAbove(){
+    if(mac.sel.size!==1) return;
+    const ref = findParentList(mac.data, [...mac.sel][0]);
+    const item = N('New Item');
+    ref.list.splice(ref.list.indexOf(ref.node), 0, item);
+    mac.sel=new Set([item.id]); mac.anchor=item.id; mac.editing=item.id;
+    renderMac();
+  }
+  function indentSel(dir){
+    if(mac.sel.size!==1) return;
+    const ref = findParentList(mac.data, [...mac.sel][0]); if(!ref) return;
+    if(dir>0){
+      const i = ref.list.indexOf(ref.node); if(i===0) return;
+      const prev = ref.list[i-1]; ref.list.splice(i,1); prev.children.push(ref.node); prev.expanded=true;
+    } else {
+      if(!ref.parent) return;
+      const gp = findParentList(mac.data, ref.parent.id);
+      ref.list.splice(ref.list.indexOf(ref.node),1);
+      gp.list.splice(gp.list.indexOf(gp.node)+1, 0, ref.node);
+    }
+    renderMac();
+  }
+  function moveSel(dir){
+    if(mac.sel.size!==1) return;
+    const ref = findParentList(mac.data, [...mac.sel][0]); if(!ref) return;
+    const i = ref.list.indexOf(ref.node); const j = i+dir;
+    if(j<0||j>=ref.list.length) return;
+    ref.list.splice(i,1); ref.list.splice(j,0,ref.node);
+    renderMac();
+  }
+  function deleteIds(ids){
+    ids.forEach(id=>{ const ref=findParentList(mac.data,id); if(ref) ref.list.splice(ref.list.indexOf(ref.node),1); });
+    mac.sel=new Set(); mac.anchor=null; renderMac();
+  }
+  function resetAll(){ walk(mac.data, n=>n.checked=false); renderMac(); }
+
+  /* ------------- inspector ------------- */
+  function renderInspector(){
+    $('#inspector').classList.toggle('on', mac.inspector);
+    if(!mac.inspector) return;
+    const one = mac.sel.size===1 ? findParentList(mac.data,[...mac.sel][0])?.node : null;
+    $('#insp-title').textContent = one? one.title : (mac.sel.size>1?`${mac.sel.size} items`:'Maine Packing');
+    $('#insp-notes').value = one?.note || '';
+    $('#insp-qty').textContent = one? (one.qty||1) : '—';
+    $('#insp-info').textContent = one? 'Created Jul 13 · Modified just now' : `${progressOf(mac.data)[1]} items`;
+    $('#insp-rename').style.display = one? '':'none';
+    $('#insp-rename').onclick = ()=> one && beginRename(one.id);
+    $('#insp-notes').onchange = e => { if(one){ one.note = e.target.value.trim()||null; renderMac(); } };
+    $('#qty-minus').onclick = ()=>{ if(one){ one.qty = Math.max(1,(one.qty||1)-1); if(one.qty===1) one.qty=null; renderMac(); } };
+    $('#qty-plus').onclick = ()=>{ if(one){ one.qty = (one.qty||1)+1; renderMac(); } };
+  }
+
+  /* ------------- menus ------------- */
+  let openMenuEl=null, scrimEl=null;
+  function closeMenu(){ if(openMenuEl){openMenuEl.remove();openMenuEl=null;} if(scrimEl){scrimEl.remove();scrimEl=null;} document.querySelectorAll('.menubar > button').forEach(b=>b.classList.remove('open')); }
+  function showMenu(anchor, items){
+    closeMenu();
+    scrimEl=document.createElement('div'); scrimEl.className='scrim'; scrimEl.onmousedown=closeMenu; document.body.appendChild(scrimEl);
+    const m=document.createElement('div'); m.className='menu';
+    items.forEach(it=>{
+      if(it==='-'){ m.appendChild(document.createElement('hr')); return; }
+      const b=document.createElement('button'); b.className='mi'+(it.danger?' danger':''); b.disabled=!!it.disabled;
+      b.innerHTML = `<span class="lbl">${it.label}</span>` + (it.hint?`<span class="hint">${it.hint}</span>`:'');
+      b.onclick = ()=>{ closeMenu(); it.action && it.action(); };
+      m.appendChild(b);
+    });
+    document.body.appendChild(m);
+    const mw = m.offsetWidth, mh = m.offsetHeight;
+    let left = Math.min(anchor.left, window.innerWidth - mw - 10);
+    let top = (anchor.bottom||anchor.top) + 4;
+    if(top+mh > window.innerHeight-10) top = Math.max(10, window.innerHeight - mh - 10);
+    m.style.left=left+'px'; m.style.top=top+'px';
+    openMenuEl=m;
+  }
+  function itemMenuItems(ids, opts){
+    const hints = opts.hints;
+    const single = ids.length===1;
+    const node = single? findParentList(mac.data, ids[0])?.node : null;
+    const st = node? stateOf(node) : null;
+    const allChecked = ids.map(id=>findParentList(mac.data,id)?.node).filter(Boolean).every(n=>stateOf(n)==='checked');
+    const act = fn => () => { if(opts.selectOnAct){ mac.sel=new Set(ids); mac.anchor=ids[0]; } fn(); };
+    const H = s => hints? s : null;
+    if(!single){
+      return [
+        {label: allChecked?'Uncheck':'Check', hint:H('⌘K'), action: act(()=>{ mac.sel=new Set(ids); toggleSelected(); })},
+        '-',
+        {label:`Delete ${ids.length} Items`, hint:H('⌘⌫'), danger:true, action: act(()=>confirmDelete(ids))},
+      ];
+    }
+    return [
+      {label:'Add Below', action: act(()=>beginAdd(ids[0]))},
+      {label:'Add Above', hint:H('⌥⌘N'), action: act(()=>{ mac.sel=new Set(ids); addAbove(); })},
+      {label:'Add Child', hint:H('⌘⏎'), action: act(()=>beginAdd(ids[0], true))},
+      '-',
+      {label: st==='checked'?'Uncheck':'Check', hint:H('⌘K'), action: act(()=>toggleBranch(node))},
+      ...(node && node.children.length ? [{label:'Reset Branch…', disabled: st==='unchecked', action: act(()=>confirmResetBranch(node))}] : []),
+      '-',
+      {label:'Indent', hint:H('⌘]'), action: act(()=>{ mac.sel=new Set(ids); indentSel(1); })},
+      {label:'Outdent', hint:H('⌘['), action: act(()=>{ mac.sel=new Set(ids); indentSel(-1); })},
+      {label:'Move Up', hint:H('⌘⌥↑'), action: act(()=>{ mac.sel=new Set(ids); moveSel(-1); })},
+      {label:'Move Down', hint:H('⌘⌥↓'), action: act(()=>{ mac.sel=new Set(ids); moveSel(1); })},
+      '-',
+      {label:'Rename', hint:H('⌘E'), action: act(()=>beginRename(ids[0]))},
+      {label:'Details', action: act(()=>{ mac.sel=new Set(ids); mac.inspector=true; renderMac(); })},
+      '-',
+      {label:'Delete', hint:H('⌘⌫'), danger:true, action: act(()=>confirmDelete(ids))},
+    ];
+  }
+  function openItemMenu(anchor, ids, opts){ showMenu(anchor, itemMenuItems(ids, opts)); }
+
+  const menubarMenus = {
+    app: () => [ {label:'About Listsurf', action:()=>toast('About box — unchanged by M5')}, {label:'Settings…', hint:'⌘,', action:()=>toast('Settings — unchanged by M5 (incl. note-preview line count)')} ],
+    file: () => [ {label:'New List', hint:'⇧⌘N', action:()=>toast('New List sheet would open (⇧⌘N — remapped from ⌘N)')}, '-', {label:'Import List…', action:()=>toast('Unchanged by M5')}, {label:'Export…', action:()=>toast('Unchanged by M5')} ],
+    edit: () => [ {label:'Undo', hint:'⌘Z', disabled:true, action:null}, {label:'Redo', hint:'⇧⌘Z', disabled:true, action:null}, '-', {label:'(Undo ships in the app; not simulated here)', disabled:true} ],
+    item: () => {
+      const single = mac.sel.size===1, some = mac.sel.size>0;
+      const ids = [...mac.sel];
+      return [
+        {label:'New Item', hint:'⌘N', action:()=>beginAddSmart()},
+        {label:'Add Item Above', hint:'⌥⌘N', disabled:!single, action:()=>addAbove()},
+        {label:'Add Child', hint:'⌘⏎', disabled:!single, action:()=>beginAdd(ids[0], true)},
+        '-',
+        {label:'Rename', hint:'⌘E', disabled:!single, action:()=>beginRename(ids[0])},
+        {label:'Toggle Checked', hint:'⌘K', disabled:!some, action:()=>toggleSelected()},
+        '-',
+        {label:'Indent', hint:'⌘]', disabled:!single, action:()=>indentSel(1)},
+        {label:'Outdent', hint:'⌘[', disabled:!single, action:()=>indentSel(-1)},
+        {label:'Move Up', hint:'⌘⌥↑', disabled:!single, action:()=>moveSel(-1)},
+        {label:'Move Down', hint:'⌘⌥↓', disabled:!single, action:()=>moveSel(1)},
+        '-',
+        {label:'Reset All Checks…', action:()=>confirmResetAll()},
+        '-',
+        {label:'Delete', hint:'⌘⌫', disabled:!some, danger:true, action:()=>confirmDelete(ids)},
+      ];
+    },
+    view: () => [
+      {label:'Filter: All', hint:'⌥⌘1', action:()=>{ mac.filter='all'; renderMac(); }},
+      {label:'Filter: Remaining', hint:'⌥⌘2', action:()=>{ mac.filter='remaining'; renderMac(); }},
+      {label:'Filter: Completed', hint:'⌥⌘3', action:()=>{ mac.filter='completed'; renderMac(); }},
+      '-',
+      {label:'Toggle Inspector', hint:'⌥⌘I', action:()=>{ mac.inspector=!mac.inspector; renderMac(); }},
+      '-',
+      {label:'Expand All', action:()=>{ walk(mac.data,n=>n.expanded=true); renderMac(); }},
+      {label:'Collapse All', action:()=>{ walk(mac.data,n=>n.expanded=false); renderMac(); }},
+    ],
+    help: () => [ {label:'Listsurf Help', hint:'⌘?', action:()=>toast('Help — generated from CommandCatalog in Phase 4')} ],
+  };
+  document.querySelectorAll('.menubar > button[data-menu]').forEach(btn=>{
+    btn.onclick = () => { const r=btn.getBoundingClientRect(); btn.classList.add('open'); showMenu({left:r.left, bottom:r.bottom}, menubarMenus[btn.dataset.menu]()); };
+  });
+
+  /* ------------- confirm dialogs (Return hits the default — spec gate j) ------------- */
+  function confirmDialog({title, body, defaultLabel, onConfirm}){
+    const scrim=document.createElement('div'); scrim.className='confirm-scrim';
+    scrim.innerHTML = `<div class="confirm" role="dialog" aria-label="${title}"><h3>${title}</h3><p>${body}</p><div class="btns"><button class="cancel">Cancel</button><button class="default">${defaultLabel}</button></div></div>`;
+    document.body.appendChild(scrim);
+    const done = ok => { scrim.remove(); document.removeEventListener('keydown', keyH, true); if(ok) onConfirm(); };
+    scrim.querySelector('.cancel').onclick=()=>done(false);
+    scrim.querySelector('.default').onclick=()=>done(true);
+    function keyH(e){ if(e.key==='Enter'){ e.preventDefault(); e.stopPropagation(); done(true);} if(e.key==='Escape'){ e.preventDefault(); e.stopPropagation(); done(false);} }
+    document.addEventListener('keydown', keyH, true);
+    scrim.querySelector('.default').focus();
+  }
+  function confirmDelete(ids){ confirmDialog({title: ids.length===1?'Delete Item?':'Delete '+ids.length+' Items?', body:'Children are deleted with their parent. (One ⌘Z undoes this in the app.)', defaultLabel:'Delete', onConfirm:()=>deleteIds(ids)}); }
+  function confirmResetAll(){ confirmDialog({title:'Reset All Checks?', body:'Every checked item in this list will be unchecked.', defaultLabel:'Reset All', onConfirm:resetAll}); }
+  function confirmResetBranch(n){ confirmDialog({title:'Reset Branch?', body:`Every checked item under “${n.title}” will be unchecked.`, defaultLabel:'Reset Branch', onConfirm:()=>{ setSubtree(n,false); renderMac(); }}); }
+
+  /* ------------- toolbar ------------- */
+  $('#tb-add').onclick = ()=>beginAddSmart();
+  $('#tb-actions').onclick = e => { const ids=[...mac.sel]; if(!ids.length){ toast('Select an item first'); return; } openItemMenu(e.currentTarget.getBoundingClientRect(), ids, {hints:true}); };
+  document.querySelectorAll('#tb-filter button').forEach(b=> b.onclick=()=>{ mac.filter=b.dataset.f; renderMac(); });
+  $('#tb-expand').onclick = ()=>{ walk(mac.data,n=>n.expanded=true); renderMac(); };
+  $('#tb-collapse').onclick = ()=>{ walk(mac.data,n=>n.expanded=false); renderMac(); };
+  $('#tb-reset').onclick = ()=>confirmResetAll();
+  $('#tb-inspector').onclick = ()=>{ mac.inspector=!mac.inspector; renderMac(); };
+  $('#tb-editlist').onclick = ()=>toast('Edit List sheet — title, notes, icon, color (real in the app, unchanged by M5)');
+  outlineEl.addEventListener('mousedown', e => { if(e.target===outlineEl){ dismissAddOnClickAway(); mac.sel=new Set(); mac.anchor=null; renderMac(); } });
+  outlineEl.addEventListener('contextmenu', e => {
+    if(e.target!==outlineEl) return; e.preventDefault();
+    showMenu({left:e.clientX, top:e.clientY, bottom:e.clientY}, [
+      {label:'Add Item', action:()=>beginAdd(lastVisibleRootAnchor())}, '-',
+      {label:'Expand All', action:()=>{walk(mac.data,n=>n.expanded=true);renderMac();}},
+      {label:'Collapse All', action:()=>{walk(mac.data,n=>n.expanded=false);renderMac();}},
+    ]);
+  });
+
+  /* ------------- keyboard ------------- */
+  document.addEventListener('keydown', e => {
+    if($('#stage-mac').classList.contains('hidden')) return;
+    const inField = e.target.tagName==='INPUT' || e.target.tagName==='TEXTAREA';
+    const cmd = e.metaKey || e.ctrlKey;
+    if(inField) return; // fields own their keys
+    const ids = visibleIds();
+    const selArr = [...mac.sel];
+    const curIdx = mac.anchor!=null ? ids.indexOf(mac.anchor) : -1;
+
+    if(cmd && e.altKey && ['Digit1','Digit2','Digit3'].includes(e.code)){
+      e.preventDefault(); lit('filters');
+      mac.filter = {Digit1:'all',Digit2:'remaining',Digit3:'completed'}[e.code]; renderMac(); return;
+    }
+    if(cmd && e.altKey && (e.key==='ArrowUp'||e.key==='ArrowDown')){ e.preventDefault(); lit('move'); moveSel(e.key==='ArrowUp'?-1:1); return; }
+    if(cmd && e.altKey && (e.code==='KeyN')){ e.preventDefault(); lit('optcmdn'); addAbove(); return; }
+    if(cmd && e.altKey && (e.code==='KeyI')){ e.preventDefault(); mac.inspector=!mac.inspector; renderMac(); return; }
+    if(cmd && e.shiftKey && e.code==='KeyN'){ e.preventDefault(); toast('New List sheet would open (⇧⌘N)'); return; }
+    if(cmd){
+      switch(e.code){
+        case 'KeyN': e.preventDefault(); lit('cmdn'); beginAddSmart(); return;
+        case 'KeyE': e.preventDefault(); lit('cmde'); if(mac.sel.size===1) beginRename(selArr[0]); return;
+        case 'KeyK': e.preventDefault(); lit('cmdk'); if(mac.sel.size) toggleSelected(); return;
+        case 'BracketRight': e.preventDefault(); lit('brackets'); indentSel(1); return;
+        case 'BracketLeft': e.preventDefault(); lit('brackets'); indentSel(-1); return;
+        case 'Backspace': e.preventDefault(); lit('delete'); if(mac.sel.size) confirmDelete(selArr); return;
+        case 'Enter': e.preventDefault(); lit('cmdreturn'); if(mac.sel.size===1) beginAdd(selArr[0], true); return;
+      }
+      return;
+    }
+    switch(e.key){
+      case 'ArrowDown': case 'ArrowUp': {
+        e.preventDefault(); lit('arrows');
+        if(!ids.length) return;
+        let next = e.key==='ArrowDown' ? Math.min(curIdx+1, ids.length-1) : Math.max(curIdx-1, 0);
+        if(curIdx===-1) next = e.key==='ArrowDown'?0:ids.length-1;
+        if(e.shiftKey && mac.anchor!=null){
+          mac.sel.add(ids[next]); mac.anchor=ids[next];
+        } else { mac.sel=new Set([ids[next]]); mac.anchor=ids[next]; }
+        renderMac(); return;
+      }
+      case 'Enter': {
+        e.preventDefault(); lit('return');
+        if(mac.sel.size===1) beginRename(selArr[0]);
+        else if(mac.sel.size===0) beginAdd(lastVisibleRootAnchor());
+        return;
+      }
+      case ' ': {
+        if(!mac.sel.size) return;
+        e.preventDefault(); lit('space'); toggleSelected(); return;
+      }
+      case 'Tab': {
+        e.preventDefault(); lit('tab'); indentSel(e.shiftKey?-1:1); return;
+      }
+      case 'Escape': {
+        lit('esc');
+        if(mac.sel.size){ mac.sel=new Set(); mac.anchor=null; renderMac(); }
+        return;
+      }
+    }
+  });
+
+  /* ---------------- iOS ---------------- */
+  const ioslist = $('#ioslist');
+  function iosFindSel(){ return ios.sel? findParentList(ios.data, ios.sel) : null; }
+  function renderIOS(){
+    const rows = flatRows(ios.data, ios.filter);
+    const [c,t] = progressOf(ios.data);
+    $('#ios-progress').textContent = `${c}/${t}`;
+    document.querySelectorAll('#ios-filter button').forEach(b=>b.classList.toggle('on', b.dataset.f===ios.filter));
+    ioslist.innerHTML='';
+    if(!rows.length && ios.data.length && !ios.adding){
+      const d=document.createElement('div'); d.className='allDone';
+      d.innerHTML = ios.filter==='remaining' ? `<div class="big">🎉</div><h3>All Done!</h3><button id="iosShowAll">Show All</button>` : `<div class="big">○</div><h3>Nothing Completed Yet</h3><button id="iosShowAll">Show All</button>`;
+      ioslist.appendChild(d);
+      const b=$('#iosShowAll'); if(b) b.onclick=()=>{ ios.filter='all'; renderIOS(); };
+    }
+    rows.forEach(({n,depth})=>{
+      ioslist.appendChild(iosRowEl(n, depth));
+      if(ios.adding && ios.adding.afterId===n.id) ioslist.appendChild(iosAddRow(depth + (ios.adding.asChild?1:0)));
+    });
+    if(ios.adding && ios.adding.afterId===null) ioslist.appendChild(iosAddRow(0));
+    syncIOSChrome();
+    const f = ioslist.querySelector('[data-focusme]'); if(f){ f.focus(); f.select && f.select(); }
+  }
+  function iosRowEl(n, depth){
+    const st = stateOf(n);
+    const row=document.createElement('div');
+    row.className='irow'+(ios.sel===n.id?' sel':'')+(st==='checked'?' checked':'');
+    row.style.paddingLeft = (8+depth*20)+'px';
+    const chev=document.createElement('button'); chev.className='chev'+(n.children.length?'':' leaf'); chev.textContent=n.expanded?'▼':'▶';
+    chev.onclick=e=>{e.stopPropagation(); n.expanded=!n.expanded; renderIOS();};
+    const cbx=document.createElement('button'); cbx.className='cbx'; cbx.innerHTML=CHECK_SVG[st];
+    cbx.setAttribute('aria-label',(st==='checked'?'Uncheck ':'Check ')+n.title);
+    cbx.onclick=e=>{e.stopPropagation(); setSubtree(n, st!=='checked'); renderIOS();};
+    const rtext=document.createElement('div'); rtext.className='rtext';
+    if(ios.editing===n.id){
+      const inp=document.createElement('input'); inp.value=n.title; inp.dataset.focusme='1';
+      inp.onkeydown=e=>{ if(e.key==='Enter'){ const t=inp.value.trim(); if(t) n.title=t; ios.editing=null; renderIOS(); } if(e.key==='Escape'){ ios.editing=null; renderIOS(); } };
+      inp.onblur=()=>{ if(ios.editing===n.id){ const t=inp.value.trim(); if(t) n.title=t; ios.editing=null; renderIOS(); } };
+      rtext.appendChild(inp);
+    } else {
+      const tt=document.createElement('div'); tt.className='rtitle'; tt.textContent=n.title; rtext.appendChild(tt);
+      if(n.note){const nt=document.createElement('div'); nt.className='note'; nt.textContent=n.note; rtext.appendChild(nt);}
+    }
+    row.appendChild(chev); row.appendChild(cbx); row.appendChild(rtext);
+    if(n.qty){const q=document.createElement('span'); q.className='meta qty'; q.textContent='×'+n.qty; row.appendChild(q);}
+    if(n.children.length){const ls=leaves(n); const p=document.createElement('span'); p.className='prog'; p.textContent=ls.filter(l=>l.checked).length+'/'+ls.length; row.appendChild(p);}
+    const ell=document.createElement('button'); ell.className='rowbtn'; ell.textContent='⋯';
+    ell.onclick=e=>{e.stopPropagation(); ios.sel=n.id; renderIOS(); openIOSMenu(e.currentTarget.getBoundingClientRect(), n);};
+    const trash=document.createElement('button'); trash.className='rowbtn trash'; trash.textContent='🗑';
+    trash.onclick=e=>{e.stopPropagation(); iosConfirmDelete(n);};
+    row.appendChild(ell); row.appendChild(trash);
+    row.onclick=()=>{ if(ios.editing) return; ios.sel = ios.sel===n.id? null : n.id; ios.adding=null; renderIOS(); };
+    // long-press → context menu; any movement cancels (scroll must not trigger it)
+    let lp=null;
+    row.addEventListener('pointerdown', e=>{ lp=setTimeout(()=>{ lp=null; openIOSMenu({left:e.clientX, top:e.clientY, bottom:e.clientY}, n); }, 550); });
+    ['pointerup','pointerleave','pointermove','pointercancel'].forEach(ev=> row.addEventListener(ev, ()=>{ if(lp){ clearTimeout(lp); lp=null; } }));
+    return row;
+  }
+  function iosAddRow(depth){
+    const div=document.createElement('div'); div.className='iadd'; div.style.paddingLeft=(8+depth*20)+'px';
+    div.innerHTML=`<span class="plus">＋</span>`;
+    const inp=document.createElement('input'); inp.placeholder='New item'; inp.dataset.focusme='1';
+    inp.onkeydown=e=>{ if(e.key==='Enter') iosCommitAdd(inp.value); if(e.key==='Escape'){ ios.adding=null; renderIOS(); } };
+    div.appendChild(inp);
+    return div;
+  }
+  function iosCommitAdd(val, dismissAfter=false){
+    const t=(val||'').trim();
+    if(!t){ ios.adding=null; renderIOS(); return; }
+    const item=N(t);
+    if(ios.adding.afterId===null){ ios.data.push(item); }
+    else {
+      const ref=findParentList(ios.data, ios.adding.afterId);
+      if(ios.adding.asChild){ ref.node.children.push(item); ref.node.expanded=true; }
+      else ref.list.splice(ref.list.indexOf(ref.node)+1,0,item);
+    }
+    ios.sel=item.id;
+    ios.adding = dismissAfter? null : { afterId:item.id, asChild:false };
+    renderIOS();
+  }
+  function startIOSAdd(asChild=false){
+    if(ios.filter==='completed'){ ios.filter='all'; toast('Filter reset to All — new items start unchecked'); }
+    ios.editing=null;
+    ios.adding={ afterId: ios.sel || iosLastRootAnchor(), asChild };
+    renderIOS();
+  }
+  function iosLastRootAnchor(){ const rows=flatRows(ios.data,'all'); return rows.length? rows[rows.length-1].n.id : null; }
+  function iosAddAbove(n){
+    const ref=findParentList(ios.data, n.id);
+    const item=N('New Item');
+    ref.list.splice(ref.list.indexOf(ref.node),0,item);
+    ios.sel=item.id; ios.editing=item.id;
+    renderIOS();
+  }
+  function iosConfirmDelete(n){
+    confirmDialog({title:'Delete Item?', body:`“${n.title}”${n.children.length?' and its children':''} will be deleted. (Swipe-to-delete also works in the app; one undo step.)`, defaultLabel:'Delete', onConfirm:()=>{
+      const ref=findParentList(ios.data,n.id); ref.list.splice(ref.list.indexOf(ref.node),1);
+      if(ios.sel===n.id) ios.sel=null; renderIOS();
+    }});
+  }
+  function openIOSMenu(anchor, n){
+    const st=stateOf(n);
+    showMenu(anchor, [
+      {label:'Add Below', action:()=>{ ios.sel=n.id; startIOSAdd(); }},
+      {label:'Add Above', action:()=>iosAddAbove(n)},
+      {label:'Add Child', action:()=>{ ios.sel=n.id; startIOSAdd(true); }},
+      '-',
+      {label: st==='checked'?'Uncheck':'Check', action:()=>{ setSubtree(n, st!=='checked'); renderIOS(); }},
+      {label:'Rename', action:()=>{ ios.sel=n.id; ios.editing=n.id; renderIOS(); }},
+      {label:'Details', action:()=>{ ios.sel=n.id; renderIOS(); openIOSDetails(n); }},
+      '-',
+      {label:'Delete', danger:true, action:()=>iosConfirmDelete(n)},
+    ]);
+  }
+  function openIOSDetails(n){
+    const scrim=document.createElement('div'); scrim.className='sheet-scrim';
+    scrim.innerHTML = `<div class="sheet" role="dialog" aria-label="Details">
+      <h3>Details</h3>
+      <div class="fld"><h4>Title</h4><div class="val">${n.title}</div><div class="ro">Read-only here — rename from the row menu</div></div>
+      <div class="fld"><h4>Notes</h4><textarea id="ios-d-notes" placeholder="Add notes…">${n.note||''}</textarea></div>
+      <div class="fld"><h4>Quantity</h4><span class="stepper"><button id="ios-d-minus">−</button><span class="val" id="ios-d-qty">${n.qty||1}</span><button id="ios-d-plus">＋</button></span></div>
+      <div class="btns"><button id="ios-d-done">Done</button></div>
+    </div>`;
+    document.body.appendChild(scrim);
+    scrim.querySelector('#ios-d-minus').onclick=()=>{ n.qty=Math.max(1,(n.qty||1)-1); if(n.qty===1)n.qty=null; scrim.querySelector('#ios-d-qty').textContent=n.qty||1; };
+    scrim.querySelector('#ios-d-plus').onclick=()=>{ n.qty=(n.qty||1)+1; scrim.querySelector('#ios-d-qty').textContent=n.qty; };
+    scrim.querySelector('#ios-d-done').onclick=()=>{ n.note=scrim.querySelector('#ios-d-notes').value.trim()||null; scrim.remove(); renderIOS(); };
+    scrim.onclick=e=>{ if(e.target===scrim){ n.note=scrim.querySelector('#ios-d-notes').value.trim()||null; scrim.remove(); renderIOS(); } };
+  }
+  function syncIOSChrome(){
+    $('#iosaccessory').style.display = ios.adding? '' : 'none';
+    const bar=$('#iosactions'); bar.innerHTML='';
+    if(!ios.adding){
+      if(ios.sel){
+        const selref=iosFindSel();
+        [['＋ Below',()=>startIOSAdd()],['↑ Above',()=>selref&&iosAddAbove(selref.node)],['↳ Child',()=>startIOSAdd(true)],['⇥',()=>iosIndent(1)],['⇤',()=>iosIndent(-1)]].forEach(([l,f])=>{ const b=document.createElement('button'); b.textContent=l; b.onclick=f; bar.appendChild(b); });
+      } else {
+        const b=document.createElement('button'); b.textContent='＋ Add Item'; b.onclick=()=>startIOSAdd(); bar.appendChild(b);
+      }
+    }
+  }
+  function iosIndent(dir){
+    if(!ios.sel) return;
+    const ref=findParentList(ios.data, ios.sel); if(!ref) return;
+    if(dir>0){ const i=ref.list.indexOf(ref.node); if(i===0) return; const prev=ref.list[i-1]; ref.list.splice(i,1); prev.children.push(ref.node); prev.expanded=true; }
+    else { if(!ref.parent) return; const gp=findParentList(ios.data, ref.parent.id); ref.list.splice(ref.list.indexOf(ref.node),1); gp.list.splice(gp.list.indexOf(gp.node)+1,0,ref.node); }
+    renderIOS();
+  }
+  $('#ios-cancel').onclick=()=>{ ios.adding=null; renderIOS(); };
+  $('#ios-done').onclick=()=>{ const inp=ioslist.querySelector('.iadd input'); if(inp&&inp.value.trim()) iosCommitAdd(inp.value, true); else { ios.adding=null; renderIOS(); } };
+  $('#ios-acc-below').onclick=()=>{ ios.adding && (ios.adding.asChild=false, renderIOS()); };
+  $('#ios-acc-child').onclick=()=>{ ios.adding && (ios.adding.asChild=true, renderIOS()); };
+  $('#ios-acc-indent').onclick=()=>toast('Indent applies to the committed item (accessory bar, unchanged by M5)');
+  $('#ios-acc-outdent').onclick=()=>toast('Outdent applies to the committed item (accessory bar, unchanged by M5)');
+  $('#ios-hidekb').onclick=()=>{ const inp=ioslist.querySelector('.iadd input'); if(inp) inp.blur(); toast('Keyboard hidden — add flow stays armed (new ⌄ affordance, spec §1.6)'); };
+  document.querySelectorAll('#ios-filter button').forEach(b=> b.onclick=()=>{ ios.filter=b.dataset.f; renderIOS(); });
+  $('#ios-reset').onclick=()=>{ confirmDialog({title:'Reset All Checks?', body:'Every checked item in this list will be unchecked.', defaultLabel:'Reset All', onConfirm:()=>{ walk(ios.data,n=>n.checked=false); renderIOS(); }}); };
+  $('#ios-expand').onclick=()=>{ walk(ios.data,n=>n.expanded=true); renderIOS(); };
+  $('#ios-collapse').onclick=()=>{ walk(ios.data,n=>n.expanded=false); renderIOS(); };
+  $('#ios-inspector').onclick=()=>{ const ref=iosFindSel(); if(ref) openIOSDetails(ref.node); else toast('Select an item first — Details holds notes and quantity'); };
+  $('#ios-editlist').onclick=()=>toast('Edit List sheet — title, notes, icon, color (real in the app, unchanged by M5)');
+
+  /* ------------- platform toggle ------------- */
+  $('#tab-mac').onclick=()=>{ setTab('mac'); };
+  $('#tab-ios').onclick=()=>{ setTab('ios'); };
+  function setTab(which){
+    $('#stage-mac').classList.toggle('hidden', which!=='mac');
+    $('#stage-ios').classList.toggle('hidden', which!=='ios');
+    $('#tab-mac').classList.toggle('on', which==='mac');
+    $('#tab-ios').classList.toggle('on', which==='ios');
+    $('#legendpanel').classList.toggle('hidden', which!=='mac');
+    if(which==='ios') renderIOS();
+  }
+
+  renderMac();
+})();
+</script>

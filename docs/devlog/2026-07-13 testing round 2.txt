@@ -1,0 +1,2 @@
+MacOS testing 2026-07-13 20:01
+- cmd-K should work also on multi-line select

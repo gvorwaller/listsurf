@@ -1,0 +1,29 @@
+iOS
+- need delete confirmation modal on delete items, or, slide left to show delete
+- the bottom 'below/child,...' needs to stay visible at the bottom and not scroll
+- why do add below / child not have a line at the position they will be, instead of at the bottom?  This is a major deal for intuitive editing.
+- press and drag doesn't work at all
+- there's no way to add a line above the first line item;  this also is a weakness of CarbonFin (I see that the Mac app has add above)
+- need 'undo' for delete (or last destructive action) (lower priority, or, comment on this so I understand)
+- edit pen has no visible action; 
+- the instructions say 'return' etc., but no k/b is available to do that
+- 'rename' doesn't do anything
+- no place to add notes or counts 
+- context menu shows up at random touches anywhere on screen
+- press and hold should allow drag, and/or should pop up edit for the item
+- I like with CarbonFin that there is a kb icon that hides the kb when it's used
+- need collapse all / expand all 
+
+
+Since iOS docs / context notes show keyboard commands, there should be some prominent notation that "this is only if you have a bluetooth kb attached"
+
+(I think a few of these are for future stages, as a note says;  but is this spec not for a complete refactor, so all that should be included in the spec (or, did I miss it? honestly did not review carefully))
+
+MacOS
+- add above first item, does not show checkoff circle immediately after add.  navigate away, and it shows up
+- Notes- 'return' doesn't save as new lines in the note display on screen (should be scrollable variable lines, as in V1)
+- 'edit' pen doesn't do anything
+- drag will pick up, but not drop (I think that is listed as an exception for the prototype)
+- move/extend selection - to me this is ambiguous - should say something like multi-item select 
+- 'quantity' - not editable
+- double click on an item should make it editable (or, comment "why not")
