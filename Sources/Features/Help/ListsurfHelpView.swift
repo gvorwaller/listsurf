@@ -114,13 +114,14 @@ struct ListsurfHelpView: View {
                 }
 
                 HelpSection(
-                    title: "Check mode",
+                    title: "Checking off items",
                     systemImage: "checkmark.circle",
                     items: [
-                        HelpItem("Toggle Check Mode", "Switches from editing the outline to checking items off. On Mac: Shift-Command-E."),
-                        HelpItem("Parent items", "Parents summarize child progress so a nested checklist is easier to scan."),
-                        HelpItem("Filters", "Show all, only unchecked, or only checked items."),
-                        HelpItem("Back to Edit", "Use the mode button again to return to outline editing.")
+                        HelpItem("Checkbox", "Tap or click the circle beside a title to check or uncheck it. Checking a parent checks its whole branch."),
+                        HelpItem("Parent items", "Parents summarize child progress (a dash means some but not all children are checked) so a nested checklist is easier to scan."),
+                        HelpItem("Filters", "Show All, Remaining, or Completed items. New items always start unchecked, so adding one while Completed is filtered switches back to All."),
+                        HelpItem("Reset All Checks", "Unchecks every item in the list, after confirmation."),
+                        HelpItem("Reset Branch", "From an item's menu: unchecks that item and all of its children, after confirmation.")
                     ]
                 )
 
@@ -137,7 +138,6 @@ struct ListsurfHelpView: View {
                         HelpItem("Double-click", "Renames the item in place. Escape cancels; clicking elsewhere commits."),
                         HelpItem("Command-Delete", "Deletes the selected items after confirmation."),
                         HelpItem("Command-Z / Shift-Command-Z", "Undo and redo any edit, including checks."),
-                        HelpItem("Shift-Command-E", "Toggles Check Mode."),
                         HelpItem("Option-Command-I", "Toggles the inspector."),
                         HelpItem("Command-N", "Creates a new list."),
                         HelpItem("Command-Comma", "Opens Settings.")

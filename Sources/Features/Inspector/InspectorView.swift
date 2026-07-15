@@ -22,8 +22,11 @@ struct InspectorView: View {
     private func itemInspector(_ item: OutlineItem) -> some View {
         Form {
             Section("Title") {
-                TextField("Title", text: titleBinding(item), axis: .vertical)
-                    .lineLimit(1...3)
+                LabeledContent("Title", value: item.title)
+                Button("Rename") {
+                    store.beginEditing(itemID: item.id)
+                }
+                .accessibilityIdentifier("inspector.renameItem")
             }
 
             Section("Notes") {
@@ -79,15 +82,6 @@ struct InspectorView: View {
             }
         }
         .formStyle(.grouped)
-    }
-
-    private func titleBinding(_ item: OutlineItem) -> Binding<String> {
-        Binding(
-            get: { item.title },
-            set: { newValue in
-                store.updateItemTitle(id: item.id, title: newValue, undoManager: undoManager)
-            }
-        )
     }
 
     private func notesBinding(_ item: OutlineItem) -> Binding<String> {

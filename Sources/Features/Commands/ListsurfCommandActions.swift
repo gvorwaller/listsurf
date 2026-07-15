@@ -17,7 +17,6 @@ struct ListsurfListCommandActions {
     var moveUp: (@MainActor () -> Void)?
     var moveDown: (@MainActor () -> Void)?
     var delete: (@MainActor () -> Void)?
-    var toggleCheckMode: (@MainActor () -> Void)?
     var toggleInspector: (@MainActor () -> Void)?
     var expandAll: (@MainActor () -> Void)?
     var collapseAll: (@MainActor () -> Void)?

@@ -89,6 +89,37 @@ struct ItemActionsMenu: View {
             }
 
             Divider()
+
+            Button {
+                store.toggleChecked(ids: [id], undoManager: undoManager)
+            } label: {
+                Label(
+                    store.wouldCheck(ids: [id]) ? "Check" : "Uncheck",
+                    systemImage: store.wouldCheck(ids: [id]) ? "checkmark.circle" : "circle"
+                )
+            }
+
+            if store.resolvedRow(for: id)?.hasChildren == true {
+                Button {
+                    store.pendingBranchResetID = id
+                } label: {
+                    Label("Reset Branch…", systemImage: "arrow.counterclockwise")
+                }
+                .disabled(store.resolvedRow(for: id)?.checkState == .unchecked)
+            }
+
+            Divider()
+        } else if itemIDs.count > 1 {
+            Button {
+                store.toggleChecked(ids: itemIDs, undoManager: undoManager)
+            } label: {
+                Label(
+                    store.wouldCheck(ids: itemIDs) ? "Check" : "Uncheck",
+                    systemImage: store.wouldCheck(ids: itemIDs) ? "checkmark.circle" : "circle"
+                )
+            }
+
+            Divider()
         }
 
         if !itemIDs.isEmpty {

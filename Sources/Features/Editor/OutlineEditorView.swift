@@ -1,5 +1,6 @@
 import SwiftUI
 import Domain
+import Platform
 
 struct OutlineEditorView: View {
     @Bindable var store: ListStore
@@ -78,7 +79,7 @@ struct OutlineEditorView: View {
     private var editorContent: some View {
         Group {
             if store.filteredRows.isEmpty && store.addPlacement == nil && store.searchText.isEmpty {
-                emptyState
+                filteredEmptyState
             } else if store.filteredRows.isEmpty && store.addPlacement == nil {
                 ContentUnavailableView.search(text: store.searchText)
             } else {
@@ -137,6 +138,21 @@ struct OutlineEditorView: View {
         }
     }
 
+    /// Filter-aware replacement for the mode-switch (spec §1.4): with items
+    /// on the list but none visible under the active filter, the empty state
+    /// explains why and offers a way back to All rather than looking like an
+    /// empty list.
+    @ViewBuilder
+    private var filteredEmptyState: some View {
+        if store.checkFilter == .remaining, !store.items.isEmpty {
+            allDoneState
+        } else if store.checkFilter == .completed, !store.items.isEmpty {
+            noCompletedState
+        } else {
+            emptyState
+        }
+    }
+
     private var emptyState: some View {
         ContentUnavailableView {
             Label("No Items", systemImage: "text.badge.plus")
@@ -148,6 +164,32 @@ struct OutlineEditorView: View {
             }
             .buttonStyle(.borderedProminent)
             .accessibilityIdentifier("editor.addFirstItem")
+        }
+    }
+
+    /// Carried from `CheckModeView.swift:46-58` (M5 unification).
+    private var allDoneState: some View {
+        let p = store.progress
+        return ContentUnavailableView {
+            Label("All Done!", systemImage: "checkmark.circle.fill")
+        } description: {
+            Text("\(p.checked)/\(p.total) items checked")
+        } actions: {
+            Button("Show All") {
+                store.checkFilter = .all
+            }
+            .buttonStyle(.borderedProminent)
+        }
+    }
+
+    private var noCompletedState: some View {
+        ContentUnavailableView {
+            Label("No Completed Items", systemImage: "circle")
+        } actions: {
+            Button("Show All") {
+                store.checkFilter = .all
+            }
+            .buttonStyle(.borderedProminent)
         }
     }
 
@@ -197,11 +239,12 @@ struct OutlineEditorView: View {
     }
 
     /// B6 fix (spec §2): the drag gate terms, all editor-computed so trait
-    /// changes re-diff correctly (Rev 2.4). Phase 1 intentionally omits the
-    /// filter term (`checkFilter != .all`) — filters are check-mode-only
-    /// today and that term belongs to Phase 2.
+    /// changes re-diff correctly (Rev 2.4). Phase 2 adds the filter term
+    /// (`checkFilter != .all`): filtered rows are a non-contiguous excerpt
+    /// of true sibling order, same rationale as the search guard.
     private func dragBlocked(_ row: FlatRow) -> Bool {
         if store.isTextInputActive || !store.searchText.isEmpty { return true }
+        if store.checkFilter != .all { return true }
         if rowInMultiSelection(row) { return true }
         return false
     }
@@ -219,6 +262,10 @@ struct OutlineEditorView: View {
                 editingText: store.editingItemID == row.id ? $editingText : .constant(""),
                 focus: $focus,
                 onToggleExpand: { store.toggleExpanded(row.id) },
+                onToggleCheck: {
+                    store.toggleCheck(itemID: row.id, undoManager: undoManager)
+                    Haptics.checkToggle()
+                },
                 onCommitEdit: { commitEdit(row.id) },
                 onCancelEdit: {
                     editingText = ""
@@ -254,7 +301,11 @@ struct OutlineEditorView: View {
             .accessibilityIdentifier("editor.deleteItem")
         }
         .contentShape(Rectangle())
-        .modifier(RowSelectionTapModifier(rowID: row.id, onSelect: selectRow(_:)))
+        .modifier(RowSelectionTapModifier(
+            rowID: row.id,
+            onSelect: selectRow(_:),
+            onDoubleTap: showDetails(itemID:)
+        ))
     }
 
     #if os(iOS)
@@ -559,15 +610,31 @@ private struct OutlineContextMenuModifier: ViewModifier {
 
 /// iOS selects by row tap (List selection outside edit mode is a macOS
 /// affordance); macOS relies on native List selection and adds nothing.
+///
+/// Double-tap opens Details (Rev 2.5, spec §1.6, td-ee5174). The double-tap
+/// gesture is attached with `.simultaneousGesture` rather than a second
+/// `.onTapGesture(count: 2)` — two competing `.gesture` recognizers of
+/// different counts force SwiftUI to wait for the higher count to fail
+/// before firing the lower one, delaying every single tap. Simultaneous
+/// gestures recognize independently: the single-tap handler still fires the
+/// instant one tap completes, and a fast second tap additionally fires the
+/// double-tap handler.
 private struct RowSelectionTapModifier: ViewModifier {
     let rowID: UUID
     let onSelect: (UUID) -> Void
+    let onDoubleTap: (UUID) -> Void
 
     func body(content: Content) -> some View {
         #if os(iOS)
-        content.onTapGesture {
-            onSelect(rowID)
-        }
+        content
+            .onTapGesture {
+                onSelect(rowID)
+            }
+            .simultaneousGesture(
+                TapGesture(count: 2).onEnded {
+                    onDoubleTap(rowID)
+                }
+            )
         #else
         content
         #endif

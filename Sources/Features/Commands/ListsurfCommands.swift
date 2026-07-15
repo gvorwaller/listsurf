@@ -101,12 +101,6 @@ public struct ListsurfCommands: Commands {
         }
 
         CommandMenu("View") {
-            Button("Toggle Check Mode") {
-                listCommands?.toggleCheckMode?()
-            }
-            .keyboardShortcut("e", modifiers: [.command, .shift])
-            .disabled(listCommands?.toggleCheckMode == nil)
-
             Button("Toggle Inspector") {
                 listCommands?.toggleInspector?()
             }

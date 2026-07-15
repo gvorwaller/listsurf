@@ -16,16 +16,41 @@ final class Listsurf_iOSUITests: XCTestCase {
         let itemField = app.textFields["editor.newItem"]
         XCTAssertTrue(itemField.waitForExistence(timeout: 5))
         itemField.typeText("Passport\n")
-        XCTAssertTrue(app.staticTexts["Passport"].waitForExistence(timeout: 5))
+        let passport = app.staticTexts["Passport"]
+        XCTAssertTrue(passport.waitForExistence(timeout: 5))
 
-        let modeButton = app.buttons["detail.toggleMode"]
-        XCTAssertTrue(modeButton.waitForExistence(timeout: 5))
-        modeButton.tap()
+        // Committing with Return re-arms the add flow; tapping the row is
+        // the click-away dismissal (same pattern as the drag tests) before
+        // the checkbox button can be reached directly.
+        passport.tap()
 
         let checkButton = app.buttons["Check Passport"]
         XCTAssertTrue(checkButton.waitForExistence(timeout: 5))
         checkButton.tap()
         XCTAssertTrue(app.buttons["Uncheck Passport"].waitForExistence(timeout: 5))
+    }
+
+    /// Rev 2.5 (td-ee5174): double-tap a row opens Details without delaying
+    /// single-tap selection. Verifies both halves of that contract in one
+    /// pass — a lone tap must show the action bar promptly, and a fast
+    /// second tap must open the inspector sheet.
+    @MainActor func testDoubleTapOpensDetails() {
+        continueAfterFailure = false
+        let app = launchApp(store: "ios-double-tap-details", reset: true)
+        createList(named: "Double Tap List", in: app)
+        addItem(named: "Passport", in: app)
+
+        let passport = app.staticTexts["Passport"]
+        XCTAssertTrue(passport.waitForExistence(timeout: 5))
+
+        // Single tap: selection (and the action bar it drives) must appear
+        // promptly — not gated behind a double-tap-failure timeout.
+        passport.tap()
+        XCTAssertTrue(app.buttons["editor.ios.details"].waitForExistence(timeout: 1.5))
+
+        // Double tap: opens Details directly.
+        passport.doubleTap()
+        XCTAssertTrue(app.buttons["inspector.renameItem"].waitForExistence(timeout: 5))
     }
 
     @MainActor func testListPersistsAcrossRelaunch() {

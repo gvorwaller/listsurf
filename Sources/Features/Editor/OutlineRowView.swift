@@ -39,11 +39,14 @@ struct OutlineRowView: View {
     @Binding var editingText: String
     let focus: FocusState<EditorFocus?>.Binding
     let onToggleExpand: () -> Void
+    let onToggleCheck: () -> Void
     let onCommitEdit: () -> Void
     let onCancelEdit: () -> Void
     var body: some View {
         HStack(spacing: 6) {
             disclosureIndicator
+
+            checkbox
 
             titleAndNotes
 
@@ -53,6 +56,52 @@ struct OutlineRowView: View {
         }
         .padding(.vertical, 2)
         .padding(.horizontal, 4)
+    }
+
+    /// Checkbox anatomy, icon set, identifier, and labels carried verbatim
+    /// from `CheckRowView.swift:28-41` (M5 unification, spec §5 Phase 2) —
+    /// the iOS UI test asserts these exact accessibility labels.
+    private var checkbox: some View {
+        Button(action: onToggleCheck) {
+            checkIcon
+                .font(.title2)
+                .contentTransition(.symbolEffect(.replace))
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("check.item.\(row.id.uuidString)")
+        .accessibilityLabel(
+            row.checkState == .checked
+                ? "Uncheck \(row.item.title)"
+                : "Check \(row.item.title)"
+        )
+        .accessibilityValue(checkStateDescription)
+        .accessibilityHint(row.hasChildren ? "Toggles this branch and all child items" : "Toggles this item")
+    }
+
+    @ViewBuilder
+    private var checkIcon: some View {
+        switch row.checkState {
+        case .checked:
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(.green)
+        case .unchecked:
+            Image(systemName: "circle")
+                .foregroundStyle(.secondary)
+        case .mixed:
+            Image(systemName: "minus.circle.fill")
+                .foregroundStyle(.orange)
+        }
+    }
+
+    private var checkStateDescription: String {
+        switch row.checkState {
+        case .checked:
+            "Checked"
+        case .unchecked:
+            "Unchecked"
+        case .mixed:
+            "Partially checked"
+        }
     }
 
     @ViewBuilder
@@ -70,7 +119,10 @@ struct OutlineRowView: View {
             } else {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(row.item.title.isEmpty ? "Untitled" : row.item.title)
-                        .foregroundStyle(row.item.title.isEmpty ? .secondary : .primary)
+                        .strikethrough(row.checkState == .checked)
+                        .foregroundStyle(
+                            row.item.title.isEmpty || row.checkState == .checked ? .secondary : .primary
+                        )
 
                     if notePreviewLineCount > 0,
                        let notes = row.item.notes?.trimmingCharacters(in: .whitespacesAndNewlines),

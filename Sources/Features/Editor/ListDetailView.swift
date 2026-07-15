@@ -14,18 +14,11 @@ struct ListDetailView: View {
     var body: some View {
         Group {
             if let store = listStore {
-                if store.isCheckMode {
-                    CheckModeView(
-                        store: store,
-                        notePreviewLineCount: max(0, notePreviewLineCount)
-                    )
-                } else {
-                    OutlineEditorView(
-                        store: store,
-                        showInspector: $showInspector,
-                        notePreviewLineCount: max(0, notePreviewLineCount)
-                    )
-                }
+                OutlineEditorView(
+                    store: store,
+                    showInspector: $showInspector,
+                    notePreviewLineCount: max(0, notePreviewLineCount)
+                )
             } else {
                 ProgressView()
             }
@@ -62,6 +55,23 @@ struct ListDetailView: View {
             }
         } message: {
             Text("Every checked item in this list will be unchecked.")
+        }
+        .confirmationDialog(
+            "Reset Branch?",
+            isPresented: isConfirmingBranchReset,
+            titleVisibility: .visible
+        ) {
+            if let store = listStore, let id = store.pendingBranchResetID {
+                Button("Reset Branch", role: .destructive) {
+                    store.resetSubtree(itemID: id, undoManager: undoManager)
+                    store.pendingBranchResetID = nil
+                }
+            }
+        } message: {
+            if let store = listStore, let id = store.pendingBranchResetID,
+               let item = store.items.first(where: { $0.id == id }) {
+                Text("“\(item.title)” and all of its child items will be unchecked.")
+            }
         }
         .confirmationDialog(
             deletionDialogTitle,
@@ -106,18 +116,7 @@ struct ListDetailView: View {
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         ToolbarItemGroup(placement: .primaryAction) {
-            if let store = listStore {
-                Button {
-                    store.isCheckMode.toggle()
-                } label: {
-                    Label(
-                        store.isCheckMode ? "Edit Mode" : "Check Mode",
-                        systemImage: store.isCheckMode ? "list.bullet.indent" : "checklist"
-                    )
-                }
-                .accessibilityIdentifier("detail.toggleMode")
-                .help(store.isCheckMode ? "Switch to Edit Mode" : "Switch to Check Mode")
-
+            if listStore != nil {
                 Button {
                     showInspector.toggle()
                 } label: {
@@ -137,17 +136,13 @@ struct ListDetailView: View {
 
         ToolbarItemGroup(placement: .secondaryAction) {
             if let store = listStore {
-                if store.isCheckMode {
-                    checkModeToolbar(store)
-                } else {
-                    editModeToolbar(store)
-                }
+                editorToolbar(store)
             }
         }
     }
 
     @ViewBuilder
-    private func editModeToolbar(_ store: ListStore) -> some View {
+    private func editorToolbar(_ store: ListStore) -> some View {
         Button {
             store.beginAdding(.root)
         } label: {
@@ -177,36 +172,21 @@ struct ListDetailView: View {
         .accessibilityIdentifier("editor.itemActions")
         .help("Add, indent, move, rename, or delete the selected items")
 
-        Button {
-            store.expandAll()
-        } label: {
-            Label("Expand All", systemImage: "arrow.up.left.and.arrow.down.right")
-        }
-        .help("Expand all branches")
-
-        Button {
-            store.collapseAll()
-        } label: {
-            Label("Collapse All", systemImage: "arrow.down.right.and.arrow.up.left")
-        }
-        .help("Collapse all branches")
-    }
-
-    @ViewBuilder
-    private func checkModeToolbar(_ store: ListStore) -> some View {
-        let progress = store.progress
-        Text("\(progress.checked)/\(progress.total)")
-            .monospacedDigit()
-            .foregroundStyle(.secondary)
-            .help("Items checked / total")
-
         Picker("Filter", selection: filterBinding(store)) {
             ForEach(ListStore.CheckFilter.allCases, id: \.self) { filter in
                 Text(filter.rawValue).tag(filter)
             }
         }
         .pickerStyle(.segmented)
+        .accessibilityIdentifier("editor.filter")
         .help("Filter items by check state")
+
+        let progress = store.progress
+        Text("\(progress.checked)/\(progress.total)")
+            .monospacedDigit()
+            .foregroundStyle(.secondary)
+            .accessibilityIdentifier("editor.progress")
+            .help("Items checked / total")
 
         Button {
             store.expandAll()
@@ -225,7 +205,7 @@ struct ListDetailView: View {
         Button {
             showingResetAllChecksConfirmation = true
         } label: {
-            Label("Reset All", systemImage: "arrow.counterclockwise")
+            Label("Reset All Checks", systemImage: "arrow.counterclockwise")
         }
         .disabled(progress.checked == 0)
         .help("Uncheck all items")
@@ -242,7 +222,6 @@ struct ListDetailView: View {
         guard let store = listStore else { return ListsurfListCommandActions() }
         var actions = ListsurfListCommandActions()
 
-        actions.toggleCheckMode = { store.isCheckMode.toggle() }
         actions.toggleInspector = { showInspector.toggle() }
         actions.expandAll = { store.expandAll() }
         actions.collapseAll = { store.collapseAll() }
@@ -250,7 +229,7 @@ struct ListDetailView: View {
         // While the user is typing (rename or add field), structural
         // commands must be disabled: an enabled menu equivalent would fire
         // instead of, or on top of, the text field's own handling.
-        guard !store.isCheckMode, !store.isTextInputActive else { return actions }
+        guard !store.isTextInputActive else { return actions }
 
         // Presence (nil vs non-nil) still gates menu enablement at publish
         // time — a republication lag can only mis-gray a menu item
@@ -329,6 +308,13 @@ struct ListDetailView: View {
         Binding(
             get: { listStore?.pendingDeletionIDs != nil },
             set: { if !$0 { listStore?.pendingDeletionIDs = nil } }
+        )
+    }
+
+    private var isConfirmingBranchReset: Binding<Bool> {
+        Binding(
+            get: { listStore?.pendingBranchResetID != nil },
+            set: { if !$0 { listStore?.pendingBranchResetID = nil } }
         )
     }
 }

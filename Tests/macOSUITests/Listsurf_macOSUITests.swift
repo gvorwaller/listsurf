@@ -272,6 +272,55 @@ final class Listsurf_macOSUITests: XCTestCase {
                        "⇧Tab must outdent the selected row, not move focus to search")
     }
 
+    /// M5 Phase 2 (spec §5): the unified editor's checkbox and filter,
+    /// replacing the old mode-switch UI test. Checkbox click toggles state
+    /// and label (no mode switch needed to reach it); the Remaining filter
+    /// hides checked rows; checking off everything remaining lands on the
+    /// All Done state; Show All restores the full list.
+    @MainActor func testCheckboxAndFilterFlow() {
+        continueAfterFailure = false
+        let app = launchApp(store: "mac-checkbox-filter", reset: true)
+        createList(named: "Mac Checkbox Filter List", in: app)
+
+        addItem(named: "Passport", in: app)
+        addItem(named: "Sunscreen", in: app)
+        app.typeKey(.escape, modifierFlags: [])
+
+        let passport = app.staticTexts["Passport"]
+        let sunscreen = app.staticTexts["Sunscreen"]
+        XCTAssertTrue(passport.waitForExistence(timeout: 5))
+        XCTAssertTrue(sunscreen.waitForExistence(timeout: 5))
+
+        let checkPassport = app.buttons["Check Passport"]
+        XCTAssertTrue(checkPassport.waitForExistence(timeout: 5))
+        checkPassport.click()
+        XCTAssertTrue(app.buttons["Uncheck Passport"].waitForExistence(timeout: 5))
+
+        // Filter to Remaining: the now-checked Passport row must disappear,
+        // Sunscreen (still unchecked) must stay.
+        let remainingSegment = app.buttons["Remaining"]
+        XCTAssertTrue(remainingSegment.waitForExistence(timeout: 5))
+        remainingSegment.click()
+
+        XCTAssertFalse(passport.waitForExistence(timeout: 2))
+        XCTAssertTrue(sunscreen.waitForExistence(timeout: 5))
+
+        // Check the last remaining row too — the list should empty out into
+        // the All Done state.
+        let checkSunscreen = app.buttons["Check Sunscreen"]
+        XCTAssertTrue(checkSunscreen.waitForExistence(timeout: 5))
+        checkSunscreen.click()
+
+        XCTAssertTrue(app.staticTexts["All Done!"].waitForExistence(timeout: 5))
+
+        let showAll = app.buttons["Show All"]
+        XCTAssertTrue(showAll.waitForExistence(timeout: 5))
+        showAll.click()
+
+        XCTAssertTrue(passport.waitForExistence(timeout: 5))
+        XCTAssertTrue(sunscreen.waitForExistence(timeout: 5))
+    }
+
     /// Polls `condition` until it's true or `timeout` elapses. Row-reorder
     /// geometry only settles after SwiftUI's drop/undo animation completes,
     /// so a single frame read right after the gesture can race the layout.

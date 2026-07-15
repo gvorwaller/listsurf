@@ -57,7 +57,7 @@ enum PreviewFixtures {
         return store
     }
 
-    static func listStore(checkMode: Bool = false) -> ListStore {
+    static func listStore() -> ListStore {
         let listRepo = PreviewListRepository(lists: [packingList])
         let outlineRepo = PreviewOutlineRepository(items: items)
         let store = ListStore(
@@ -69,7 +69,6 @@ enum PreviewFixtures {
         store.items = items
         store.expandedIDs = [clothingID]
         store.flatRows = TreeEngine().flatten(items: items, expandedIDs: [clothingID])
-        store.isCheckMode = checkMode
         return store
     }
 }
