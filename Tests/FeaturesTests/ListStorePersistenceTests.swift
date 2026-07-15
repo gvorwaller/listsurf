@@ -37,8 +37,7 @@ final class ListStorePersistenceTests: XCTestCase {
         )
         store.items = [parent, childOne, childTwo]
         store.expandAll()
-        store.isCheckMode = true
-        store.checkFilter = .checked
+        store.checkFilter = .completed
 
         XCTAssertTrue(store.filteredRows.contains { $0.id == parent.id })
     }
@@ -208,8 +207,29 @@ final class ListStorePersistenceTests: XCTestCase {
         XCTAssertNil(store.addPlacement, "Starting a rename must end an active add")
     }
 
+    /// spec §1.4: a new item is always born unchecked, so it must never be
+    /// born invisible under the Completed filter.
     @MainActor
-    func testEnteringCheckModeClearsTextEntryState() {
+    func testBeginAddingResetsCompletedFilterToAll() {
+        let list = ListItem(title: "Test")
+        let item = OutlineItem(listID: list.id, title: "Item", isChecked: true)
+        let store = ListStore(
+            listID: list.id,
+            outlineRepo: DelayedOutlineRepository(items: [item]),
+            listRepo: StubListRepository(list: list)
+        )
+        store.items = [item]
+        store.checkFilter = .completed
+
+        store.beginAdding(.root)
+
+        XCTAssertEqual(store.checkFilter, .all)
+    }
+
+    /// The Remaining filter needs no such rule — a new unchecked item is
+    /// already visible there.
+    @MainActor
+    func testBeginAddingDoesNotDisturbRemainingFilter() {
         let list = ListItem(title: "Test")
         let item = OutlineItem(listID: list.id, title: "Item")
         let store = ListStore(
@@ -218,12 +238,11 @@ final class ListStorePersistenceTests: XCTestCase {
             listRepo: StubListRepository(list: list)
         )
         store.items = [item]
+        store.checkFilter = .remaining
 
-        store.beginAdding(.below(item.id))
-        store.isCheckMode = true
+        store.beginAdding(.root)
 
-        XCTAssertNil(store.addPlacement)
-        XCTAssertFalse(store.isTextInputActive, "Check mode must not inherit phantom text-entry state")
+        XCTAssertEqual(store.checkFilter, .remaining)
     }
 
     @MainActor

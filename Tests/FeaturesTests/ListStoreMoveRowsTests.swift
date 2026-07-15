@@ -116,6 +116,27 @@ final class ListStoreMoveRowsTests: XCTestCase {
         XCTAssertFalse(undoManager.canUndo)
     }
 
+    /// spec §1.4: filtered rows are a non-contiguous excerpt of true sibling
+    /// order, so a drag there cannot mean what it looks like — same
+    /// rationale as the search/text-entry guards above.
+    @MainActor
+    func testMoveRowsRefusedUnderActiveFilter() {
+        let list = ListItem(title: "Test")
+        let a = OutlineItem(listID: list.id, title: "A", position: 1.0)
+        let b = OutlineItem(listID: list.id, title: "B", position: 2.0)
+        let c = OutlineItem(listID: list.id, title: "C", position: 3.0)
+        let store = makeStore(items: [a, b, c], list: list)
+        let undoManager = makeUndoManager()
+        store.checkFilter = .remaining
+        let itemsBefore = store.items
+
+        store.moveRows(from: IndexSet(integer: 0), to: 3, undoManager: undoManager)
+        RunLoop.current.run(until: Date())
+
+        XCTAssertEqual(store.items, itemsBefore)
+        XCTAssertFalse(undoManager.canUndo)
+    }
+
     @MainActor
     func testMoveRowsPersists() async {
         let list = ListItem(title: "Test")

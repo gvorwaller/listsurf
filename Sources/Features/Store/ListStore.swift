@@ -16,17 +16,6 @@ public final class ListStore {
     public var flatRows: [FlatRow] = []
     public var expandedIDs: Set<UUID> = []
     public var selectedItemIDs: Set<UUID> = []
-    public var isCheckMode = false {
-        didSet {
-            // Mode switches destroy the editor view (and its draft text
-            // buffers), so pending add/rename state must not survive them —
-            // it would gate commands and render phantom entry fields later.
-            if isCheckMode, oldValue != isCheckMode {
-                editingItemID = nil
-                addPlacement = nil
-            }
-        }
-    }
     public var checkFilter: CheckFilter = .all
     public var searchText = ""
 
@@ -35,6 +24,7 @@ public final class ListStore {
     public var editingItemID: UUID?
     public var addPlacement: OutlineAddPlacement?
     public var pendingDeletionIDs: Set<UUID>?
+    public var pendingBranchResetID: UUID?
 
     public var isTextInputActive: Bool {
         editingItemID != nil || addPlacement != nil
@@ -50,8 +40,8 @@ public final class ListStore {
 
     public enum CheckFilter: String, CaseIterable {
         case all = "All"
-        case unchecked = "Unchecked"
-        case checked = "Checked"
+        case remaining = "Remaining"
+        case completed = "Completed"
     }
 
     init(
@@ -86,14 +76,12 @@ public final class ListStore {
                 .filter { visibleIDs.contains($0.id) }
         }
 
-        if isCheckMode {
-            switch checkFilter {
-            case .all: break
-            case .unchecked:
-                rows = rows.filter { $0.checkState != .checked }
-            case .checked:
-                rows = rows.filter { $0.checkState == .checked }
-            }
+        switch checkFilter {
+        case .all: break
+        case .remaining:
+            rows = rows.filter { $0.checkState != .checked }
+        case .completed:
+            rows = rows.filter { $0.checkState == .checked }
         }
 
         return rows
@@ -186,6 +174,11 @@ public final class ListStore {
     // MARK: - Add / edit flow
 
     public func beginAdding(_ placement: OutlineAddPlacement) {
+        // A new item is always born unchecked — it must never be born
+        // invisible under the Completed filter (spec §1.4).
+        if checkFilter == .completed {
+            checkFilter = .all
+        }
         var resolved = placement
         switch placement {
         case .root:
@@ -327,7 +320,10 @@ public final class ListStore {
     /// (spec D2). Refused/identity drags return silently: no undo entry, no
     /// persistence, and SwiftUI animates the row back on its own.
     public func moveRows(from source: IndexSet, to destination: Int, undoManager: UndoManager? = nil) {
-        guard searchText.isEmpty, !isTextInputActive else { return }   // D5 defense-in-depth; keeps D9's invariant
+        // D5 defense-in-depth; keeps D9's invariant. checkFilter != .all is
+        // Phase 2 (spec §1.4): filtered rows are a non-contiguous excerpt of
+        // true sibling order, so a drag there cannot mean what it looks like.
+        guard searchText.isEmpty, !isTextInputActive, checkFilter == .all else { return }
         guard source.count == 1, let sourceIndex = source.first else {
             logger.debug("Drag move ignored: multi-index selection drags are not supported")
             return
@@ -415,19 +411,68 @@ public final class ListStore {
 
     // MARK: - Check operations
 
+    /// Resolves a row's derived state even when it is currently hidden
+    /// (collapsed ancestor) — visible rows already carry a derived
+    /// checkState; a collapsed row needs a full flatten to derive its
+    /// parent tri-state (the trick `toggleCheck` used pre-unification).
+    public func resolvedRow(for id: UUID) -> FlatRow? {
+        flatRows.first(where: { $0.id == id })
+            ?? engine.flatten(items: items, expandedIDs: Set(items.map(\.id))).first(where: { $0.id == id })
+    }
+
+    /// What a `toggleChecked(ids:)` call would do to this set right now:
+    /// true = check, false = uncheck (spec §1.3's multi-select rule — every
+    /// resolved row already checked → uncheck, otherwise check). Used by
+    /// menu surfaces to render a dynamic "Check"/"Uncheck" label without
+    /// duplicating the rule.
+    public func wouldCheck(ids: Set<UUID>) -> Bool {
+        let states = ids.compactMap { resolvedRow(for: $0)?.checkState }
+        guard !states.isEmpty else { return true }
+        return !states.allSatisfy { $0 == .checked }
+    }
+
     public func toggleCheck(itemID: UUID, undoManager: UndoManager? = nil) {
-        // Visible rows already carry a derived checkState; a collapsed row
-        // needs a full flatten to derive its parent tri-state.
-        let rowState = flatRows.first(where: { $0.id == itemID })?.checkState
-            ?? engine.flatten(items: items, expandedIDs: Set(items.map(\.id)))
-                .first(where: { $0.id == itemID })?.checkState
-        guard let currentState = rowState else { return }
+        toggleChecked(ids: [itemID], undoManager: undoManager)
+    }
+
+    /// Multi-select toggle rule (spec §1.3): if every resolved row's
+    /// checkState == .checked, uncheck the batch; otherwise check it. One
+    /// undo step covers the whole batch, and a no-op (nothing actually
+    /// changed) registers no undo entry at all.
+    public func toggleChecked(ids: Set<UUID>, undoManager: UndoManager? = nil) {
+        guard !ids.isEmpty else { return }
+        guard ids.contains(where: { resolvedRow(for: $0) != nil }) else { return }
+        let newChecked = wouldCheck(ids: ids)
+
         let oldItems = items
-        let newChecked = currentState != .checked
-        let updated = engine.setChecked(newChecked, itemID: itemID, in: items)
+        var updated = items
+        for id in ids {
+            updated = engine.setChecked(newChecked, itemID: id, in: updated)
+        }
+        // No-op guard BEFORE registering undo: an unchanged result must not
+        // consume the next ⌘Z.
+        guard updated != oldItems else { return }
+
+        // Selection-advance under filter (spec §1.3) needs the pre-toggle
+        // selection and filtered order captured before applyChanges rebuilds
+        // flatRows/filteredRows against the new items.
+        let preToggleSelection = selectedItemIDs
+        let oldFilteredRows = filteredRows
+        // A checkbox tap on an unselected row must never move selection —
+        // only advance when the toggled ids overlap the current selection
+        // (Space/⌘K/menu always toggle exactly the selection).
+        let togglesSelectedRow = !ids.isDisjoint(with: preToggleSelection)
+
         registerUndo(undoManager: undoManager, oldItems: oldItems)
         applyChanges(to: updated)
         persistInBackground(from: oldItems, to: updated)
+
+        guard checkFilter != .all, togglesSelectedRow, !preToggleSelection.isEmpty else { return }
+        let newFilteredIDs = Set(filteredRows.map(\.id))
+        guard preToggleSelection.isDisjoint(with: newFilteredIDs) else { return }
+        guard let removedIndex = oldFilteredRows.firstIndex(where: { preToggleSelection.contains($0.id) }) else { return }
+        let newRows = filteredRows
+        selectedItemIDs = newRows.isEmpty ? [] : [newRows[min(removedIndex, newRows.count - 1)].id]
     }
 
     public func resetAllChecks(undoManager: UndoManager? = nil) {
