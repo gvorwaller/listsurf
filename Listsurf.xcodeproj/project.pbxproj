@@ -18,6 +18,7 @@
 		300AA94F0D7736B139E2CED3 /* PersistenceStackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6333E421FA3C467DD6B1FC32 /* PersistenceStackTests.swift */; };
 		387B386B50AD3FF3A2D18E2F /* ListsurfApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 381BB974398C3B1771AC6076 /* ListsurfApp.swift */; };
 		404060D2BD0DBA7CE3977DF6 /* ListStoreCheckToggleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92BEDA56DBA6A454E8568D06 /* ListStoreCheckToggleTests.swift */; };
+		43866B421CAD1730F3210B5D /* CommandCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F199EC0D1C35BCC20909AD69 /* CommandCatalogTests.swift */; };
 		45E7E4865D76EEA6B4A807A6 /* AppStoreExportImportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64EEE7C32951799279EFE079 /* AppStoreExportImportTests.swift */; };
 		464DB6D8F9509B3663C8A70D /* ListStorePersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD47F2E0D8AB9E6BCAA24598 /* ListStorePersistenceTests.swift */; };
 		485C8EB6EC889B0B510968F7 /* Features in Frameworks */ = {isa = PBXBuildFile; productRef = 612D6A7467094FC9D904EF31 /* Features */; };
@@ -26,6 +27,7 @@
 		585C2BC4AA461CAC38E1ADF1 /* Listsurf_macOSUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 468653C87021C1129C8D3CE2 /* Listsurf_macOSUITests.swift */; };
 		5AA8BA968490582CBD4D4A1F /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = FC95DFD9A1535CA110E3DB8D /* PrivacyInfo.xcprivacy */; };
 		5C43F676AEA4A4B113CE6D43 /* Persistence in Frameworks */ = {isa = PBXBuildFile; productRef = ACB2D7DD86014ED66252B5A0 /* Persistence */; };
+		5D5985C87CE5771110B39323 /* CommandCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F199EC0D1C35BCC20909AD69 /* CommandCatalogTests.swift */; };
 		614C0A70EC2A23C336024AC3 /* TreeEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6108498B78633A46A33B8646 /* TreeEngineTests.swift */; };
 		6331436AB3C6050915EE3A52 /* Domain in Frameworks */ = {isa = PBXBuildFile; productRef = 4601F91B9DF59FFDE1B64DC9 /* Domain */; };
 		6D130EE30C03B2A9A9C87D1C /* ListStoreUndoTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84528739F5651E7226F1D938 /* ListStoreUndoTests.swift */; };
@@ -100,6 +102,7 @@
 		E596D00A45E2A16387F9EBBA /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		EA6AD7120BBA722213D66A24 /* Listsurf_macOSUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Listsurf_macOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F00F5DBB30801B63485ECB9D /* CoreDataDiagnosticsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataDiagnosticsTests.swift; sourceTree = "<group>"; };
+		F199EC0D1C35BCC20909AD69 /* CommandCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandCatalogTests.swift; sourceTree = "<group>"; };
 		FC95DFD9A1535CA110E3DB8D /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		FD47F2E0D8AB9E6BCAA24598 /* ListStorePersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListStorePersistenceTests.swift; sourceTree = "<group>"; };
 		FE49A4249F72A4A5922141B4 /* Listsurf_iOSUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = Listsurf_iOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -238,6 +241,7 @@
 			isa = PBXGroup;
 			children = (
 				64EEE7C32951799279EFE079 /* AppStoreExportImportTests.swift */,
+				F199EC0D1C35BCC20909AD69 /* CommandCatalogTests.swift */,
 				64C6D5584915F7AEEC43C04F /* ContentViewExportFilenameTests.swift */,
 				92BEDA56DBA6A454E8568D06 /* ListStoreCheckToggleTests.swift */,
 				4D3A9CA1FB7108141AF8DD65 /* ListStoreMoveRowsTests.swift */,
@@ -483,6 +487,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				1BC21E1BC964B3FB71DCB5D4 /* AppStoreExportImportTests.swift in Sources */,
+				43866B421CAD1730F3210B5D /* CommandCatalogTests.swift in Sources */,
 				2B1A03CA895B6A5178659361 /* ContentViewExportFilenameTests.swift in Sources */,
 				AE30AE8EAC74D8A8E27BA9B9 /* CoreDataDiagnosticsTests.swift in Sources */,
 				7315A5141C567537F2DFED4D /* ExportTests.swift in Sources */,
@@ -512,6 +517,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				45E7E4865D76EEA6B4A807A6 /* AppStoreExportImportTests.swift in Sources */,
+				5D5985C87CE5771110B39323 /* CommandCatalogTests.swift in Sources */,
 				FA63F8923574826BD852C3AA /* ContentViewExportFilenameTests.swift in Sources */,
 				7E5FF0F83CE1C5DED47A3B12 /* CoreDataDiagnosticsTests.swift in Sources */,
 				D30AAFEBE521108DCF654301 /* ExportTests.swift in Sources */,

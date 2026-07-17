@@ -198,6 +198,7 @@ struct ListDetailView: View {
                     store: store,
                     itemIDs: store.selectedItemIDs,
                     showsShortcutHints: true,
+                    selectsTargetOnAct: false,
                     onShowDetails: { id in
                         store.selectedItemIDs = [id]
                         showInspector = true
@@ -288,12 +289,27 @@ struct ListDetailView: View {
         guard let store = listStore else { return ListsurfListCommandActions() }
         var actions = ListsurfListCommandActions()
 
-        actions.toggleInspector = { showInspector.toggle() }
-        actions.expandAll = { store.expandAll() }
-        actions.collapseAll = { store.collapseAll() }
+        actions.toggleInspector = {
+            showInspector.toggle()
+            CommandInvocation.post(CommandCatalog.toggleInspector)
+        }
+        actions.expandAll = {
+            store.expandAll()
+            CommandInvocation.post(CommandCatalog.expandAll)
+        }
+        actions.collapseAll = {
+            store.collapseAll()
+            CommandInvocation.post(CommandCatalog.collapseAll)
+        }
         actions.setFilter = { filter in
             guard !store.isTextInputActive else { return }
             store.checkFilter = filter
+            let command: CommandCatalog.Command = switch filter {
+            case .all: CommandCatalog.filterAll
+            case .remaining: CommandCatalog.filterRemaining
+            case .completed: CommandCatalog.filterCompleted
+            }
+            CommandInvocation.post(command)
         }
 
         // While the user is typing (rename or add field), structural
@@ -315,52 +331,63 @@ struct ListDetailView: View {
             guard !store.isTextInputActive else { return }
             let liveID = singleSelectedItemID(in: store)
             store.beginAdding(liveID.map(OutlineAddPlacement.below) ?? .root)
+            CommandInvocation.post(CommandCatalog.newItem)
         }
         if selectedID != nil {
             actions.addAbove = {
                 guard !store.isTextInputActive, let liveID = singleSelectedItemID(in: store) else { return }
                 let newID = store.insertAbove(referenceID: liveID, title: "New Item", undoManager: undoManager)
                 store.beginEditing(itemID: newID)
+                CommandInvocation.post(CommandCatalog.addAbove)
             }
             actions.addChild = {
                 guard !store.isTextInputActive, let liveID = singleSelectedItemID(in: store) else { return }
                 store.beginAdding(.child(liveID))
+                CommandInvocation.post(CommandCatalog.addChild)
             }
             actions.indent = {
                 guard !store.isTextInputActive, let liveID = singleSelectedItemID(in: store) else { return }
                 store.indent(itemID: liveID, undoManager: undoManager)
+                CommandInvocation.post(CommandCatalog.indent)
             }
             actions.outdent = {
                 guard !store.isTextInputActive, let liveID = singleSelectedItemID(in: store) else { return }
                 store.outdent(itemID: liveID, undoManager: undoManager)
+                CommandInvocation.post(CommandCatalog.outdent)
             }
             actions.moveUp = {
                 guard !store.isTextInputActive, let liveID = singleSelectedItemID(in: store) else { return }
                 store.moveUp(itemID: liveID, undoManager: undoManager)
+                CommandInvocation.post(CommandCatalog.moveUp)
             }
             actions.moveDown = {
                 guard !store.isTextInputActive, let liveID = singleSelectedItemID(in: store) else { return }
                 store.moveDown(itemID: liveID, undoManager: undoManager)
+                CommandInvocation.post(CommandCatalog.moveDown)
             }
             actions.rename = {
                 guard !store.isTextInputActive, let liveID = singleSelectedItemID(in: store) else { return }
                 store.beginEditing(itemID: liveID)
+                CommandInvocation.post(CommandCatalog.rename)
             }
         }
         if !store.selectedItemIDs.isEmpty {
             actions.toggleChecked = {
                 guard !store.isTextInputActive, !store.selectedItemIDs.isEmpty else { return }
                 store.toggleChecked(ids: store.selectedItemIDs, undoManager: undoManager)
+                CommandInvocation.post(CommandCatalog.toggleChecked)
             }
             actions.delete = {
                 guard !store.isTextInputActive, !store.selectedItemIDs.isEmpty else { return }
                 store.pendingDeletionIDs = store.selectedItemIDs
+                CommandInvocation.post(CommandCatalog.delete)
             }
         }
         if store.progress.checked > 0 {
             actions.resetAllChecks = {
                 guard !store.isTextInputActive, store.progress.checked > 0 else { return }
                 showingResetAllChecksConfirmation = true
+                CommandInvocation.post(CommandCatalog.resetAllChecks)
             }
         }
 

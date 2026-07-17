@@ -78,10 +78,16 @@ public struct ContentView: View {
         .focusedSceneValue(
             \.listsurfAppCommands,
             ListsurfAppCommandActions(
-                newList: beginNewList,
+                newList: {
+                    beginNewList()
+                    CommandInvocation.post(CommandCatalog.newList)
+                },
                 importBackup: beginImportBackup,
                 exportBackup: beginExportBackup,
-                showHelp: showHelp,
+                showHelp: {
+                    showHelp()
+                    CommandInvocation.post(CommandCatalog.help)
+                },
                 importList: beginImportList
             )
         )

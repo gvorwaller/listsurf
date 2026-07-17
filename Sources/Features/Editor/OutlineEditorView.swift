@@ -60,15 +60,18 @@ struct OutlineEditorView: View {
             .onKeyPress(.escape, phases: .down) { _ in
                 if store.addPlacement != nil {
                     cancelAdding()
+                    CommandInvocation.post(CommandCatalog.escape)
                     return .handled
                 }
                 if store.editingItemID != nil {
                     editingText = ""
                     store.cancelEditing()
+                    CommandInvocation.post(CommandCatalog.escape)
                     return .handled
                 }
                 if !store.selectedItemIDs.isEmpty {
                     store.selectedItemIDs = []
+                    CommandInvocation.post(CommandCatalog.escape)
                     return .handled
                 }
                 return .ignored
@@ -279,6 +282,7 @@ struct OutlineEditorView: View {
                 onCancelEdit: {
                     editingText = ""
                     store.cancelEditing()
+                    CommandInvocation.post(CommandCatalog.escape)
                 }
             )
 
@@ -289,6 +293,7 @@ struct OutlineEditorView: View {
                     store: store,
                     itemIDs: [row.id],
                     showsShortcutHints: false,
+                    selectsTargetOnAct: true,
                     onShowDetails: showDetails(itemID:)
                 )
             } label: {
@@ -403,6 +408,7 @@ struct OutlineEditorView: View {
                 .onSubmit { commitNewItem() }
                 .onKeyPress(.escape) {
                     cancelAdding()
+                    CommandInvocation.post(CommandCatalog.escape)
                     return .handled
                 }
         }
@@ -510,9 +516,11 @@ struct OutlineEditorView: View {
         switch store.selectedItemIDs.count {
         case 0:
             store.beginAdding(.root)
+            CommandInvocation.post(CommandCatalog.newItem)
         case 1:
             guard let selectedID = store.selectedItemIDs.first else { return .ignored }
             store.beginEditing(itemID: selectedID)
+            CommandInvocation.post(CommandCatalog.rename)
         default:
             return .ignored
         }
@@ -526,8 +534,10 @@ struct OutlineEditorView: View {
         }
         if isShiftPressed {
             store.outdent(itemID: row.id, undoManager: undoManager)
+            CommandInvocation.post(CommandCatalog.outdent)
         } else {
             store.indent(itemID: row.id, undoManager: undoManager)
+            CommandInvocation.post(CommandCatalog.indent)
         }
         return .handled
     }
@@ -539,6 +549,7 @@ struct OutlineEditorView: View {
             return .ignored
         }
         store.toggleChecked(ids: store.selectedItemIDs, undoManager: undoManager)
+        CommandInvocation.post(CommandCatalog.toggleChecked)
         return .handled
     }
     #endif
@@ -613,13 +624,17 @@ private struct OutlineContextMenuModifier: ViewModifier {
             Button {
                 store.beginAdding(.root)
             } label: {
-                Label("Add Item", systemImage: "plus")
+                Label(CommandCatalog.newItem.title, systemImage: CommandCatalog.newItem.systemImage)
             }
+            Divider()
+            Button(CommandCatalog.expandAll.title) { store.expandAll() }
+            Button(CommandCatalog.collapseAll.title) { store.collapseAll() }
         } else {
             ItemActionsMenu(
                 store: store,
                 itemIDs: ids,
                 showsShortcutHints: true,
+                selectsTargetOnAct: false,
                 onShowDetails: onShowDetails
             )
         }

@@ -7,6 +7,9 @@ import Persistence
 struct ListsurfApp: App {
     @State private var appStore: AppStore
     @State private var errorStore: AppErrorStore
+    #if os(macOS)
+    @State private var isKeyboardLegendPresented = false
+    #endif
 
     init() {
         let processInfo = ProcessInfo.processInfo
@@ -46,10 +49,24 @@ struct ListsurfApp: App {
                 .environment(errorStore)
         }
         .commands {
+            #if os(macOS)
+            ListsurfCommands(isKeyboardLegendPresented: $isKeyboardLegendPresented)
+            #else
             ListsurfCommands()
+            #endif
         }
 
         #if os(macOS)
+        Window("Keyboard Legend", id: "keyboard-legend") {
+            KeyboardLegendView { isPresented in
+                isKeyboardLegendPresented = isPresented
+            }
+        }
+        .defaultSize(width: 520, height: 620)
+        .windowResizability(.contentSize)
+        .windowLevel(.floating)
+        .restorationBehavior(.disabled)
+
         Settings {
             ListsurfSettingsView()
                 .environment(appStore)

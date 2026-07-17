@@ -13,6 +13,7 @@ struct ItemActionsMenu: View {
     @Bindable var store: ListStore
     let itemIDs: Set<UUID>
     let showsShortcutHints: Bool
+    let selectsTargetOnAct: Bool
     let onShowDetails: (UUID) -> Void
     @Environment(\.undoManager) private var undoManager
 
@@ -23,67 +24,76 @@ struct ItemActionsMenu: View {
     var body: some View {
         if let id = singleID {
             Button {
+                selectTargetIfNeeded()
                 store.beginAdding(.below(id))
             } label: {
-                Label("Add Below", systemImage: "plus")
+                Label(CommandCatalog.newItem.title, systemImage: CommandCatalog.newItem.systemImage)
             }
 
             Button {
+                selectTargetIfNeeded()
                 let newID = store.insertAbove(referenceID: id, title: "New Item", undoManager: undoManager)
                 store.beginEditing(itemID: newID)
             } label: {
-                Label("Add Above", systemImage: "arrow.up")
+                Label(CommandCatalog.addAbove.title, systemImage: CommandCatalog.addAbove.systemImage)
             }
 
             Button {
+                selectTargetIfNeeded()
                 store.beginAdding(.child(id))
             } label: {
-                Label("Add Child", systemImage: "arrow.turn.down.right")
+                Label(CommandCatalog.addChild.title, systemImage: CommandCatalog.addChild.systemImage)
             }
-            .shortcutHint(.return, modifiers: [.command], enabled: showsShortcutHints)
+            .shortcutHint(CommandCatalog.addChild.binding, enabled: showsShortcutHints)
 
             Divider()
 
             Button {
+                selectTargetIfNeeded()
                 store.indent(itemID: id, undoManager: undoManager)
             } label: {
-                Label("Indent", systemImage: "increase.indent")
+                Label(CommandCatalog.indent.title, systemImage: CommandCatalog.indent.systemImage)
             }
-            .shortcutHint("]", modifiers: [.command], enabled: showsShortcutHints)
+            .shortcutHint(CommandCatalog.indent.binding, enabled: showsShortcutHints)
 
             Button {
+                selectTargetIfNeeded()
                 store.outdent(itemID: id, undoManager: undoManager)
             } label: {
-                Label("Outdent", systemImage: "decrease.indent")
+                Label(CommandCatalog.outdent.title, systemImage: CommandCatalog.outdent.systemImage)
             }
-            .shortcutHint("[", modifiers: [.command], enabled: showsShortcutHints)
+            .shortcutHint(CommandCatalog.outdent.binding, enabled: showsShortcutHints)
 
             Divider()
 
             Button {
+                selectTargetIfNeeded()
                 store.moveUp(itemID: id, undoManager: undoManager)
             } label: {
-                Label("Move Up", systemImage: "arrow.up")
+                Label(CommandCatalog.moveUp.title, systemImage: CommandCatalog.moveUp.systemImage)
             }
-            .shortcutHint(.upArrow, modifiers: [.command, .option], enabled: showsShortcutHints)
+            .shortcutHint(CommandCatalog.moveUp.binding, enabled: showsShortcutHints)
 
             Button {
+                selectTargetIfNeeded()
                 store.moveDown(itemID: id, undoManager: undoManager)
             } label: {
-                Label("Move Down", systemImage: "arrow.down")
+                Label(CommandCatalog.moveDown.title, systemImage: CommandCatalog.moveDown.systemImage)
             }
-            .shortcutHint(.downArrow, modifiers: [.command, .option], enabled: showsShortcutHints)
+            .shortcutHint(CommandCatalog.moveDown.binding, enabled: showsShortcutHints)
 
             Divider()
 
             Button {
+                selectTargetIfNeeded()
                 store.beginEditing(itemID: id)
             } label: {
-                Label("Rename", systemImage: "pencil")
+                Label(CommandCatalog.rename.title, systemImage: CommandCatalog.rename.systemImage)
             }
-            .shortcutHint("e", modifiers: [.command], enabled: showsShortcutHints)
+            .shortcutHint(CommandCatalog.rename.binding, enabled: showsShortcutHints)
 
             Button {
+                selectTargetIfNeeded()
                 onShowDetails(id)
             } label: {
                 Label("Details", systemImage: "info.circle")
@@ -92,6 +102,7 @@ struct ItemActionsMenu: View {
             Divider()
 
             Button {
+                selectTargetIfNeeded()
                 store.toggleChecked(ids: [id], undoManager: undoManager)
             } label: {
                 Label(
@@ -99,13 +110,14 @@ struct ItemActionsMenu: View {
                     systemImage: store.wouldCheck(ids: [id]) ? "checkmark.circle" : "circle"
                 )
             }
-            .shortcutHint("k", modifiers: [.command], enabled: showsShortcutHints)
+            .shortcutHint(CommandCatalog.toggleChecked.binding, enabled: showsShortcutHints)
 
             if store.resolvedRow(for: id)?.hasChildren == true {
                 Button {
+                    selectTargetIfNeeded()
                     store.pendingBranchResetID = id
                 } label: {
-                    Label("Reset Branch…", systemImage: "arrow.counterclockwise")
+                    Label(CommandCatalog.resetBranch.title, systemImage: CommandCatalog.resetBranch.systemImage)
                 }
                 .disabled(store.resolvedRow(for: id)?.checkState == .unchecked)
             }
@@ -113,6 +125,7 @@ struct ItemActionsMenu: View {
             Divider()
         } else if itemIDs.count > 1 {
             Button {
+                selectTargetIfNeeded()
                 store.toggleChecked(ids: itemIDs, undoManager: undoManager)
             } label: {
                 Label(
@@ -120,27 +133,34 @@ struct ItemActionsMenu: View {
                     systemImage: store.wouldCheck(ids: itemIDs) ? "checkmark.circle" : "circle"
                 )
             }
-            .shortcutHint("k", modifiers: [.command], enabled: showsShortcutHints)
+            .shortcutHint(CommandCatalog.toggleChecked.binding, enabled: showsShortcutHints)
 
             Divider()
         }
 
         if !itemIDs.isEmpty {
             Button(role: .destructive) {
+                selectTargetIfNeeded()
                 store.pendingDeletionIDs = itemIDs
             } label: {
                 Label(itemIDs.count == 1 ? "Delete" : "Delete \(itemIDs.count) Items", systemImage: "trash")
             }
-            .shortcutHint(.delete, modifiers: [.command], enabled: showsShortcutHints)
+            .shortcutHint(CommandCatalog.delete.binding, enabled: showsShortcutHints)
+        }
+    }
+
+    private func selectTargetIfNeeded() {
+        if selectsTargetOnAct {
+            store.selectedItemIDs = itemIDs
         }
     }
 }
 
 private extension View {
     @ViewBuilder
-    func shortcutHint(_ key: KeyEquivalent, modifiers: EventModifiers, enabled: Bool) -> some View {
-        if enabled {
-            keyboardShortcut(key, modifiers: modifiers)
+    func shortcutHint(_ binding: CommandCatalog.Binding?, enabled: Bool) -> some View {
+        if enabled, let binding {
+            keyboardShortcut(binding.key, modifiers: binding.modifiers)
         } else {
             self
         }
