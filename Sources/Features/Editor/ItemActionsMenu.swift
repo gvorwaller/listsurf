@@ -81,6 +81,7 @@ struct ItemActionsMenu: View {
             } label: {
                 Label("Rename", systemImage: "pencil")
             }
+            .shortcutHint("e", modifiers: [.command], enabled: showsShortcutHints)
 
             Button {
                 onShowDetails(id)
@@ -98,6 +99,7 @@ struct ItemActionsMenu: View {
                     systemImage: store.wouldCheck(ids: [id]) ? "checkmark.circle" : "circle"
                 )
             }
+            .shortcutHint("k", modifiers: [.command], enabled: showsShortcutHints)
 
             if store.resolvedRow(for: id)?.hasChildren == true {
                 Button {
@@ -118,6 +120,7 @@ struct ItemActionsMenu: View {
                     systemImage: store.wouldCheck(ids: itemIDs) ? "checkmark.circle" : "circle"
                 )
             }
+            .shortcutHint("k", modifiers: [.command], enabled: showsShortcutHints)
 
             Divider()
         }

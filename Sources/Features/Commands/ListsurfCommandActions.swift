@@ -16,7 +16,11 @@ struct ListsurfListCommandActions {
     var outdent: (@MainActor () -> Void)?
     var moveUp: (@MainActor () -> Void)?
     var moveDown: (@MainActor () -> Void)?
+    var rename: (@MainActor () -> Void)?
+    var toggleChecked: (@MainActor () -> Void)?
     var delete: (@MainActor () -> Void)?
+    var resetAllChecks: (@MainActor () -> Void)?
+    var setFilter: (@MainActor (ListStore.CheckFilter) -> Void)?
     var toggleInspector: (@MainActor () -> Void)?
     var expandAll: (@MainActor () -> Void)?
     var collapseAll: (@MainActor () -> Void)?

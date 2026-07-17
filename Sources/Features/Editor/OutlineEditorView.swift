@@ -40,12 +40,16 @@ struct OutlineEditorView: View {
             ))
         #else
         // macOS keyboard ownership: the List (via native selection) handles
-        // ↑/↓/⌘-click/⇧-click itself; Return and Tab are claimed here and
-        // ONLY here — never as bare menu key equivalents, which would
-        // intercept typing in every text field in the window.
+        // ↑/↓/⌘-click/⇧-click itself. The editor owns bare Return = rename
+        // (or root-add with no selection), Tab/⇧Tab = indent/outdent, and
+        // Space = toggle check. They must never be bare menu equivalents,
+        // which would intercept typing in every text field in the window.
         editorContent
             .onKeyPress(.return, phases: .down) { keyPress in
                 handleReturnKey(modifiers: keyPress.modifiers)
+            }
+            .onKeyPress(.space, phases: .down) { keyPress in
+                handleSpaceKey(modifiers: keyPress.modifiers)
             }
             // Escape fallback: the add/rename fields own Escape while they
             // have focus, but focus assignment is task-deferred (Phase 1) —
@@ -61,6 +65,10 @@ struct OutlineEditorView: View {
                 if store.editingItemID != nil {
                     editingText = ""
                     store.cancelEditing()
+                    return .handled
+                }
+                if !store.selectedItemIDs.isEmpty {
+                    store.selectedItemIDs = []
                     return .handled
                 }
                 return .ignored
@@ -498,17 +506,16 @@ struct OutlineEditorView: View {
     #if os(macOS)
     private func handleReturnKey(modifiers: EventModifiers) -> KeyPress.Result {
         guard store.editingItemID == nil, store.addPlacement == nil else { return .ignored }
-        if modifiers.contains(.command) {
-            // ⌘Return belongs to the Add Child menu command.
+        guard modifiers.isEmpty else { return .ignored }
+        switch store.selectedItemIDs.count {
+        case 0:
+            store.beginAdding(.root)
+        case 1:
+            guard let selectedID = store.selectedItemIDs.first else { return .ignored }
+            store.beginEditing(itemID: selectedID)
+        default:
             return .ignored
         }
-        if modifiers.contains(.shift) {
-            guard let row = selectedRow else { return .ignored }
-            let newID = store.insertAbove(referenceID: row.id, title: "New Item", undoManager: undoManager)
-            store.beginEditing(itemID: newID)
-            return .handled
-        }
-        store.beginAdding(selectedRow.map { .below($0.id) } ?? .root)
         return .handled
     }
 
@@ -522,6 +529,16 @@ struct OutlineEditorView: View {
         } else {
             store.indent(itemID: row.id, undoManager: undoManager)
         }
+        return .handled
+    }
+
+    private func handleSpaceKey(modifiers: EventModifiers) -> KeyPress.Result {
+        guard modifiers.isEmpty,
+              !store.isTextInputActive,
+              !store.selectedItemIDs.isEmpty else {
+            return .ignored
+        }
+        store.toggleChecked(ids: store.selectedItemIDs, undoManager: undoManager)
         return .handled
     }
     #endif

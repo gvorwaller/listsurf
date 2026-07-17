@@ -8,10 +8,16 @@ public struct ListsurfCommands: Commands {
 
     public var body: some Commands {
         CommandGroup(replacing: .newItem) {
+            Button("New Item") {
+                listCommands?.addBelow?()
+            }
+            .keyboardShortcut("n", modifiers: [.command])
+            .disabled(listCommands?.addBelow == nil)
+
             Button("New List") {
                 appCommands?.newList()
             }
-            .keyboardShortcut("n", modifiers: [.command])
+            .keyboardShortcut("n", modifiers: [.command, .shift])
             .disabled(appCommands == nil)
         }
 
@@ -42,11 +48,10 @@ public struct ListsurfCommands: Commands {
         }
 
         CommandMenu("Item") {
-            // Note: Add Below/Above deliberately carry no key equivalents.
-            // Bare Return/Tab menu equivalents intercept typing in every
-            // text field in the window; the editor owns those keys directly
-            // (Return = add below, Shift-Return = add above, Tab = indent,
-            // Shift-Tab = outdent) and only while the outline has focus.
+            // Bare Return/Tab/Space menu equivalents intercept typing in
+            // every text field. The focused editor owns Return = rename (or
+            // root-add with no selection), Tab/⇧Tab = indent/outdent, and
+            // Space = toggle check.
             Button("Add Item Below") {
                 listCommands?.addBelow?()
             }
@@ -55,6 +60,7 @@ public struct ListsurfCommands: Commands {
             Button("Add Item Above") {
                 listCommands?.addAbove?()
             }
+            .keyboardShortcut("n", modifiers: [.command, .option])
             .disabled(listCommands?.addAbove == nil)
 
             Button("Add Child") {
@@ -62,6 +68,20 @@ public struct ListsurfCommands: Commands {
             }
             .keyboardShortcut(.return, modifiers: [.command])
             .disabled(listCommands?.addChild == nil)
+
+            Divider()
+
+            Button("Rename") {
+                listCommands?.rename?()
+            }
+            .keyboardShortcut("e", modifiers: [.command])
+            .disabled(listCommands?.rename == nil)
+
+            Button("Toggle Checked") {
+                listCommands?.toggleChecked?()
+            }
+            .keyboardShortcut("k", modifiers: [.command])
+            .disabled(listCommands?.toggleChecked == nil)
 
             Divider()
 
@@ -98,6 +118,13 @@ public struct ListsurfCommands: Commands {
             }
             .keyboardShortcut(.delete, modifiers: [.command])
             .disabled(listCommands?.delete == nil)
+
+            Divider()
+
+            Button("Reset All Checks…") {
+                listCommands?.resetAllChecks?()
+            }
+            .disabled(listCommands?.resetAllChecks == nil)
         }
 
         CommandMenu("View") {
@@ -106,6 +133,28 @@ public struct ListsurfCommands: Commands {
             }
             .keyboardShortcut("i", modifiers: [.command, .option])
             .disabled(listCommands?.toggleInspector == nil)
+
+            Divider()
+
+            Menu("Filter") {
+                Button("All") {
+                    listCommands?.setFilter?(.all)
+                }
+                .keyboardShortcut("1", modifiers: [.command, .option])
+                .disabled(listCommands?.setFilter == nil)
+
+                Button("Remaining") {
+                    listCommands?.setFilter?(.remaining)
+                }
+                .keyboardShortcut("2", modifiers: [.command, .option])
+                .disabled(listCommands?.setFilter == nil)
+
+                Button("Completed") {
+                    listCommands?.setFilter?(.completed)
+                }
+                .keyboardShortcut("3", modifiers: [.command, .option])
+                .disabled(listCommands?.setFilter == nil)
+            }
 
             Divider()
 

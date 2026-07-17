@@ -50,8 +50,7 @@ struct ListsurfHelpView: View {
                         HelpItem("Bottom action bar", "Appears after you select an item. It contains Below, Child, Indent, Outdent, Move, Details, and Delete."),
                         HelpItem("Indent", "Moves the selected item one level deeper under the item above it."),
                         HelpItem("Outdent", "Moves the selected item one level higher."),
-                        HelpItem("Move Up / Move Down", "Reorders the selected item among its siblings."),
-                        HelpItem("Keyboard accessory", "While typing a new item, use Below or Child to commit and immediately start the next item in that position.")
+                        HelpItem("Move Up / Move Down", "Reorders the selected item among its siblings.")
                     ]
                 )
 
@@ -125,24 +124,31 @@ struct ListsurfHelpView: View {
                     ]
                 )
 
+                #if os(macOS)
                 HelpSection(
                     title: "Mac keyboard",
                     systemImage: "keyboard",
                     items: [
                         HelpItem("Arrow keys", "Move the selection up and down the outline. Command-click or Shift-click selects multiple items."),
-                        HelpItem("Return", "Starts a new item below the selection."),
-                        HelpItem("Shift-Return", "Inserts an item above the selection and renames it."),
+                        HelpItem("Return", "Renames the selected item. With nothing selected, starts a new root item."),
+                        HelpItem("Command-N", "Starts a new item below the selection, or at the root when nothing is selected."),
+                        HelpItem("Option-Command-N", "Adds a new item above the selection."),
+                        HelpItem("Shift-Command-N", "Creates a new list."),
                         HelpItem("Command-Return", "Starts a child item inside the selection."),
+                        HelpItem("Space / Command-K", "Checks or unchecks the selected items. Under a filter, selection advances to the next visible item."),
+                        HelpItem("Command-E", "Renames the selected item in place."),
                         HelpItem("Tab / Shift-Tab", "Indents or outdents the selected item (also Command-] / Command-[ from the Item menu)."),
                         HelpItem("Command-Option-Up / Down", "Moves the selected item among its siblings."),
+                        HelpItem("Option-Command-1 / 2 / 3", "Shows All, Remaining, or Completed items."),
+                        HelpItem("Escape", "Cancels text entry, or clears the current selection."),
                         HelpItem("Double-click", "Renames the item in place. Escape cancels; clicking elsewhere commits."),
                         HelpItem("Command-Delete", "Deletes the selected items after confirmation."),
                         HelpItem("Command-Z / Shift-Command-Z", "Undo and redo any edit, including checks."),
                         HelpItem("Option-Command-I", "Toggles the inspector."),
-                        HelpItem("Command-N", "Creates a new list."),
                         HelpItem("Command-Comma", "Opens Settings.")
                     ]
                 )
+                #endif
             }
             .navigationTitle("Listsurf Help")
             #if os(iOS)

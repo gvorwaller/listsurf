@@ -5,7 +5,7 @@ final class Listsurf_macOSUITests: XCTestCase {
         continueAfterFailure = false
         let app = launchApp(store: "mac-command-new-list", reset: true)
 
-        app.typeKey("n", modifierFlags: .command)
+        app.typeKey("n", modifierFlags: [.command, .shift])
         fillNewListSheet(named: "Command Created List", in: app)
 
         XCTAssertTrue(app.staticTexts["Command Created List"].waitForExistence(timeout: 5))
@@ -297,15 +297,9 @@ final class Listsurf_macOSUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Uncheck Passport"].waitForExistence(timeout: 5))
 
         // Filter to Remaining: the now-checked Passport row must disappear,
-        // Sunscreen (still unchecked) must stay.
-        // macOS 26 exposes a segmented Picker's children as radio buttons;
-        // older runtimes exposed them as buttons.
-        let remainingSegment = firstExisting(
-            app.radioButtons["Remaining"],
-            app.buttons["Remaining"]
-        )
-        XCTAssertTrue(remainingSegment.waitForExistence(timeout: 5))
-        remainingSegment.click()
+        // Sunscreen (still unchecked) must stay. Use the Phase 3 command so
+        // this remains stable when the toolbar collapses controls.
+        app.typeKey("2", modifierFlags: [.command, .option])
 
         XCTAssertFalse(passport.waitForExistence(timeout: 2))
         XCTAssertTrue(sunscreen.waitForExistence(timeout: 5))
@@ -326,6 +320,100 @@ final class Listsurf_macOSUITests: XCTestCase {
         XCTAssertTrue(sunscreen.waitForExistence(timeout: 5))
     }
 
+    @MainActor func testReturnRenamesSelectedRow() {
+        continueAfterFailure = false
+        let app = launchApp(store: "mac-return-rename", reset: true)
+        createList(named: "Return Rename List", in: app)
+        addItem(named: "Original Title", in: app)
+        app.typeKey(.escape, modifierFlags: [])
+
+        let title = app.staticTexts["Original Title"]
+        XCTAssertTrue(title.waitForExistence(timeout: 5))
+        title.click()
+        app.typeKey(.return, modifierFlags: [])
+
+        let renameField = app.textFields["editor.renameField"]
+        XCTAssertTrue(renameField.waitForExistence(timeout: 5))
+        app.typeKey(.escape, modifierFlags: [])
+        XCTAssertTrue(title.waitForExistence(timeout: 5), "Escape must cancel Return rename without changing the title")
+
+        title.click()
+        app.typeKey("e", modifierFlags: .command)
+        XCTAssertTrue(renameField.waitForExistence(timeout: 5), "Command-E must use the same inline rename path")
+    }
+
+    /// Also serves as the Phase 3 Space-delivery gate: bare Space reaches
+    /// the focused native List and advances selection under Remaining.
+    @MainActor func testSpaceTogglesCheckAndAdvances() {
+        continueAfterFailure = false
+        let app = launchApp(store: "mac-space-advance", reset: true)
+        createList(named: "Space Advance List", in: app)
+        for title in ["Alpha", "Bravo", "Charlie"] {
+            addItem(named: title, in: app)
+        }
+        app.typeKey(.escape, modifierFlags: [])
+
+        let alpha = app.staticTexts["Alpha"]
+        let bravo = app.staticTexts["Bravo"]
+        let charlie = app.staticTexts["Charlie"]
+        XCTAssertTrue(charlie.waitForExistence(timeout: 5))
+        app.typeKey("2", modifierFlags: [.command, .option])
+
+        alpha.click()
+        app.typeKey(.space, modifierFlags: [])
+        XCTAssertFalse(alpha.waitForExistence(timeout: 2))
+        let bravoRow = app.outlineRows.containing(.staticText, identifier: "Bravo").firstMatch
+        XCTAssertTrue(waitUntil(timeout: 5) { bravoRow.isSelected }, "Selection must advance to Bravo")
+
+        app.typeKey(.space, modifierFlags: [])
+        XCTAssertFalse(bravo.waitForExistence(timeout: 2))
+        let charlieRow = app.outlineRows.containing(.staticText, identifier: "Charlie").firstMatch
+        XCTAssertTrue(waitUntil(timeout: 5) { charlieRow.isSelected }, "Selection must advance to Charlie")
+    }
+
+    @MainActor func testCommandNArmsAddFieldBelowSelection() {
+        continueAfterFailure = false
+        let app = launchApp(store: "mac-command-new-item", reset: true)
+        createList(named: "Command New Item List", in: app)
+        addItem(named: "Anchor", in: app)
+        addItem(named: "Tail", in: app)
+        app.typeKey(.escape, modifierFlags: [])
+
+        let anchor = app.staticTexts["Anchor"]
+        let tail = app.staticTexts["Tail"]
+        XCTAssertTrue(tail.waitForExistence(timeout: 5))
+        anchor.click()
+        app.typeKey("n", modifierFlags: .command)
+
+        let addField = app.textFields["editor.newItem"]
+        XCTAssertTrue(addField.waitForExistence(timeout: 5))
+        XCTAssertGreaterThan(addField.frame.minY, anchor.frame.minY)
+        XCTAssertLessThan(addField.frame.minY, tail.frame.minY,
+                          "Command-N must arm the add field below the live selection")
+    }
+
+    @MainActor func testCommandKTogglesLiveMultiSelection() {
+        continueAfterFailure = false
+        let app = launchApp(store: "mac-command-k-multi", reset: true)
+        createList(named: "Command K Multi List", in: app)
+        for title in ["Alpha", "Bravo", "Charlie"] {
+            addItem(named: title, in: app)
+        }
+        app.typeKey(.escape, modifierFlags: [])
+
+        let alpha = app.staticTexts["Alpha"]
+        let bravo = app.staticTexts["Bravo"]
+        XCTAssertTrue(bravo.waitForExistence(timeout: 5))
+        alpha.click()
+        XCUIElement.perform(withKeyModifiers: .shift) { bravo.click() }
+
+        app.typeKey("k", modifierFlags: .command)
+
+        XCTAssertTrue(app.buttons["Uncheck Alpha"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Uncheck Bravo"].waitForExistence(timeout: 5),
+                      "Command-K must read and toggle the Shift-extended selection at invocation")
+    }
+
     @MainActor func testInspectorNotesEditorIsBounded() {
         continueAfterFailure = false
         let app = launchApp(store: "mac-bounded-notes", reset: true)
@@ -336,9 +424,7 @@ final class Listsurf_macOSUITests: XCTestCase {
         let item = app.staticTexts["Noted Item"]
         XCTAssertTrue(item.waitForExistence(timeout: 5))
         item.click()
-        let inspector = app.buttons["editor.inspector"]
-        XCTAssertTrue(inspector.waitForExistence(timeout: 5))
-        inspector.click()
+        app.typeKey("i", modifierFlags: [.command, .option])
 
         let notes = app.textViews["inspector.itemNotes"]
         XCTAssertTrue(notes.waitForExistence(timeout: 5))
@@ -418,6 +504,21 @@ final class Listsurf_macOSUITests: XCTestCase {
             app.textFields["List name"],
             app.alerts.textFields.firstMatch
         )
+        if !titleField.waitForExistence(timeout: 5) {
+            // macOS can drop the first toolbar click while the newly launched
+            // window is still becoming key. Retry through the empty-state
+            // action (or toolbar fallback) after reactivation.
+            app.activate()
+            let retry = firstExisting(
+                app.buttons["library.createFirstList"],
+                app.buttons["library.newList"]
+            )
+            if retry.exists { retry.click() }
+        }
+        if !titleField.waitForExistence(timeout: 5) {
+            app.activate()
+            app.typeKey("n", modifierFlags: [.command, .shift])
+        }
         XCTAssertTrue(titleField.waitForExistence(timeout: 5))
         titleField.click()
         titleField.typeText(title)

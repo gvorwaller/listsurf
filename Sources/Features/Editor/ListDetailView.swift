@@ -291,6 +291,10 @@ struct ListDetailView: View {
         actions.toggleInspector = { showInspector.toggle() }
         actions.expandAll = { store.expandAll() }
         actions.collapseAll = { store.collapseAll() }
+        actions.setFilter = { filter in
+            guard !store.isTextInputActive else { return }
+            store.checkFilter = filter
+        }
 
         // While the user is typing (rename or add field), structural
         // commands must be disabled: an enabled menu equivalent would fire
@@ -338,11 +342,25 @@ struct ListDetailView: View {
                 guard !store.isTextInputActive, let liveID = singleSelectedItemID(in: store) else { return }
                 store.moveDown(itemID: liveID, undoManager: undoManager)
             }
+            actions.rename = {
+                guard !store.isTextInputActive, let liveID = singleSelectedItemID(in: store) else { return }
+                store.beginEditing(itemID: liveID)
+            }
         }
         if !store.selectedItemIDs.isEmpty {
+            actions.toggleChecked = {
+                guard !store.isTextInputActive, !store.selectedItemIDs.isEmpty else { return }
+                store.toggleChecked(ids: store.selectedItemIDs, undoManager: undoManager)
+            }
             actions.delete = {
                 guard !store.isTextInputActive, !store.selectedItemIDs.isEmpty else { return }
                 store.pendingDeletionIDs = store.selectedItemIDs
+            }
+        }
+        if store.progress.checked > 0 {
+            actions.resetAllChecks = {
+                guard !store.isTextInputActive, store.progress.checked > 0 else { return }
+                showingResetAllChecksConfirmation = true
             }
         }
 
