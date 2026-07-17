@@ -31,7 +31,10 @@ struct InspectorView: View {
 
             Section("Notes") {
                 NotesEditor(text: notesBinding(item))
-                    .frame(minHeight: 110)
+                    // Prototype parity: notes stay compact in both the macOS
+                    // inspector and iOS Details sheet, scrolling internally
+                    // instead of expanding the surrounding Form without bound.
+                    .frame(minHeight: 56, idealHeight: 88, maxHeight: 120)
             }
 
             Section("Quantity") {

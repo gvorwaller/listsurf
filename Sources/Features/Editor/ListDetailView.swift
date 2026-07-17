@@ -1,5 +1,6 @@
 import SwiftUI
 import Domain
+import Combine
 
 struct ListDetailView: View {
     let listID: UUID
@@ -8,6 +9,9 @@ struct ListDetailView: View {
     @State private var showInspector = false
     @State private var showingResetAllChecksConfirmation = false
     @State private var listBeingEdited: ListItem?
+    @State private var canUndo = false
+    @State private var canRedo = false
+    @State private var undoAvailabilityRefreshGate = UndoAvailabilityRefreshGate()
     @AppStorage(ListsurfSettingsKey.notesPreviewLineLimit) private var notePreviewLineCount = 1
     @Environment(\.undoManager) private var undoManager
 
@@ -37,6 +41,17 @@ struct ListDetailView: View {
         .navigationTitle(currentList?.title ?? "")
         .toolbar { toolbarContent }
         .focusedSceneValue(\.listsurfListCommands, focusedCommandActions)
+        #if os(iOS)
+        .onReceive(NotificationCenter.default.publisher(for: .NSUndoManagerCheckpoint)) { notification in
+            refreshUndoAvailability(from: notification)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .NSUndoManagerDidUndoChange)) { notification in
+            refreshUndoAvailability(from: notification)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .NSUndoManagerDidRedoChange)) { notification in
+            refreshUndoAvailability(from: notification)
+        }
+        #endif
         .sheet(item: $listBeingEdited) { list in
             ListIdentityEditSheet(list: list) { updated in
                 Task { await appStore.updateList(updated) }
@@ -97,12 +112,15 @@ struct ListDetailView: View {
             // Replacing the store must retire its undo actions, or the Undo
             // menu could mutate and persist a list that's no longer shown.
             listStore?.teardownUndo(undoManager)
+            refreshUndoAvailability()
             let store = appStore.makeListStore(for: listID)
             listStore = store
             await store.load()
+            refreshUndoAvailability()
         }
         .onDisappear {
             listStore?.teardownUndo(undoManager)
+            refreshUndoAvailability()
         }
     }
 
@@ -122,6 +140,7 @@ struct ListDetailView: View {
                 } label: {
                     Label("Inspector", systemImage: "info.circle")
                 }
+                .accessibilityIdentifier("editor.inspector")
                 .help("Toggle Inspector")
 
                 Button {
@@ -136,6 +155,26 @@ struct ListDetailView: View {
 
         ToolbarItemGroup(placement: .secondaryAction) {
             if let store = listStore {
+                #if os(iOS)
+                Button {
+                    undoManager?.undo()
+                    refreshUndoAvailability()
+                } label: {
+                    Label("Undo", systemImage: "arrow.uturn.backward")
+                }
+                .disabled(!canUndo)
+                .accessibilityIdentifier("editor.undo")
+
+                Button {
+                    undoManager?.redo()
+                    refreshUndoAvailability()
+                } label: {
+                    Label("Redo", systemImage: "arrow.uturn.forward")
+                }
+                .disabled(!canRedo)
+                .accessibilityIdentifier("editor.redo")
+                #endif
+
                 editorToolbar(store)
             }
         }
@@ -216,6 +255,33 @@ struct ListDetailView: View {
             get: { store.checkFilter },
             set: { store.checkFilter = $0 }
         )
+    }
+
+    private func refreshUndoAvailability(from notification: Notification? = nil) {
+        if let notification,
+           let notificationManager = notification.object as? UndoManager,
+           notificationManager !== undoManager {
+            return
+        }
+        if notification?.name == .NSUndoManagerCheckpoint,
+           undoAvailabilityRefreshGate.ignoresNextCheckpoint {
+            undoAvailabilityRefreshGate.ignoresNextCheckpoint = false
+            return
+        }
+
+        guard let undoManager else {
+            if canUndo { canUndo = false }
+            if canRedo { canRedo = false }
+            return
+        }
+
+        // Accessing availability emits NSUndoManagerCheckpoint. Mark that
+        // notification as self-generated so the observer does not spin.
+        undoAvailabilityRefreshGate.ignoresNextCheckpoint = true
+        let nextCanUndo = undoManager.canUndo
+        let nextCanRedo = undoManager.canRedo
+        if canUndo != nextCanUndo { canUndo = nextCanUndo }
+        if canRedo != nextCanRedo { canRedo = nextCanRedo }
     }
 
     private var focusedCommandActions: ListsurfListCommandActions {
@@ -317,4 +383,8 @@ struct ListDetailView: View {
             set: { if !$0 { listStore?.pendingBranchResetID = nil } }
         )
     }
+}
+
+private final class UndoAvailabilityRefreshGate {
+    var ignoresNextCheckpoint = false
 }

@@ -298,7 +298,12 @@ final class Listsurf_macOSUITests: XCTestCase {
 
         // Filter to Remaining: the now-checked Passport row must disappear,
         // Sunscreen (still unchecked) must stay.
-        let remainingSegment = app.buttons["Remaining"]
+        // macOS 26 exposes a segmented Picker's children as radio buttons;
+        // older runtimes exposed them as buttons.
+        let remainingSegment = firstExisting(
+            app.radioButtons["Remaining"],
+            app.buttons["Remaining"]
+        )
         XCTAssertTrue(remainingSegment.waitForExistence(timeout: 5))
         remainingSegment.click()
 
@@ -319,6 +324,31 @@ final class Listsurf_macOSUITests: XCTestCase {
 
         XCTAssertTrue(passport.waitForExistence(timeout: 5))
         XCTAssertTrue(sunscreen.waitForExistence(timeout: 5))
+    }
+
+    @MainActor func testInspectorNotesEditorIsBounded() {
+        continueAfterFailure = false
+        let app = launchApp(store: "mac-bounded-notes", reset: true)
+        createList(named: "Mac Bounded Notes", in: app)
+        addItem(named: "Noted Item", in: app)
+        app.typeKey(.escape, modifierFlags: [])
+
+        let item = app.staticTexts["Noted Item"]
+        XCTAssertTrue(item.waitForExistence(timeout: 5))
+        item.click()
+        let inspector = app.buttons["editor.inspector"]
+        XCTAssertTrue(inspector.waitForExistence(timeout: 5))
+        inspector.click()
+
+        let notes = app.textViews["inspector.itemNotes"]
+        XCTAssertTrue(notes.waitForExistence(timeout: 5))
+        let initialHeight = notes.frame.height
+        XCTAssertGreaterThanOrEqual(initialHeight, 50)
+        XCTAssertLessThanOrEqual(initialHeight, 130)
+        notes.click()
+        notes.typeText((1...12).map { "Line \($0)" }.joined(separator: "\n"))
+        XCTAssertEqual(notes.frame.height, initialHeight, accuracy: 2,
+                       "Long notes must scroll internally instead of expanding the inspector")
     }
 
     /// Polls `condition` until it's true or `timeout` elapses. Row-reorder

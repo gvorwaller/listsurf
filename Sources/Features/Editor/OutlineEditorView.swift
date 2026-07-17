@@ -35,6 +35,7 @@ struct OutlineEditorView: View {
                 },
                 onIndent: { selectedRow.map { store.indent(itemID: $0.id, undoManager: undoManager) } },
                 onOutdent: { selectedRow.map { store.outdent(itemID: $0.id, undoManager: undoManager) } },
+                onDismissKeyboard: { focus = nil },
                 hasSelectedItem: selectedRow != nil
             ))
         #else
@@ -649,6 +650,7 @@ private struct KeyboardAccessoryModifier: ViewModifier {
     let onAddChild: () -> Void
     let onIndent: () -> Void
     let onOutdent: () -> Void
+    let onDismissKeyboard: () -> Void
     let hasSelectedItem: Bool
 
     func body(content: Content) -> some View {
@@ -685,6 +687,12 @@ private struct KeyboardAccessoryModifier: ViewModifier {
                         }
                         .disabled(!hasSelectedItem)
                         .accessibilityIdentifier("editor.keyboard.outdent")
+
+                        Button(action: onDismissKeyboard) {
+                            Image(systemName: "keyboard.chevron.compact.down")
+                        }
+                        .accessibilityLabel("Dismiss Keyboard")
+                        .accessibilityIdentifier("editor.keyboard.dismiss")
 
                         Button("Done", action: onDone)
                             .bold()

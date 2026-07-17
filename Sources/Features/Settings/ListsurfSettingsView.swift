@@ -65,7 +65,7 @@ public struct ListsurfSettingsView: View {
                 Text("5 lines").tag(5)
             }
 
-            Text("Shows the first lines of an item's notes beneath its title in edit and check mode. When off, items with notes show a small note icon instead.")
+            Text("Shows the first lines of an item's notes beneath its title. When off, items with notes show a small note icon instead.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }

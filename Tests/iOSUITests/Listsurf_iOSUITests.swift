@@ -203,6 +203,134 @@ final class Listsurf_iOSUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Untapped"].waitForExistence(timeout: 5))
     }
 
+    /// M5 Rev 2.6: the add field is load-bearing UI at the requested outline
+    /// slot, and dismissing the software keyboard must not end that add flow
+    /// or discard its draft.
+    @MainActor func testAddFieldPlacementAndKeyboardDismissal() {
+        continueAfterFailure = false
+        let app = launchApp(store: "ios-add-placement-dismiss", reset: true)
+        createList(named: "Placement List", in: app)
+
+        let addItem = firstExisting(
+            app.buttons["editor.addFirstItem"],
+            app.buttons["editor.addItem"]
+        )
+        XCTAssertTrue(addItem.waitForExistence(timeout: 5))
+        addItem.tap()
+        for title in ["Anchor", "Tail"] {
+            let field = app.textFields["editor.newItem"]
+            XCTAssertTrue(field.waitForExistence(timeout: 5))
+            field.typeText("\(title)\n")
+        }
+
+        let anchor = app.staticTexts["Anchor"]
+        let tail = app.staticTexts["Tail"]
+        XCTAssertTrue(anchor.waitForExistence(timeout: 5))
+        XCTAssertTrue(tail.waitForExistence(timeout: 5))
+        anchor.tap() // dismiss the continuation field and select Anchor
+
+        XCTAssertTrue(app.buttons["editor.ios.addBelow"].waitForExistence(timeout: 5))
+        app.buttons["editor.ios.addBelow"].tap()
+        let belowField = app.textFields["editor.newItem"]
+        XCTAssertTrue(belowField.waitForExistence(timeout: 5))
+        let belowFrame = belowField.frame
+        XCTAssertGreaterThan(belowFrame.minY, anchor.frame.minY)
+        XCTAssertLessThan(belowFrame.minY, tail.frame.minY,
+                          "Below field must render between its anchor and next sibling")
+
+        belowField.typeText("Preserved draft")
+        let dismissKeyboard = app.buttons["editor.keyboard.dismiss"]
+        XCTAssertTrue(dismissKeyboard.waitForExistence(timeout: 5))
+        dismissKeyboard.tap()
+        XCTAssertFalse(app.keyboards.element.waitForExistence(timeout: 2))
+        XCTAssertTrue(belowField.exists, "Dismissing the keyboard must keep the add field armed")
+        XCTAssertEqual(belowField.value as? String, "Preserved draft")
+
+        belowField.tap()
+        XCTAssertTrue(app.keyboards.element.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["editor.keyboard.cancel"].waitForExistence(timeout: 5))
+        app.buttons["editor.keyboard.cancel"].tap()
+        XCTAssertFalse(app.textFields["editor.newItem"].waitForExistence(timeout: 2))
+
+        anchor.tap()
+        XCTAssertTrue(app.buttons["editor.ios.addChild"].waitForExistence(timeout: 5))
+        app.buttons["editor.ios.addChild"].tap()
+        let childField = app.textFields["editor.newItem"]
+        XCTAssertTrue(childField.waitForExistence(timeout: 5))
+        XCTAssertGreaterThan(childField.frame.minY, anchor.frame.minY)
+        XCTAssertLessThan(childField.frame.minY, tail.frame.minY,
+                          "Child field must render immediately below its parent")
+        XCTAssertGreaterThan(childField.frame.minX, belowFrame.minX + 10,
+                             "Child field must be visibly indented from a sibling add field")
+    }
+
+    /// M5 §1.6(b): iOS exposes stable Undo/Redo rows whose enablement follows
+    /// the scene UndoManager and is cleared when ListDetailView switches stores.
+    @MainActor func testUndoRedoAvailabilityAcrossMutationAndListSwitch() {
+        continueAfterFailure = false
+        let app = launchApp(store: "ios-undo-redo", reset: true)
+        createList(named: "First Undo List", in: app)
+        addItem(named: "Undoable", in: app)
+        let undoable = app.staticTexts["Undoable"]
+        XCTAssertTrue(undoable.waitForExistence(timeout: 5))
+        undoable.tap() // dismiss the continuation field
+
+        openEditorOverflowIfNeeded(in: app)
+        var undo = undoButton(in: app)
+        var redo = redoButton(in: app)
+        XCTAssertTrue(undo.waitForExistence(timeout: 5))
+        XCTAssertTrue(redo.waitForExistence(timeout: 5))
+        XCTAssertTrue(waitUntil(timeout: 5) { undo.isEnabled })
+        XCTAssertFalse(redo.isEnabled)
+        undo.tap()
+        XCTAssertFalse(undoable.waitForExistence(timeout: 2))
+
+        openEditorOverflowIfNeeded(in: app)
+        redo = redoButton(in: app)
+        XCTAssertTrue(waitUntil(timeout: 5) { redo.isEnabled })
+        redo.tap()
+        XCTAssertTrue(undoable.waitForExistence(timeout: 5))
+
+        let back = firstExisting(
+            app.navigationBars.buttons["Listsurf"],
+            app.navigationBars.buttons["Back"],
+            app.navigationBars.buttons.firstMatch
+        )
+        XCTAssertTrue(back.waitForExistence(timeout: 5))
+        back.tap()
+        createList(named: "Second Undo List", in: app)
+
+        openEditorOverflowIfNeeded(in: app)
+        undo = undoButton(in: app)
+        redo = redoButton(in: app)
+        XCTAssertTrue(undo.waitForExistence(timeout: 5))
+        XCTAssertTrue(redo.waitForExistence(timeout: 5))
+        XCTAssertFalse(undo.isEnabled, "Switching lists must retire the old store's undo actions")
+        XCTAssertFalse(redo.isEnabled, "Switching lists must retire the old store's redo actions")
+    }
+
+    @MainActor func testDetailsNotesEditorIsBounded() {
+        continueAfterFailure = false
+        let app = launchApp(store: "ios-bounded-notes", reset: true)
+        createList(named: "Bounded Notes List", in: app)
+        addItem(named: "Noted Item", in: app)
+
+        let item = app.staticTexts["Noted Item"]
+        XCTAssertTrue(item.waitForExistence(timeout: 5))
+        item.doubleTap()
+
+        let notes = app.textViews["inspector.itemNotes"]
+        XCTAssertTrue(notes.waitForExistence(timeout: 5))
+        let initialHeight = notes.frame.height
+        XCTAssertGreaterThanOrEqual(initialHeight, 50)
+        XCTAssertLessThanOrEqual(initialHeight, 130)
+        notes.tap()
+        notes.typeText((1...12).map { "Line \($0)" }.joined(separator: "\n"))
+        XCTAssertGreaterThanOrEqual(notes.frame.height, 50)
+        XCTAssertLessThanOrEqual(notes.frame.height, 130,
+                                 "Long notes must scroll internally instead of expanding Details")
+    }
+
     @MainActor func testCoreActionsAreVisible() {
         continueAfterFailure = false
         let app = launchApp(store: "ios-visible-actions", reset: true)
@@ -307,6 +435,26 @@ final class Listsurf_iOSUITests: XCTestCase {
         let itemField = app.textFields["editor.newItem"]
         XCTAssertTrue(itemField.waitForExistence(timeout: 5))
         itemField.typeText("\(title)\n")
+    }
+
+    @MainActor private func openEditorOverflowIfNeeded(in app: XCUIApplication) {
+        if undoButton(in: app).exists { return }
+
+        let more = firstExisting(
+            app.buttons["More"].firstMatch,
+            app.buttons["Toolbar overflow"].firstMatch
+        )
+        XCTAssertTrue(more.waitForExistence(timeout: 5), "Expected the iOS toolbar overflow button")
+        more.tap()
+        XCTAssertTrue(waitUntil(timeout: 5) { undoButton(in: app).exists })
+    }
+
+    @MainActor private func undoButton(in app: XCUIApplication) -> XCUIElement {
+        firstExisting(app.buttons["editor.undo"].firstMatch, app.buttons["Undo"].firstMatch)
+    }
+
+    @MainActor private func redoButton(in app: XCUIApplication) -> XCUIElement {
+        firstExisting(app.buttons["editor.redo"].firstMatch, app.buttons["Redo"].firstMatch)
     }
 
     @MainActor private func firstExisting(_ elements: XCUIElement...) -> XCUIElement {
