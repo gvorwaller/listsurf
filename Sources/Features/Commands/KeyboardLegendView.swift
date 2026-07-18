@@ -33,7 +33,7 @@ public struct KeyboardLegendView: View {
                     HStack(alignment: .firstTextBaseline, spacing: 16) {
                         Text(command.keyDisplay)
                             .font(.system(.body, design: .rounded, weight: .semibold))
-                            .frame(width: 92, alignment: .trailing)
+                            .frame(width: 132, alignment: .trailing)
                             .foregroundStyle(.primary)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(command.title).fontWeight(.medium)
