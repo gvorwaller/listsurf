@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<opml version="2.0">
+  <head>
+    <title>M5 Integrated Gate</title>
+  </head>
+  <body>
+    <outline text="M5 Integrated Gate — one pass closes td-39e584">
+      <outline text="Build prerequisites">
+        <outline text="macOS: current main (9e4b5aa or later), fresh build" _status="unchecked"/>
+        <outline text="iPhone: real device build" _status="unchecked" _note="Cable build fine for everything except rename-lag (P5), which ideally also gets a TestFlight/release try."/>
+      </outline>
+      <outline text="Sitting 1 — macOS (~25 min)">
+        <outline text="A. Checkbox &amp; filter flow">
+          <outline text="Create list; add 5 items, 2-3 levels of nesting" _status="unchecked"/>
+          <outline text="Check a leaf" _status="unchecked" _note="Strikethrough appears; parent shows progress (e.g. 1/3)."/>
+          <outline text="Click a parent's checkbox" _status="unchecked" _note="Whole branch checks."/>
+          <outline text="Make a mixed parent" _status="unchecked" _note="Some children checked → orange minus tri-state."/>
+          <outline text="Cycle filters: Remaining / Completed / All" _status="unchecked" _note="Remaining hides checked; Completed shows only checked; All shows everything."/>
+          <outline text="Under Remaining, check a visible row" _status="unchecked" _note="Row animates out; selection advances to the next visible row."/>
+          <outline text="Check everything under Remaining" _status="unchecked" _note="All Done! screen → Show All returns."/>
+          <outline text="Right-click parent → Reset Branch… → confirm" _status="unchecked" _note="Branch unchecked."/>
+          <outline text="Toolbar Reset All… → confirm" _status="unchecked" _note="All unchecked."/>
+          <outline text="Cmd-Z back through every mutation above" _status="unchecked" _note="Each one undoes cleanly."/>
+          <outline text="Quit and relaunch" _status="unchecked" _note="Everything persisted; legend window did NOT auto-reopen."/>
+          <outline text="Remnant sweep: no 'Check Mode' wording anywhere" _status="unchecked" _note="Toolbar, menus, Help, AND Settings."/>
+        </outline>
+        <outline text="B. Keyboard-only session (mouse untouched)">
+          <outline text="Shift-Cmd-N creates a list from the keyboard" _status="unchecked"/>
+          <outline text="Cmd-N → type → Return → type → Return ×3 → Esc" _status="unchecked" _note="Continuation flow; Esc ends it."/>
+          <outline text="Arrows move selection; Shift-arrows extend" _status="unchecked"/>
+          <outline text="Return renames the selected row — try ~10 different rows" _status="unchecked" _note="Renames in place, every single time."/>
+          <outline text="While renaming: Esc cancels, Return commits" _status="unchecked" _note="Esc leaves title unchanged."/>
+          <outline text="Remaining filter → select top row → Space Space Space" _status="unchecked" _note="Rows vanish; selection advances each time."/>
+          <outline text="Shift-extend a multi-selection → Cmd-K immediately" _status="unchecked" _note="ALL highlighted rows toggle — never just the last row (the old B3 bug)."/>
+          <outline text="Tab / Shift-Tab, Cmd-] / Cmd-[, Cmd-Opt-Up/Down" _status="unchecked" _note="Indent, outdent, move — all act on the highlighted row."/>
+          <outline text="Cmd-Delete → confirmation → press Return" _status="unchecked" _note="Return activates Delete (the dialog default), never rename."/>
+          <outline text="Cmd-Z back through everything" _status="unchecked"/>
+          <outline text="Edge: Return, nothing selected, empty list" _status="unchecked" _note="Arms the root add field."/>
+          <outline text="Edge: Return with a multi-selection" _status="unchecked" _note="Does nothing."/>
+          <outline text="Edge: Space while renaming/adding" _status="unchecked" _note="Types a space; never toggles a check."/>
+          <outline text="Edge: click sidebar search, press Space" _status="unchecked" _note="Types a space; editor untouched."/>
+          <outline text="Edge: Space with no selection" _status="unchecked" _note="List scrolls (native default)."/>
+          <outline text="Esc with no text entry active" _status="unchecked" _note="Clears selection; a second Esc does nothing."/>
+        </outline>
+        <outline text="C. Consistency audit">
+          <outline text="Read Help's Mac keyboard section line by line, performing each entry" _status="unchecked" _note="Any line that doesn't match reality = fail."/>
+          <outline text="Audit each surface against docs/m5-parity-matrix.md" _status="unchecked" _note="Item menu; View menu (Filter submenu, Keyboard Legend); row right-click (hints ON); row ellipsis (hints OFF — deliberate); toolbar Actions; empty-area right-click (Add Item, Expand All, Collapse All)."/>
+          <outline text="Press every advertised shortcut once" _status="unchecked" _note="Cmd-N, Shift-Cmd-N, Opt-Cmd-N, Cmd-Return, Cmd-E, Cmd-K, Cmd-], Cmd-[, Cmd-Opt-Up, Cmd-Opt-Down, Cmd-Delete, Opt-Cmd-1/2/3, Opt-Cmd-I, Opt-Cmd-L, Cmd-?, Cmd-comma, Cmd-Z, Shift-Cmd-Z."/>
+        </outline>
+        <outline text="D. New features">
+          <outline text="Inspector notes stay bounded" _status="unchecked" _note="Paste ~15 lines → field stays ~3-6 lines tall, scrolls internally; inspector layout intact."/>
+          <outline text="Keyboard Legend: Opt-Cmd-L opens; keys light up; hides again" _status="unchecked" _note="Press Return/Space/Tab/Cmd-K/arrows in the editor → matching row flashes ~1s."/>
+          <outline text="Legend never steals focus" _status="unchecked" _note="With legend open, keep typing — keystrokes stay in the editor."/>
+        </outline>
+        <outline text="E. Judgment calls (verdicts, not pass/fail)">
+          <outline text="Row menus say 'New Item' where they said 'Add Below' — keep or revert?" _status="unchecked"/>
+          <outline text="Strikethrough on checked rows — keep?" _status="unchecked"/>
+          <outline text="Instant hide under Remaining vs a grace delay — keep?" _status="unchecked"/>
+          <outline text="Overall: does it feel like the prototype? Note anything missing." _status="unchecked"/>
+        </outline>
+      </outline>
+      <outline text="Sitting 2 — iPhone, real device (~15 min)">
+        <outline text="P. Core flow">
+          <outline text="Add 5 nested items — add field appears AT the insertion point" _status="unchecked" _note="Below its anchor, indented for a child. Bottom-of-list = spec violation."/>
+          <outline text="Keyboard-dismiss button (down-chevron)" _status="unchecked" _note="Keyboard drops, add flow stays armed with draft; tap field → keyboard returns; Done ends flow."/>
+          <outline text="Checkbox flow: leaf, branch, mixed, filters, All Done, Reset" _status="unchecked" _note="Fat-finger check: checkbox vs chevron never mis-tap."/>
+          <outline text="Undo/Redo in toolbar overflow" _status="unchecked" _note="Mutate → Undo on / Redo off; Undo → Redo on; Redo; switch lists → both off."/>
+          <outline text="Rename lag measurement (td-e7c609)" _status="unchecked" _note="Type a quick sentence in rename. Record build type (cable vs TestFlight) and verdict: none / noticeable / bad. Non-blocking today; fix-before-ship regardless."/>
+          <outline text="Double-tap a row opens Details; single-tap not delayed" _status="unchecked"/>
+          <outline text="Details notes bounded and scrolls internally" _status="unchecked" _note="Paste long text."/>
+          <outline text="Scroll hard to top: no shake, large title renders" _status="unchecked" _note="td-ef3eec probe — if it still shakes, note it; known issue, just record."/>
+        </outline>
+        <outline text="Q. Gestures never verified on hardware">
+          <outline text="Drag a row among its siblings" _status="unchecked" _note="Clean same-parent reorder."/>
+          <outline text="Drag past first/last sibling" _status="unchecked" _note="Clamps sanely; no crash or jump."/>
+          <outline text="Long-press: menu vs drag arbitration" _status="unchecked" _note="td-3960b2 said drag only worked by sliding out of the menu — record what happens now."/>
+          <outline text="Swipe-to-delete → confirm → Undo restores" _status="unchecked"/>
+          <outline text="Kill and relaunch — everything persisted" _status="unchecked"/>
+        </outline>
+      </outline>
+      <outline text="Wrap-up">
+        <outline text="Hand CC2 the marked-up list (any form)" _status="unchecked" _note="Fails → td issues from one-line symptoms. Judgment calls → recorded decisions. All pass or signed deferrals → td-39e584 closes; next stop TestFlight dogfood."/>
+      </outline>
+    </outline>
+  </body>
+</opml>
