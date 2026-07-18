@@ -42,9 +42,8 @@ struct ItemActionsMenu: View {
                 selectTargetIfNeeded()
                 store.beginAdding(.child(id))
             } label: {
-                Label(CommandCatalog.addChild.title, systemImage: CommandCatalog.addChild.systemImage)
+                Label(hinted(CommandCatalog.addChild.title, CommandCatalog.addChild.binding), systemImage: CommandCatalog.addChild.systemImage)
             }
-            .shortcutHint(CommandCatalog.addChild.binding, enabled: showsShortcutHints)
 
             Divider()
 
@@ -52,17 +51,15 @@ struct ItemActionsMenu: View {
                 selectTargetIfNeeded()
                 store.indent(itemID: id, undoManager: undoManager)
             } label: {
-                Label(CommandCatalog.indent.title, systemImage: CommandCatalog.indent.systemImage)
+                Label(hinted(CommandCatalog.indent.title, CommandCatalog.indent.binding), systemImage: CommandCatalog.indent.systemImage)
             }
-            .shortcutHint(CommandCatalog.indent.binding, enabled: showsShortcutHints)
 
             Button {
                 selectTargetIfNeeded()
                 store.outdent(itemID: id, undoManager: undoManager)
             } label: {
-                Label(CommandCatalog.outdent.title, systemImage: CommandCatalog.outdent.systemImage)
+                Label(hinted(CommandCatalog.outdent.title, CommandCatalog.outdent.binding), systemImage: CommandCatalog.outdent.systemImage)
             }
-            .shortcutHint(CommandCatalog.outdent.binding, enabled: showsShortcutHints)
 
             Divider()
 
@@ -70,17 +67,15 @@ struct ItemActionsMenu: View {
                 selectTargetIfNeeded()
                 store.moveUp(itemID: id, undoManager: undoManager)
             } label: {
-                Label(CommandCatalog.moveUp.title, systemImage: CommandCatalog.moveUp.systemImage)
+                Label(hinted(CommandCatalog.moveUp.title, CommandCatalog.moveUp.binding), systemImage: CommandCatalog.moveUp.systemImage)
             }
-            .shortcutHint(CommandCatalog.moveUp.binding, enabled: showsShortcutHints)
 
             Button {
                 selectTargetIfNeeded()
                 store.moveDown(itemID: id, undoManager: undoManager)
             } label: {
-                Label(CommandCatalog.moveDown.title, systemImage: CommandCatalog.moveDown.systemImage)
+                Label(hinted(CommandCatalog.moveDown.title, CommandCatalog.moveDown.binding), systemImage: CommandCatalog.moveDown.systemImage)
             }
-            .shortcutHint(CommandCatalog.moveDown.binding, enabled: showsShortcutHints)
 
             Divider()
 
@@ -88,9 +83,8 @@ struct ItemActionsMenu: View {
                 selectTargetIfNeeded()
                 store.beginEditing(itemID: id)
             } label: {
-                Label(CommandCatalog.rename.title, systemImage: CommandCatalog.rename.systemImage)
+                Label(hinted(CommandCatalog.rename.title, CommandCatalog.rename.binding), systemImage: CommandCatalog.rename.systemImage)
             }
-            .shortcutHint(CommandCatalog.rename.binding, enabled: showsShortcutHints)
 
             Button {
                 selectTargetIfNeeded()
@@ -106,11 +100,10 @@ struct ItemActionsMenu: View {
                 store.toggleChecked(ids: [id], undoManager: undoManager)
             } label: {
                 Label(
-                    store.wouldCheck(ids: [id]) ? "Check" : "Uncheck",
+                    hinted(store.wouldCheck(ids: [id]) ? "Check" : "Uncheck", CommandCatalog.toggleChecked.binding),
                     systemImage: store.wouldCheck(ids: [id]) ? "checkmark.circle" : "circle"
                 )
             }
-            .shortcutHint(CommandCatalog.toggleChecked.binding, enabled: showsShortcutHints)
 
             if store.resolvedRow(for: id)?.hasChildren == true {
                 Button {
@@ -129,11 +122,10 @@ struct ItemActionsMenu: View {
                 store.toggleChecked(ids: itemIDs, undoManager: undoManager)
             } label: {
                 Label(
-                    store.wouldCheck(ids: itemIDs) ? "Check" : "Uncheck",
+                    hinted(store.wouldCheck(ids: itemIDs) ? "Check" : "Uncheck", CommandCatalog.toggleChecked.binding),
                     systemImage: store.wouldCheck(ids: itemIDs) ? "checkmark.circle" : "circle"
                 )
             }
-            .shortcutHint(CommandCatalog.toggleChecked.binding, enabled: showsShortcutHints)
 
             Divider()
         }
@@ -143,9 +135,8 @@ struct ItemActionsMenu: View {
                 selectTargetIfNeeded()
                 store.pendingDeletionIDs = itemIDs
             } label: {
-                Label(itemIDs.count == 1 ? "Delete" : "Delete \(itemIDs.count) Items", systemImage: "trash")
+                Label(hinted(itemIDs.count == 1 ? "Delete" : "Delete \(itemIDs.count) Items", CommandCatalog.delete.binding), systemImage: "trash")
             }
-            .shortcutHint(CommandCatalog.delete.binding, enabled: showsShortcutHints)
         }
     }
 
@@ -154,15 +145,14 @@ struct ItemActionsMenu: View {
             store.selectedItemIDs = itemIDs
         }
     }
-}
 
-private extension View {
-    @ViewBuilder
-    func shortcutHint(_ binding: CommandCatalog.Binding?, enabled: Bool) -> some View {
-        if enabled, let binding {
-            keyboardShortcut(binding.key, modifiers: binding.modifiers)
-        } else {
-            self
-        }
+    /// macOS suppresses key equivalents in context menus by platform design
+    /// (Finder, Notes, and every system context menu show none), so the
+    /// `.keyboardShortcut` modifier renders nothing there (td-06fb0a). The
+    /// hint is appended to the title text instead — only on surfaces whose
+    /// target is the selection (see `showsShortcutHints` doc above).
+    private func hinted(_ title: String, _ binding: CommandCatalog.Binding?) -> String {
+        guard showsShortcutHints, let binding else { return title }
+        return "\(title)   \(binding.display)"
     }
 }

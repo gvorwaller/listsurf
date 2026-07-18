@@ -11,6 +11,15 @@ struct OutlineEditorView: View {
     @State private var newItemText = ""
     @State private var selectionFromAddFlow: Set<UUID> = []
     @FocusState private var focus: EditorFocus?
+    // B2 escalation (spec §2): menu-equivalent invocations (⌘Return, ⌘N from
+    // the menu bar) dismiss their menu AFTER our one-hop deferred focus
+    // assignment lands, and the dismissal's key-focus churn can steal it —
+    // the field arms but keystrokes go nowhere (td-ff531e). While a target
+    // is pending, one bounded retry plus a one-shot re-assert win that race;
+    // the pending flag clears the moment focus reaches its target, so a
+    // deliberate later focus=nil (the iOS ⌄ keyboard-dismiss) is never
+    // fought. No sleeps, no third mechanism.
+    @State private var pendingFocus: EditorFocus?
 
     var body: some View {
         #if os(iOS)
@@ -114,8 +123,9 @@ struct OutlineEditorView: View {
                 // Task-deferred: the assignment must land after the rename
                 // field mounts (one runloop hop), not inside the transaction
                 // that flips editingItemID (spec §2, B2/B4 fix).
-                Task { @MainActor in focus = .rename(newValue) }
+                assignFocus(.rename(newValue))
             } else if let oldValue, newValue == nil {
+                if pendingFocus == .rename(oldValue) { pendingFocus = nil }
                 // Editing was ended by something other than this view's own
                 // commit/cancel (both consume the draft first) — e.g. the
                 // store enforcing add/rename exclusivity. Commit the
@@ -133,7 +143,20 @@ struct OutlineEditorView: View {
             // any re-add), and the continuation flow's .below(a)→.below(b)
             // is a value change that also fires.
             if newValue != nil {
-                Task { @MainActor in focus = .addField }
+                assignFocus(.addField)
+            } else if pendingFocus == .addField {
+                pendingFocus = nil
+            }
+        }
+        .onChange(of: focus) { _, newValue in
+            // One-shot re-assert (B2 escalation): if something stole focus
+            // before it ever reached the pending target, put it back once.
+            guard let pending = pendingFocus else { return }
+            if newValue == pending {
+                pendingFocus = nil
+            } else {
+                pendingFocus = nil
+                focus = pending
             }
         }
         .onChange(of: store.selectedItemIDs) { _, newValue in
@@ -497,6 +520,21 @@ struct OutlineEditorView: View {
     /// A user tap always dismisses a pending add (commit-or-cancel), even if
     /// the tapped row is the item the add flow just created — the intent is
     /// "done entering, work with this row".
+    /// Deferred focus assignment with the spec §2 B2 bounded escalation:
+    /// one runloop hop, then a single yield-retry while the target is still
+    /// pending. The one-shot `.onChange(of: focus)` re-assert covers the
+    /// menu-dismissal race that lands after both.
+    private func assignFocus(_ target: EditorFocus) {
+        pendingFocus = target
+        Task { @MainActor in
+            focus = target
+            await Task.yield()
+            if pendingFocus == target, focus != target {
+                focus = target
+            }
+        }
+    }
+
     private func selectRow(_ id: UUID) {
         if store.addPlacement != nil {
             dismissPendingAdd()

@@ -390,6 +390,34 @@ final class Listsurf_macOSUITests: XCTestCase {
         XCTAssertGreaterThan(addField.frame.minY, anchor.frame.minY)
         XCTAssertLessThan(addField.frame.minY, tail.frame.minY,
                           "Command-N must arm the add field below the live selection")
+        // td-ff531e: existence is not focus — typing must land in the field.
+        app.typeText("Focus Proof")
+        XCTAssertTrue(waitUntil(timeout: 5) { (addField.value as? String) == "Focus Proof" },
+                      "Command-N's add field must own keyboard focus")
+    }
+
+    /// td-ff531e regression: the menu-equivalent path (menu-system key-focus
+    /// churn on dismissal) stole the one-hop deferred focus assignment — the
+    /// field armed but typing went nowhere.
+    @MainActor func testCommandReturnArmsEditableChildField() {
+        continueAfterFailure = false
+        let app = launchApp(store: "mac-command-return-child", reset: true)
+        createList(named: "Command Return List", in: app)
+        addItem(named: "Parent", in: app)
+        app.typeKey(.escape, modifierFlags: [])
+
+        let parent = app.staticTexts["Parent"]
+        XCTAssertTrue(parent.waitForExistence(timeout: 5))
+        parent.click()
+        app.typeKey(.return, modifierFlags: .command)
+
+        let addField = app.textFields["editor.newItem"]
+        XCTAssertTrue(addField.waitForExistence(timeout: 5))
+        app.typeText("Child Via Menu")
+        XCTAssertTrue(waitUntil(timeout: 5) { (addField.value as? String) == "Child Via Menu" },
+                      "Command-Return's child add field must own keyboard focus")
+        app.typeKey(.return, modifierFlags: [])
+        XCTAssertTrue(app.staticTexts["Child Via Menu"].waitForExistence(timeout: 5))
     }
 
     @MainActor func testCommandKTogglesLiveMultiSelection() {
