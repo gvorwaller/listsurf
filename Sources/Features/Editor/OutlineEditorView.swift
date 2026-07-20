@@ -11,14 +11,16 @@ struct OutlineEditorView: View {
     @State private var newItemText = ""
     @State private var selectionFromAddFlow: Set<UUID> = []
     @FocusState private var focus: EditorFocus?
-    // B2 escalation (spec §2): menu-equivalent invocations (⌘Return, ⌘N from
-    // the menu bar) dismiss their menu AFTER our one-hop deferred focus
-    // assignment lands, and the dismissal's key-focus churn can steal it —
-    // the field arms but keystrokes go nowhere (td-ff531e). While a target
-    // is pending, one bounded retry plus a one-shot re-assert win that race;
-    // the pending flag clears the moment focus reaches its target, so a
-    // deliberate later focus=nil (the iOS ⌄ keyboard-dismiss) is never
-    // fought. No sleeps, no third mechanism.
+    // td-ff531e: when arming restructures the outline (⌘Return's .child
+    // placement expands the parent row), FocusState reports the target as
+    // focused while AppKit's first responder never moves — the bridge
+    // silently does not run, no state-change event ever fires to reveal it,
+    // and typing goes to the List. Proven by responder-chain event logging
+    // (2026-07-19) after three pure-SwiftUI escalations were falsified.
+    // While a target is pending (cleared by: first typed character, one
+    // steal re-assert, or a deliberate dismissal such as the iOS ⌄ button),
+    // the responder chain is verified after assignment and the NSTextField
+    // is focused directly when the bridge didn't do it.
     @State private var pendingFocus: EditorFocus?
 
     var body: some View {
@@ -44,7 +46,7 @@ struct OutlineEditorView: View {
                 },
                 onIndent: { selectedRow.map { store.indent(itemID: $0.id, undoManager: undoManager) } },
                 onOutdent: { selectedRow.map { store.outdent(itemID: $0.id, undoManager: undoManager) } },
-                onDismissKeyboard: { focus = nil },
+                onDismissKeyboard: { pendingFocus = nil; focus = nil },
                 hasSelectedItem: selectedRow != nil
             ))
         #else
@@ -149,15 +151,33 @@ struct OutlineEditorView: View {
             }
         }
         .onChange(of: focus) { _, newValue in
-            // One-shot re-assert (B2 escalation): if something stole focus
-            // before it ever reached the pending target, put it back once.
+            // One-shot re-assert (B2 escalation, revised after
+            // testCommandReturnArmsEditableChildField falsified the
+            // clear-on-reach version): the menu-equivalent churn steals focus
+            // AFTER it lands, so the guard must survive the reach and fire on
+            // the first loss. It is consumed by that one re-assert; deliberate
+            // dismissals (iOS ⌄, Esc, placement end) clear it explicitly, and
+            // the first typed character clears it as focus-proven.
+            guard let pending = pendingFocus, newValue != pending else { return }
+            pendingFocus = nil
+            focus = pending
+        }
+        #if os(macOS)
+        .onReceive(NotificationCenter.default.publisher(for: NSMenu.didEndTrackingNotification)) { _ in
+            // Menu-equivalent invocations can swallow the FocusState
+            // assignment entirely while the menu session is active — then no
+            // focus change ever fires and the steal-detect above never runs.
+            // The menu system announcing its own end is the deterministic
+            // moment the field can actually take focus.
             guard let pending = pendingFocus else { return }
-            if newValue == pending {
-                pendingFocus = nil
-            } else {
-                pendingFocus = nil
-                focus = pending
-            }
+            pendingFocus = nil
+            Task { @MainActor in focus = pending }
+        }
+        #endif
+        .onChange(of: newItemText) { _, newValue in
+            // First typed character proves focus landed — stop guarding, so a
+            // later deliberate focus move (sidebar search, ⌥⌘I) isn't rebuffed.
+            if !newValue.isEmpty, pendingFocus == .addField { pendingFocus = nil }
         }
         .onChange(of: store.selectedItemIDs) { _, newValue in
             // Click-away commits an in-progress rename, Finder-style.
@@ -428,6 +448,24 @@ struct OutlineEditorView: View {
             TextField(addPlaceholder, text: $newItemText)
                 .accessibilityIdentifier("editor.newItem")
                 .focused($focus, equals: .addField)
+                .onAppear {
+                    #if os(macOS)
+                    // td-ff531e: when arming restructures the outline (.child
+                    // expands the parent), the field mounts AFTER every
+                    // deferred assignment already ran — FocusState holds
+                    // .addField but no live view ever claimed it, so the List
+                    // keeps first responder and typing goes nowhere. The
+                    // field itself is the only place guaranteed to exist
+                    // after registration: cycle the binding from here.
+                    if pendingFocus == .addField, !Self.textEditorIsFirstResponder() {
+                        Task { @MainActor in
+                            await Task.yield()
+                            guard pendingFocus == .addField, !Self.textEditorIsFirstResponder() else { return }
+                            Self.focusAddFieldDirectly()
+                        }
+                    }
+                    #endif
+                }
                 .onSubmit { commitNewItem() }
                 .onKeyPress(.escape) {
                     cancelAdding()
@@ -531,9 +569,71 @@ struct OutlineEditorView: View {
             await Task.yield()
             if pendingFocus == target, focus != target {
                 focus = target
+                return
             }
+            #if os(macOS)
+            // td-ff531e root cause (evidence: focus-debug log 2026-07-19):
+            // on the menu-equivalent path, FocusState reports the target as
+            // focused while AppKit's first responder never moved — the
+            // makeFirstResponder bridge fails silently inside menu dispatch,
+            // and no FocusState change ever fires to reveal it. The responder
+            // chain is the ground truth: if no field editor is active, cycle
+            // focus nil→target once (the steal-detect onChange re-asserts,
+            // making the cycle self-completing and bounded by pendingFocus).
+            if pendingFocus == target, focus == target, !Self.textEditorIsFirstResponder() {
+                Self.focusAddFieldDirectly()
+            }
+            #endif
         }
     }
+
+    #if os(macOS)
+    private static func textEditorIsFirstResponder() -> Bool {
+        guard let responder = NSApp.keyWindow?.firstResponder else { return false }
+        return responder is NSTextView || responder is NSTextField
+    }
+
+    private static func firstResponderDescription() -> String {
+        guard let responder = NSApp.keyWindow?.firstResponder else { return "nil" }
+        return String(describing: type(of: responder))
+    }
+
+    /// td-ff531e last-resort: SwiftUI's FocusState→responder bridge provably
+    /// does not run when the add field mounts during an outline restructure
+    /// (.child arming expands the parent) — state reads .addField, the field
+    /// is mounted, the chain is clean, and no makeFirstResponder ever
+    /// happens (focus-debug log, 2026-07-19). Focus the NSTextField itself.
+    private static func focusAddFieldDirectly() {
+        guard let window = NSApp.keyWindow, let content = window.contentView else { return }
+        if let field = findAddTextField(in: content) {
+            window.makeFirstResponder(field)
+        }
+    }
+
+    private static func findAddTextField(in view: NSView) -> NSTextField? {
+        // The SwiftUI accessibilityIdentifier does not propagate to the
+        // backing AppKitTextField, so match on what does: an editable
+        // NSTextField whose placeholder is one of the add field's. Add and
+        // rename are mutually exclusive, the sidebar search lives in the
+        // toolbar (outside contentView), and the inspector notes editor is
+        // an NSTextView — a placeholder match is therefore unambiguous.
+        // Must mirror `addPlaceholder` above.
+        let addPlaceholders: Set<String> = ["New item", "New item below", "New child item"]
+        var match: NSTextField?
+        func walk(_ v: NSView) {
+            if match != nil { return }
+            if let field = v as? NSTextField, field.isEditable,
+               let placeholder = field.placeholderString,
+               addPlaceholders.contains(placeholder) {
+                match = field
+                return
+            }
+            v.subviews.forEach(walk)
+        }
+        walk(view)
+        return match
+    }
+    #endif
 
     private func selectRow(_ id: UUID) {
         if store.addPlacement != nil {
