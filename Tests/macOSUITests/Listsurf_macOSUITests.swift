@@ -320,26 +320,82 @@ final class Listsurf_macOSUITests: XCTestCase {
         XCTAssertTrue(sunscreen.waitForExistence(timeout: 5))
     }
 
-    @MainActor func testReturnRenamesSelectedRow() {
+    /// Restored split-version binding (2026-07-20 plan): bare Return with a
+    /// selected row arms an add field directly below it — editor-owned, no
+    /// menu dispatch — and typing must land immediately.
+    @MainActor func testReturnAddsItemBelowSelection() {
         continueAfterFailure = false
-        let app = launchApp(store: "mac-return-rename", reset: true)
-        createList(named: "Return Rename List", in: app)
+        let app = launchApp(store: "mac-return-add-below", reset: true)
+        createList(named: "Return Add List", in: app)
+        addItem(named: "Anchor", in: app)
+        addItem(named: "Tail", in: app)
+        app.typeKey(.escape, modifierFlags: [])
+
+        let anchor = app.staticTexts["Anchor"]
+        let tail = app.staticTexts["Tail"]
+        XCTAssertTrue(tail.waitForExistence(timeout: 5))
+        anchor.click()
+        app.typeKey(.return, modifierFlags: [])
+
+        let addField = app.textFields["editor.newItem"]
+        XCTAssertTrue(addField.waitForExistence(timeout: 5))
+        XCTAssertGreaterThan(addField.frame.minY, anchor.frame.minY)
+        XCTAssertLessThan(addField.frame.minY, tail.frame.minY,
+                          "Return must arm the add field below the selection")
+        app.typeText("Return Focus Proof")
+        XCTAssertTrue(waitUntil(timeout: 5) { (addField.value as? String) == "Return Focus Proof" },
+                      "Return's add field must own keyboard focus")
+        app.typeKey(.return, modifierFlags: [])
+        XCTAssertTrue(app.staticTexts["Return Focus Proof"].waitForExistence(timeout: 5))
+    }
+
+    /// Restored split-version binding: Shift-Return inserts a "New Item"
+    /// above the selection and drops straight into a focused rename.
+    @MainActor func testShiftReturnAddsRenameableItemAbove() {
+        continueAfterFailure = false
+        let app = launchApp(store: "mac-shift-return-above", reset: true)
+        createList(named: "Shift Return List", in: app)
+        addItem(named: "Anchor", in: app)
+        app.typeKey(.escape, modifierFlags: [])
+
+        let anchor = app.staticTexts["Anchor"]
+        XCTAssertTrue(anchor.waitForExistence(timeout: 5))
+        anchor.click()
+        app.typeKey(.return, modifierFlags: .shift)
+
+        let renameField = app.textFields["editor.renameField"]
+        XCTAssertTrue(renameField.waitForExistence(timeout: 5))
+        app.typeText("Above Proof")
+        XCTAssertTrue(waitUntil(timeout: 5) { ((renameField.value as? String) ?? "").contains("Above Proof") },
+                      "Shift-Return's rename field must own keyboard focus")
+        app.typeKey(.escape, modifierFlags: [])
+
+        let newItem = app.staticTexts["New Item"]
+        XCTAssertTrue(newItem.waitForExistence(timeout: 5),
+                      "Escape cancels the rename, leaving the placeholder title")
+        XCTAssertLessThan(newItem.frame.minY, anchor.frame.minY,
+                          "The inserted item must sit above the selection")
+    }
+
+    @MainActor func testCommandERenamesSelectedRow() {
+        continueAfterFailure = false
+        let app = launchApp(store: "mac-command-e-rename", reset: true)
+        createList(named: "Rename List", in: app)
         addItem(named: "Original Title", in: app)
         app.typeKey(.escape, modifierFlags: [])
 
         let title = app.staticTexts["Original Title"]
         XCTAssertTrue(title.waitForExistence(timeout: 5))
         title.click()
-        app.typeKey(.return, modifierFlags: [])
+        app.typeKey("e", modifierFlags: .command)
 
         let renameField = app.textFields["editor.renameField"]
         XCTAssertTrue(renameField.waitForExistence(timeout: 5))
+        app.typeText("Rename Focus Proof")
+        XCTAssertTrue(waitUntil(timeout: 5) { ((renameField.value as? String) ?? "").contains("Rename Focus Proof") },
+                      "Command-E's rename field must own keyboard focus")
         app.typeKey(.escape, modifierFlags: [])
-        XCTAssertTrue(title.waitForExistence(timeout: 5), "Escape must cancel Return rename without changing the title")
-
-        title.click()
-        app.typeKey("e", modifierFlags: .command)
-        XCTAssertTrue(renameField.waitForExistence(timeout: 5), "Command-E must use the same inline rename path")
+        XCTAssertTrue(title.waitForExistence(timeout: 5), "Escape must cancel the rename without changing the title")
     }
 
     /// Also serves as the Phase 3 Space-delivery gate: bare Space reaches

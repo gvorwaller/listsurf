@@ -36,6 +36,20 @@ final class CommandCatalogTests: XCTestCase {
                        "Duplicate command IDs")
     }
 
+    /// Pins the 2026-07-20 binding decision (restored split-version keys):
+    /// Return/⇧Return create items and are editor-owned; rename has no
+    /// editor-owned key (double-click / ⌘E); Space stays on toggle.
+    func testEditorOwnedKeyAssignments() {
+        XCTAssertEqual(CommandCatalog.newItem.editorOwnedKey, "Return")
+        XCTAssertEqual(CommandCatalog.addAbove.editorOwnedKey, "⇧Return")
+        XCTAssertNil(CommandCatalog.rename.editorOwnedKey)
+        XCTAssertEqual(CommandCatalog.toggleChecked.editorOwnedKey, "Space")
+        XCTAssertEqual(CommandCatalog.indent.editorOwnedKey, "Tab")
+        XCTAssertEqual(CommandCatalog.outdent.editorOwnedKey, "⇧Tab")
+        XCTAssertNil(CommandCatalog.addChild.editorOwnedKey,
+                     "⌘Return is the addChild binding display; a duplicate editorOwnedKey would render ⌘↩ twice")
+    }
+
     func testEditorOwnedKeysAreRepresentedInOrderedHelp() {
         let displays = CommandCatalog.macKeyboardHelp.map(\.keyDisplay)
         XCTAssertTrue(displays.contains { $0.contains("Return") })

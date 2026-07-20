@@ -8,10 +8,10 @@ shortcut hints.
 
 | Command | Canonical label | Key | Item menu | View menu | Row right-click | Row ellipsis | Toolbar actions | Empty-area right-click |
 |---|---|---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| newItem | New Item | ⌘N / Return with no selection | ✓ | — | ✓ (below) | ✓ (below) | ✓ | ✓ |
-| addAbove | Add Above | ⌥⌘N | ✓ | — | ✓ | ✓ | ✓ | — |
+| newItem | New Item | Return / ⌘N | ✓ | — | ✓ (below) | ✓ (below) | ✓ | ✓ |
+| addAbove | Add Above | ⇧Return / ⌥⌘N | ✓ | — | ✓ | ✓ | ✓ | — |
 | addChild | Add Child | ⌘↩ | ✓ | — | ✓ | ✓ | ✓ | — |
-| rename | Rename | Return / ⌘E | ✓ | — | ✓ | ✓ | ✓ | — |
+| rename | Rename | ⌘E / double-click | ✓ | — | ✓ | ✓ | ✓ | — |
 | toggleChecked | Toggle Checked | Space / ⌘K | ✓ | — | ✓ | ✓ | ✓ | — |
 | indent | Indent | Tab / ⌘] | ✓ | — | ✓ | ✓ | ✓ | — |
 | outdent | Outdent | ⇧Tab / ⌘[ | ✓ | — | ✓ | ✓ | ✓ | — |

@@ -51,10 +51,13 @@ struct OutlineEditorView: View {
             ))
         #else
         // macOS keyboard ownership: the List (via native selection) handles
-        // ↑/↓/⌘-click/⇧-click itself. The editor owns bare Return = rename
-        // (or root-add with no selection), Tab/⇧Tab = indent/outdent, and
-        // Space = toggle check. They must never be bare menu equivalents,
-        // which would intercept typing in every text field in the window.
+        // ↑/↓/⌘-click/⇧-click itself. The editor owns Return = add below
+        // (root-add with no selection), ⇧Return = add above + rename,
+        // ⌘Return = add child, Tab/⇧Tab = indent/outdent, and Space =
+        // toggle check. The bare keys must never be menu equivalents, which
+        // would intercept typing in every text field in the window; the add
+        // keys are editor-owned so arming never depends on menu dispatch
+        // (the FocusState→AppKit hand-off is unreliable there — td-ff531e).
         editorContent
             .onKeyPress(.return, phases: .down) { keyPress in
                 handleReturnKey(modifiers: keyPress.modifiers)
@@ -650,18 +653,32 @@ struct OutlineEditorView: View {
     #if os(macOS)
     private func handleReturnKey(modifiers: EventModifiers) -> KeyPress.Result {
         guard store.editingItemID == nil, store.addPlacement == nil else { return .ignored }
+        if modifiers == .command {
+            // ⌘Return = Add Child, handled here when the key reaches the
+            // editor. The menu bar registers the same equivalent; whichever
+            // layer wins arms the identical placement, so both routes are
+            // correct — this handler guarantees the direct path exists.
+            guard let row = selectedRow else { return .ignored }
+            store.beginAdding(.child(row.id))
+            CommandInvocation.post(CommandCatalog.addChild)
+            return .handled
+        }
+        if modifiers == .shift {
+            guard let row = selectedRow else { return .ignored }
+            let newID = store.insertAbove(referenceID: row.id, title: "New Item", undoManager: undoManager)
+            store.beginEditing(itemID: newID)
+            CommandInvocation.post(CommandCatalog.addAbove)
+            return .handled
+        }
         guard modifiers.isEmpty else { return .ignored }
-        switch store.selectedItemIDs.count {
-        case 0:
+        if let row = selectedRow {
+            store.beginAdding(.below(row.id))
+        } else if store.selectedItemIDs.isEmpty {
             store.beginAdding(.root)
-            CommandInvocation.post(CommandCatalog.newItem)
-        case 1:
-            guard let selectedID = store.selectedItemIDs.first else { return .ignored }
-            store.beginEditing(itemID: selectedID)
-            CommandInvocation.post(CommandCatalog.rename)
-        default:
+        } else {
             return .ignored
         }
+        CommandInvocation.post(CommandCatalog.newItem)
         return .handled
     }
 

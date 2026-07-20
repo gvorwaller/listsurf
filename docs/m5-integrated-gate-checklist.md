@@ -6,7 +6,7 @@ Mark each ☐ pass/fail; jot a note on anything that feels wrong even if it "pas
 Failures don't need diagnosis — a one-line symptom is enough; CC2 turns them into td issues.
 
 **Build prerequisites**
-- ☐ macOS: current main (`7772057` or later), fresh build.
+- ☐ macOS: current main including the 2026-07-20 edit-key restoration, fresh build.
 - ☐ iPhone: real device — cable build is fine for everything EXCEPT step P5 (rename lag),
   which should ideally also be tried on a TestFlight/release build before calling it real.
 
@@ -28,26 +28,36 @@ Failures don't need diagnosis — a one-line symptom is enough; CC2 turns them i
 11. ☐ Quit and relaunch → everything persisted; legend window did NOT auto-reopen.
 12. ☐ Remnant sweep: no "Check Mode" wording anywhere — toolbar, menus, Help, **Settings**.
 
-### B. Keyboard-only session (Gate M3 — mouse untouched)
+### B. Keyboard-only session (Gate M3 — mouse untouched; restored split-version keys, 2026-07-20)
 1. ☐ ⇧⌘N → create a list from the keyboard.
-2. ☐ ⌘N → type → Return → type → Return (continuation ×3) → Esc ends the flow.
-3. ☐ Arrows move selection; ⇧-arrows extend it.
-4. ☐ Return on a selected row → renames in place. Do it ~10× on different rows — every time.
-5. ☐ While renaming: Esc cancels (title unchanged); Return commits.
-6. ☐ Filter Remaining (⌥⌘2) → select top row → Space, Space, Space → rows vanish,
+2. ☐ **Return on a selected row → add field opens directly below it, cursor live** →
+   type → Return → type → Return (continuation ×3) → Esc ends the flow.
+   Do the arm ~10× on different rows — typing must land instantly EVERY time
+   (this is the restored primary add path; it never touches the menu system).
+3. ☐ ⇧Return on a selected row → "New Item" appears ABOVE it, already renaming;
+   type (replaces the placeholder) → Return commits. Do it ~5×.
+4. ☐ ⌘Return on a selected row → indented child add field, cursor live. ~5×.
+5. ☐ Same three adds via the menu equivalents ⌘N / ⌥⌘N / Item▸Add Child clicked
+   with the mouse → identical behavior including live cursor (menu-path machinery).
+6. ☐ Arrows move selection; ⇧-arrows extend it.
+7. ☐ ⌘E (and double-click) on a selected row → renames in place.
+   While renaming: Esc cancels (title unchanged); Return commits.
+8. ☐ Filter Remaining (⌥⌘2) → select top row → Space, Space, Space → rows vanish,
    selection advances each time.
-7. ☐ ⇧-extend a multi-selection → ⌘K immediately → ALL selected rows toggle
+9. ☐ ⇧-extend a multi-selection → ⌘K immediately → ALL selected rows toggle
    (this is the old "acts on the last row" bug — it must hit the highlighted rows).
-8. ☐ Tab / ⇧Tab indent/outdent the selected row; ⌘] / ⌘[ same; ⌘⌥↑/↓ moves it.
-9. ☐ ⌘⌫ → confirmation dialog → **Return activates Delete (the default), never rename**.
-10. ☐ ⌘Z back through everything.
-11. Edge cases:
+10. ☐ Tab / ⇧Tab indent/outdent the selected row; ⌘] / ⌘[ same; ⌘⌥↑/↓ moves it.
+11. ☐ ⌘⌫ → confirmation dialog → **Return activates Delete (the default), never adds**.
+12. ☐ ⌘Z back through everything.
+13. Edge cases:
     - ☐ Return with nothing selected on an empty list → arms root add.
     - ☐ Return with a multi-selection → does nothing.
-    - ☐ Space while renaming/adding → types a space, never toggles.
+    - ☐ Space while renaming/adding → types a space, never toggles; then end the
+      entry with Return or Esc → Space now toggles the selected row (decision
+      2026-07-20: this convenience is a keeper — verify both halves).
     - ☐ Click into sidebar search, press Space → types a space; editor untouched.
     - ☐ Space with no selection → list scrolls (native default).
-12. ☐ Esc with no text entry active → clears selection; Esc again → nothing.
+14. ☐ Esc with no text entry active → clears selection; Esc again → nothing.
 
 ### C. Consistency audit (Gate M4)
 1. ☐ Open Help (⌘?) → read the "Mac keyboard" section **line by line, performing each
@@ -60,8 +70,8 @@ Failures don't need diagnosis — a one-line symptom is enough; CC2 turns them i
    - ☐ Row ⋯ ellipsis menu (hints ABSENT — deliberate)
    - ☐ Toolbar ⋯ Actions button
    - ☐ Right-click on empty outline area (Add Item, Expand All, Collapse All)
-3. ☐ Press every shortcut Help advertises, once each: ⌘N ⇧⌘N ⌥⌘N ⌘⏎ ⌘E ⌘K ⌘] ⌘[
-   ⌘⌥↑ ⌘⌥↓ ⌘⌫ ⌥⌘1 ⌥⌘2 ⌥⌘3 ⌥⌘I ⌥⌘L ⌘? ⌘, ⌘Z ⇧⌘Z.
+3. ☐ Press every shortcut Help advertises, once each: ⏎ ⇧⏎ ⌘N ⇧⌘N ⌥⌘N ⌘⏎ ⌘E ⌘K
+   ⌘] ⌘[ ⌘⌥↑ ⌘⌥↓ ⌘⌫ ⌥⌘1 ⌥⌘2 ⌥⌘3 ⌥⌘I ⌥⌘L ⌘? ⌘, ⌘Z ⇧⌘Z.
 
 ### D. New features (Phase 2 batch + Phase 4)
 1. ☐ Inspector notes (⌥⌘I): paste ~15 lines into Notes → the field stays compact
