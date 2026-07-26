@@ -39,6 +39,9 @@ struct ListDetailView: View {
             }
         }
         .navigationTitle(currentList?.title ?? "")
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        #endif
         .toolbar { toolbarContent }
         .focusedSceneValue(\.listsurfListCommands, focusedCommandActions)
         #if os(iOS)
@@ -178,6 +181,32 @@ struct ListDetailView: View {
                 editorToolbar(store)
             }
         }
+
+        #if os(iOS)
+        // iPhone collapses .secondaryAction into the ••• overflow menu, so the
+        // Remaining/Completed/All filter (still in editorToolbar on macOS)
+        // needs its own always-visible control here instead.
+        if let store = listStore {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Picker("Filter", selection: filterBinding(store)) {
+                        ForEach(ListStore.CheckFilter.allCases, id: \.self) { filter in
+                            Text(filter.rawValue).tag(filter)
+                        }
+                    }
+                } label: {
+                    Label(
+                        "Filter",
+                        systemImage: store.checkFilter == .all
+                            ? "line.3.horizontal.decrease.circle"
+                            : "line.3.horizontal.decrease.circle.fill"
+                    )
+                }
+                .accessibilityIdentifier("editor.filterMenu")
+                .help("Filter items by check state")
+            }
+        }
+        #endif
     }
 
     @ViewBuilder
@@ -212,6 +241,7 @@ struct ListDetailView: View {
         .accessibilityIdentifier("editor.itemActions")
         .help("Add, indent, move, rename, or delete the selected items")
 
+        #if os(macOS)
         Picker("Filter", selection: filterBinding(store)) {
             ForEach(ListStore.CheckFilter.allCases, id: \.self) { filter in
                 Text(filter.rawValue).tag(filter)
@@ -220,6 +250,7 @@ struct ListDetailView: View {
         .pickerStyle(.segmented)
         .accessibilityIdentifier("editor.filter")
         .help("Filter items by check state")
+        #endif
 
         let progress = store.progress
         Text("\(progress.checked)/\(progress.total)")

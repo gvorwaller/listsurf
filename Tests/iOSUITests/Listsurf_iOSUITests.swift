@@ -92,6 +92,41 @@ final class Listsurf_iOSUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Boarding Pass"].waitForExistence(timeout: 5))
     }
 
+    /// td-8982f7 (Gate I2, plan item 2): the Remaining/Completed/All filter
+    /// must be reachable directly on iPhone, NOT behind the ••• overflow
+    /// menu that .secondaryAction collapses into.
+    @MainActor func testFilterMenuReachableWithoutOverflow() {
+        continueAfterFailure = false
+        let app = launchApp(store: "ios-filter-menu", reset: true)
+        createList(named: "Filter Menu List", in: app)
+        addItem(named: "Passport", in: app)
+
+        let passport = app.staticTexts["Passport"]
+        XCTAssertTrue(passport.waitForExistence(timeout: 5))
+        passport.tap() // dismiss the continuation field, select the row
+
+        let checkButton = app.buttons["Check Passport"]
+        XCTAssertTrue(checkButton.waitForExistence(timeout: 5))
+        checkButton.tap()
+        XCTAssertTrue(app.buttons["Uncheck Passport"].waitForExistence(timeout: 5))
+
+        // Reachable directly — no "More"/overflow tap in this path.
+        let filterMenu = app.buttons["editor.filterMenu"]
+        XCTAssertTrue(filterMenu.waitForExistence(timeout: 5))
+        filterMenu.tap()
+
+        let remaining = app.buttons["Remaining"]
+        XCTAssertTrue(remaining.waitForExistence(timeout: 5))
+        remaining.tap()
+        XCTAssertFalse(passport.waitForExistence(timeout: 2), "Checked item must hide under the Remaining filter")
+
+        filterMenu.tap()
+        let all = app.buttons["All"]
+        XCTAssertTrue(all.waitForExistence(timeout: 5))
+        all.tap()
+        XCTAssertTrue(passport.waitForExistence(timeout: 5), "All filter must bring the item back")
+    }
+
     @MainActor func testListPersistsAcrossRelaunch() {
         continueAfterFailure = false
         let app = launchApp(store: "ios-persistence", reset: true)
