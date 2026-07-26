@@ -48,11 +48,25 @@ struct OutlineEditorView: View {
     // frame and reserving it explicitly is the fix that doesn't depend on
     // that automatic (and here, non-functional) propagation.
     @State private var keyboardOverlap: CGFloat = 0
-    /// Conservative floor covering a standard iPhone keyboard (~271-346pt
-    /// across current models) plus the keyboard accessory toolbar
-    /// (~44-50pt) — see `keyboardOverlap`'s doc comment for why the
-    /// notification-derived value can't be trusted alone.
+    /// Simulator-UI-test-runner-only floor, covering a standard iPhone
+    /// keyboard (~271-346pt) plus the accessory toolbar (~44-50pt).
+    /// `keyboardWillChangeFrameNotification`'s reported frame was
+    /// empirically unreliable ONLY there (the software keyboard never
+    /// visually presents in that runner even though the accessory toolbar
+    /// still docks to the screen bottom, per gate-review finding on
+    /// 1cf3301). On a real device the notification reports correctly,
+    /// including the two cases where the keyboard is legitimately absent
+    /// (chevron-dismissed, hardware keyboard attached) — applying this
+    /// floor there would wrongly reserve blank space in both. Gated on
+    /// `isRunningUITests` so production never sees it.
     private static let minimumKeyboardClearance: CGFloat = 350
+    /// Same UI-test-mode signal `ListsurfApp.init()` uses to pick an
+    /// isolated persistence store (`LISTSURF_UI_TEST_STORE` launch
+    /// environment) — reused here as the gate for the Simulator-runner-only
+    /// keyboard-clearance floor above, rather than inventing a second flag.
+    private static var isRunningUITests: Bool {
+        ProcessInfo.processInfo.environment["LISTSURF_UI_TEST_STORE"] != nil
+    }
     #endif
 
     var body: some View {
@@ -301,16 +315,23 @@ struct OutlineEditorView: View {
                 // to automatic keyboard-avoidance here. Without this,
                 // `scrollTo(anchor: .bottom)` positions the row against the
                 // List's own (unshrunk) bottom edge, which is exactly where
-                // the keyboard/toolbar covers it. `max` with a conservative
-                // floor: the notification's reported frame was empirically
-                // unreliable in the iOS Simulator's UI-test runner (the
-                // keyboard never visually presents there even though the
-                // `.toolbar(placement: .keyboard)` accessory still docks to
-                // the screen bottom) — a real device's keyboard is expected
-                // to report correctly and simply exceed this floor.
+                // the keyboard/toolbar covers it.
+                //
+                // Gate-review finding on 1cf3301: the `minimumKeyboardClearance`
+                // floor must NOT apply in production — `isTextInputActive`
+                // stays true in two real, gate-verified situations where
+                // the keyboard is legitimately NOT on screen (chevron
+                // keyboard-dismiss with the add flow still armed; a
+                // hardware keyboard attached), and `keyboardOverlap`
+                // correctly reports ~0 in both. Forcing a 350pt floor there
+                // regressed layout with a permanent blank dead zone. The
+                // floor is scoped to exactly the one environment where it's
+                // needed: the Simulator UI-test runner.
                 .safeAreaPadding(
                     .bottom,
-                    store.isTextInputActive ? max(keyboardOverlap, Self.minimumKeyboardClearance) : 0
+                    store.isTextInputActive
+                        ? (Self.isRunningUITests ? max(keyboardOverlap, Self.minimumKeyboardClearance) : keyboardOverlap)
+                        : 0
                 )
                 .onChange(of: store.addPlacement) { _, newValue in
                     guard newValue != nil else { return }
