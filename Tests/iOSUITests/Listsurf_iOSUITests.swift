@@ -405,6 +405,84 @@ final class Listsurf_iOSUITests: XCTestCase {
                                  "Long notes must scroll internally instead of expanding Details")
     }
 
+    /// td-50f035 (Gate E4, plan item 11): notes long enough to be truncated
+    /// get a "more" toggle under the preview; tapping it expands the row IN
+    /// PLACE to show the full note (no nested scrolling — Gaylon's decision,
+    /// see `NotePreviewView`'s doc comment).
+    ///
+    /// Verifies via the toggle's accessibility label and the preview's
+    /// on-screen HEIGHT growing, not text content: SwiftUI's `Text`
+    /// accessibility label reports the full underlying string regardless of
+    /// `lineLimit` (confirmed empirically — the collapsed and expanded
+    /// labels were identical), so content-matching can't distinguish
+    /// collapsed from expanded here; the visible row height is what
+    /// actually changes.
+    @MainActor func testNotePreviewMoreAffordanceExpandsInPlace() {
+        continueAfterFailure = false
+        let app = launchApp(store: "ios-note-preview-expand", reset: true)
+        createList(named: "Note Preview List", in: app)
+        addItem(named: "Noted Item", in: app)
+
+        let item = app.staticTexts["Noted Item"]
+        XCTAssertTrue(item.waitForExistence(timeout: 5))
+        item.doubleTap()
+
+        let notes = app.textViews["inspector.itemNotes"]
+        XCTAssertTrue(notes.waitForExistence(timeout: 5))
+        notes.tap()
+        // Long enough to trip the length half of the truncation heuristic
+        // (`notes.count > lineCount * 40`) regardless of exact characters —
+        // a separate, pre-existing bug in this environment corrupts long
+        // `typeText` runs into the Notes editor (InspectorView's
+        // `notesBinding` writes to the store on every keystroke, unlike the
+        // rename/add fields td-e7c609 fixed for exactly this race), so this
+        // test deliberately does not depend on the committed text being
+        // byte-exact.
+        notes.typeText((1...30).map { "Word\($0)" }.joined(separator: " "))
+
+        // Dismiss the sheet the same way testDetailsSheetTitleFieldRenamesRow
+        // does — it auto-expands to its large detent while the keyboard is
+        // up (no dimmed backdrop left to tap), so a grabber drag is the
+        // reliable dismissal, exercising the onDisappear commit path.
+        let grabber = app.buttons["Sheet Grabber"]
+        XCTAssertTrue(grabber.waitForExistence(timeout: 5))
+        let grabberStart = grabber.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        let dismissTarget = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.98))
+        grabberStart.press(forDuration: 0.05, thenDragTo: dismissTarget)
+        XCTAssertFalse(notes.waitForExistence(timeout: 2), "Details sheet must be dismissed")
+
+        let preview = app.staticTexts["note.preview"]
+        XCTAssertTrue(preview.waitForExistence(timeout: 5))
+        let collapsedHeight = preview.frame.height
+
+        let toggle = app.buttons["note.preview.toggle"]
+        XCTAssertTrue(
+            toggle.waitForExistence(timeout: 5),
+            "A note past the default 1-line preview must show the more affordance"
+        )
+        XCTAssertEqual(toggle.label, "Show full note")
+        toggle.tap()
+
+        XCTAssertTrue(
+            waitUntil(timeout: 5) { toggle.label == "Collapse note" },
+            "Tapping the toggle must flip its accessibility label to reflect the expanded state"
+        )
+        XCTAssertTrue(
+            waitUntil(timeout: 5) { preview.frame.height > collapsedHeight + 10 },
+            "Expanding must grow the row's visible height to show the rest of the note in place"
+        )
+
+        toggle.tap()
+        XCTAssertTrue(
+            waitUntil(timeout: 5) { toggle.label == "Show full note" },
+            "Tapping again must collapse it back"
+        )
+        XCTAssertTrue(
+            waitUntil(timeout: 5) { abs(preview.frame.height - collapsedHeight) < 5 },
+            "Collapsing must shrink the row back to its 1-line height"
+        )
+    }
+
     @MainActor func testCoreActionsAreVisible() {
         continueAfterFailure = false
         let app = launchApp(store: "ios-visible-actions", reset: true)

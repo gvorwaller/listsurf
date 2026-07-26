@@ -15,6 +15,11 @@ public final class ListStore {
     public var items: [OutlineItem] = []
     public var flatRows: [FlatRow] = []
     public var expandedIDs: Set<UUID> = []
+    /// Row IDs whose note preview is expanded past the Settings line-limit
+    /// (td-50f035, plan item 11) — transient UI state, never persisted, and
+    /// cleared on `load()` so a note left expanded in one list doesn't leak
+    /// into the next.
+    public var expandedNoteIDs: Set<UUID> = []
     public var selectedItemIDs: Set<UUID> = []
     public var checkFilter: CheckFilter = .all {
         didSet { if oldValue != checkFilter { rowsVersion += 1 } }
@@ -107,6 +112,7 @@ public final class ListStore {
         // Never read past queued writes: a reload racing the persistence
         // chain would overwrite in-memory edits with stale store data.
         await persistenceTail?.value
+        expandedNoteIDs.removeAll()
         do {
             list = try await listRepo.fetch(id: listID)
             let fetchedItems = try await outlineRepo.fetchItems(forList: listID)
@@ -633,6 +639,18 @@ public final class ListStore {
     public func expandAll() {
         expandedIDs = Set(items.map(\.id))
         rebuildRows()
+    }
+
+    /// Toggles the note-preview expand-in-place affordance (td-50f035,
+    /// plan item 11). Presentation-only: no row-tree rebuild needed since
+    /// this never changes which rows are visible, only how tall one row's
+    /// note preview renders.
+    public func toggleNoteExpanded(_ id: UUID) {
+        if expandedNoteIDs.contains(id) {
+            expandedNoteIDs.remove(id)
+        } else {
+            expandedNoteIDs.insert(id)
+        }
     }
 
     public func collapseAll() {

@@ -59,11 +59,9 @@ public struct ListsurfSettingsView: View {
         Section("Display") {
             Picker("Notes under items", selection: notesPreviewLineLimit) {
                 Text("Off").tag(0)
-                Text("1 line").tag(1)
-                Text("2 lines").tag(2)
-                Text("3 lines").tag(3)
-                Text("4 lines").tag(4)
-                Text("5 lines").tag(5)
+                ForEach(1...10, id: \.self) { count in
+                    Text(count == 1 ? "1 line" : "\(count) lines").tag(count)
+                }
             }
 
             Text("Shows the first lines of an item's notes beneath its title. When off, items with notes show a small note icon instead.")

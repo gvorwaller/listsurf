@@ -53,6 +53,7 @@
 		B62174526586EA4AC072F989 /* ListStoreCheckToggleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92BEDA56DBA6A454E8568D06 /* ListStoreCheckToggleTests.swift */; };
 		C18AB7AA988149D102942319 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E596D00A45E2A16387F9EBBA /* Assets.xcassets */; };
 		C42829FB4DE842A49C741970 /* TreeEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6108498B78633A46A33B8646 /* TreeEngineTests.swift */; };
+		CA5881442DC02B157A233E62 /* ListStoreNotePreviewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D5FD623020541048B8CB45C /* ListStoreNotePreviewTests.swift */; };
 		D2BE1E360A276E8D91FA6339 /* Features in Frameworks */ = {isa = PBXBuildFile; productRef = EC2DEADB41298DF100C18397 /* Features */; };
 		D30AAFEBE521108DCF654301 /* ExportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB4BB5FF121D8510A85F9237 /* ExportTests.swift */; };
 		D3DE5C20F7AEFF32B52FD30B /* ListStoreUndoTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84528739F5651E7226F1D938 /* ListStoreUndoTests.swift */; };
@@ -60,6 +61,7 @@
 		DE34EF01A0BF8D991C022D36 /* AppStoreSelectionRestoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 895E66C9AEC55767FDE30B63 /* AppStoreSelectionRestoreTests.swift */; };
 		DF012DBA6E76A1B0016B569D /* Persistence in Frameworks */ = {isa = PBXBuildFile; productRef = 47ABA88EB97275BFA6257FC4 /* Persistence */; };
 		E096D8AE12B95CF41216E24A /* ListStoreMoveRowsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D3A9CA1FB7108141AF8DD65 /* ListStoreMoveRowsTests.swift */; };
+		E2A6F37981ECEE6891AC368A /* ListStoreNotePreviewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D5FD623020541048B8CB45C /* ListStoreNotePreviewTests.swift */; };
 		E731AD8C658639540717B0BB /* OPMLCodecTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AA9A0A5D91B13E21074CB49 /* OPMLCodecTests.swift */; };
 		F83EDD1022F8FBDF4EDD3F84 /* AppStoreSelectionRestoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 895E66C9AEC55767FDE30B63 /* AppStoreSelectionRestoreTests.swift */; };
 		F9FE080FF103C37461C4160B /* Domain in Frameworks */ = {isa = PBXBuildFile; productRef = 3330C307246A95A02800DF07 /* Domain */; };
@@ -98,6 +100,7 @@
 		64C6D5584915F7AEEC43C04F /* ContentViewExportFilenameTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentViewExportFilenameTests.swift; sourceTree = "<group>"; };
 		64EEE7C32951799279EFE079 /* AppStoreExportImportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStoreExportImportTests.swift; sourceTree = "<group>"; };
 		6AA9A0A5D91B13E21074CB49 /* OPMLCodecTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OPMLCodecTests.swift; sourceTree = "<group>"; };
+		6D5FD623020541048B8CB45C /* ListStoreNotePreviewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListStoreNotePreviewTests.swift; sourceTree = "<group>"; };
 		6E66F8E41A2C38C6BAAC47A9 /* Listsurf.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Listsurf.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		84528739F5651E7226F1D938 /* ListStoreUndoTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListStoreUndoTests.swift; sourceTree = "<group>"; };
 		895E66C9AEC55767FDE30B63 /* AppStoreSelectionRestoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStoreSelectionRestoreTests.swift; sourceTree = "<group>"; };
@@ -260,6 +263,7 @@
 				5664ABC5E9E6204C23E1A779 /* ListStoreDeleteSelectionTests.swift */,
 				4D3A9CA1FB7108141AF8DD65 /* ListStoreMoveRowsTests.swift */,
 				F45F9BBB54141609A2129AF8 /* ListStoreMultiStructureTests.swift */,
+				6D5FD623020541048B8CB45C /* ListStoreNotePreviewTests.swift */,
 				FD47F2E0D8AB9E6BCAA24598 /* ListStorePersistenceTests.swift */,
 				E230564342161A1AF0267B16 /* ListStoreSearchTests.swift */,
 				84528739F5651E7226F1D938 /* ListStoreUndoTests.swift */,
@@ -513,6 +517,7 @@
 				7F1CF2C29E0BEC34C053FEDF /* ListStoreDeleteSelectionTests.swift in Sources */,
 				74976407D02C234C4EEB5AFE /* ListStoreMoveRowsTests.swift in Sources */,
 				159AE0C09F7E890727F4E2B0 /* ListStoreMultiStructureTests.swift in Sources */,
+				E2A6F37981ECEE6891AC368A /* ListStoreNotePreviewTests.swift in Sources */,
 				A1B6F4D2AF103C5CE9C88F24 /* ListStorePersistenceTests.swift in Sources */,
 				46657AD805AC65BAFD4D1A48 /* ListStoreSearchTests.swift in Sources */,
 				6D130EE30C03B2A9A9C87D1C /* ListStoreUndoTests.swift in Sources */,
@@ -547,6 +552,7 @@
 				52302B05A83212E907CC0908 /* ListStoreDeleteSelectionTests.swift in Sources */,
 				E096D8AE12B95CF41216E24A /* ListStoreMoveRowsTests.swift in Sources */,
 				2312F7D068DB70228CED7AB5 /* ListStoreMultiStructureTests.swift in Sources */,
+				CA5881442DC02B157A233E62 /* ListStoreNotePreviewTests.swift in Sources */,
 				464DB6D8F9509B3663C8A70D /* ListStorePersistenceTests.swift in Sources */,
 				3A8E2A70BF0D2234B90271A6 /* ListStoreSearchTests.swift in Sources */,
 				D3DE5C20F7AEFF32B52FD30B /* ListStoreUndoTests.swift in Sources */,

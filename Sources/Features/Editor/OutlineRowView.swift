@@ -47,10 +47,12 @@ struct OutlineRowView: View {
     let row: FlatRow
     let isEditing: Bool
     let notePreviewLineCount: Int
+    let isNoteExpanded: Bool
     let renameDraft: EditorDraftText
     let focus: FocusState<EditorFocus?>.Binding
     let onToggleExpand: () -> Void
     let onToggleCheck: () -> Void
+    let onToggleNoteExpanded: () -> Void
     let onCommitEdit: () -> Void
     let onCancelEdit: () -> Void
     var body: some View {
@@ -60,6 +62,15 @@ struct OutlineRowView: View {
             checkbox
 
             titleAndNotes
+                // td-50f035 (plan item 11): `Spacer()` below is also
+                // flexible, and with equal default priority it was winning
+                // roughly half of the leftover width — found via UI test
+                // evidence (the expanded note wrapped into a near-1-column
+                // sliver instead of using the row). Higher priority makes
+                // this column claim the row's real estate FIRST; the
+                // Spacer only takes what's left, which is correct since its
+                // whole job is pushing `trailingInfo` to the row's edge.
+                .layoutPriority(1)
 
             Spacer()
 
@@ -137,9 +148,21 @@ struct OutlineRowView: View {
                     if notePreviewLineCount > 0,
                        let notes = row.item.notes?.trimmingCharacters(in: .whitespacesAndNewlines),
                        !notes.isEmpty {
-                        NotePreviewView(notes: notes, lineCount: notePreviewLineCount)
+                        NotePreviewView(
+                            notes: notes,
+                            lineCount: notePreviewLineCount,
+                            isExpanded: isNoteExpanded,
+                            onToggleExpanded: onToggleNoteExpanded
+                        )
                     }
                 }
+                // td-50f035 (plan item 11): without this, the column sizes
+                // to its own content (a short title leaves the note preview
+                // just as narrow), so an EXPANDED multi-line note wraps into
+                // a tall, cramped sliver instead of using the row's actual
+                // available width — found via UI test evidence, not
+                // assumption (see the iOS "note preview expand" test).
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }

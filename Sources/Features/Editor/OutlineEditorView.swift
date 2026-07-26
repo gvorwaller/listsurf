@@ -474,6 +474,7 @@ struct OutlineEditorView: View {
                 row: row,
                 isEditing: store.editingItemID == row.id,
                 notePreviewLineCount: notePreviewLineCount,
+                isNoteExpanded: store.expandedNoteIDs.contains(row.id),
                 renameDraft: renameDraft,
                 focus: $focus,
                 onToggleExpand: { store.toggleExpanded(row.id) },
@@ -481,6 +482,7 @@ struct OutlineEditorView: View {
                     store.toggleCheck(itemID: row.id, undoManager: undoManager)
                     Haptics.checkToggle()
                 },
+                onToggleNoteExpanded: { store.toggleNoteExpanded(row.id) },
                 onCommitEdit: { commitEdit(row.id) },
                 onCancelEdit: {
                     cancelEdit()
