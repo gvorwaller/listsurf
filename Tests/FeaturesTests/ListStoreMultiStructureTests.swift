@@ -90,6 +90,55 @@ final class ListStoreMultiStructureTests: XCTestCase {
         XCTAssertEqual(order, [a.id, d.id, b.id, c.id], "The selected block must leapfrog D as a unit, preserving B-before-C")
     }
 
+    // MARK: - Deterministic order for hidden (collapsed-away) selections (CODEX2 2026-07-26 finding 4)
+
+    @MainActor
+    func testMultiIndentPreservesOrderWhenSelectionIsHiddenByCollapsedAncestor() {
+        let list = ListItem(title: "Test")
+        let p = OutlineItem(listID: list.id, title: "P", position: 1)
+        let a = OutlineItem(listID: list.id, parentID: p.id, title: "A", position: 1)
+        let b = OutlineItem(listID: list.id, parentID: p.id, title: "B", position: 2)
+        let c = OutlineItem(listID: list.id, parentID: p.id, title: "C", position: 3)
+        let store = makeStore(items: [p, a, b, c], list: list)
+        // makeStore's expandAll() leaves everything expanded — collapse P
+        // specifically via toggleExpanded (which, unlike a direct
+        // `expandedIDs` assignment, also calls rebuildRows()) so A, B, C —
+        // the indent targets — are genuinely absent from flatRows. Pre-fix,
+        // `orderedForStructureOp` fell back to Int.max for every hidden id,
+        // so B and C's relative order was decided by Set-iteration order
+        // (hash-seed dependent), not document position.
+        store.toggleExpanded(p.id)
+        XCTAssertTrue(store.flatRows.filter { [a.id, b.id, c.id].contains($0.id) }.isEmpty, "Precondition: A, B, C are hidden from flatRows")
+
+        store.indent(itemIDs: [b.id, c.id])
+
+        let childrenOfA = store.engineChildren(of: a.id)
+        XCTAssertEqual(childrenOfA.map(\.id), [b.id, c.id], "Hidden multi-indent must still process top-to-bottom by true document order")
+    }
+
+    @MainActor
+    func testMultiOutdentPreservesOrderWhenSelectionIsHiddenByCollapsedAncestor() {
+        let list = ListItem(title: "Test")
+        let r = OutlineItem(listID: list.id, title: "R", position: 1)
+        let x = OutlineItem(listID: list.id, parentID: r.id, title: "X", position: 1)
+        let a = OutlineItem(listID: list.id, parentID: x.id, title: "A", position: 1)
+        let b = OutlineItem(listID: list.id, parentID: x.id, title: "B", position: 2)
+        let c = OutlineItem(listID: list.id, parentID: x.id, title: "C", position: 3)
+        let store = makeStore(items: [r, x, a, b, c], list: list)
+        // Collapse X specifically (R stays expanded): A, B, C (the outdent
+        // targets) become genuinely hidden from flatRows, which then only
+        // contains R and X. toggleExpanded (unlike a direct `expandedIDs`
+        // assignment) also calls rebuildRows().
+        store.toggleExpanded(x.id)
+        XCTAssertTrue(store.flatRows.filter { [a.id, b.id, c.id].contains($0.id) }.isEmpty, "Precondition: A, B, C are hidden from flatRows")
+
+        store.outdent(itemIDs: [a.id, b.id, c.id])
+
+        let childrenOfR = store.engineChildren(of: r.id)
+        let outdentedIDs = childrenOfR.map(\.id).filter { [a.id, b.id, c.id].contains($0) }
+        XCTAssertEqual(outdentedIDs, [a.id, b.id, c.id], "Hidden multi-outdent must still process bottom-to-top by true document order")
+    }
+
     // MARK: - Abort cases
 
     @MainActor

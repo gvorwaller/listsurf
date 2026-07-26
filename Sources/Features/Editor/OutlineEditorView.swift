@@ -176,6 +176,21 @@ struct OutlineEditorView: View {
             }
         }
         .onChange(of: store.editingItemID) { oldValue, newValue in
+            if let oldValue, let newValue, oldValue != newValue {
+                // Rename → rename OTHER item: e.g. Rename picked from a
+                // different row's ellipsis menu (ItemActionsMenu.swift) or
+                // the inspector while this row's rename is still in
+                // progress. `store.beginEditing` enforces add/rename
+                // exclusivity by reassigning `editingItemID` directly — it
+                // never sees this view's draft — so the outgoing text would
+                // otherwise be silently overwritten by the reseed below
+                // (CODEX2 2026-07-26 review finding 1a). Commit it first,
+                // mirroring the stranded-draft branch below.
+                let outgoingText = renameDraft.text.trimmingCharacters(in: .whitespaces)
+                if !outgoingText.isEmpty {
+                    store.updateItemTitle(id: oldValue, title: outgoingText, undoManager: undoManager)
+                }
+            }
             if let newValue, let item = store.items.first(where: { $0.id == newValue }) {
                 renameDraft.text = item.title
                 // Task-deferred: the assignment must land after the rename
@@ -195,7 +210,43 @@ struct OutlineEditorView: View {
                 }
             }
         }
-        .onChange(of: store.addPlacement) { _, newValue in
+        .onChange(of: store.addPlacement) { oldValue, newValue in
+            if let oldValue, newValue == nil {
+                // External end of the add flow: something other than this
+                // view's own commit/cancel nil'd `addPlacement` — e.g.
+                // `store.beginEditing` enforcing add/rename exclusivity when
+                // Rename is picked from ANOTHER row's ellipsis menu while an
+                // add is armed. This view's own end paths (commitNewItem,
+                // cancelAdding, dismissPendingAdd, cancelTextEntry, the iOS
+                // keyboard-accessory Done/Cancel) all clear `addDraft.text`
+                // synchronously as part of the same call that nils
+                // `addPlacement`, so by the time THIS handler runs for one of
+                // those the draft is already empty and this is a no-op.
+                // Only a truly external nil (this branch's actual target)
+                // still has typed text — commit it as a final item at the
+                // OLD placement rather than silently losing it (CODEX2
+                // 2026-07-26 review finding 1b). The continuation transition
+                // (.below(a) → .below(b) inside commitNewItem) is old != nil
+                // && new != nil and never reaches this branch.
+                let text = addDraft.text.trimmingCharacters(in: .whitespaces)
+                addDraft.text = ""
+                if !text.isEmpty {
+                    // `insertPendingItem` (via `store.addItem`/`addChild`)
+                    // unconditionally reselects the newly-inserted item —
+                    // correct for the normal commit-and-continue flow, but
+                    // WRONG here: by the time this fires, whatever ended the
+                    // add flow externally (e.g. `beginEditing`) has already
+                    // set the selection/editingItemID it wants (e.g. the row
+                    // now being renamed). Restoring the selection afterward
+                    // stops the stranded-item insert from stomping on that —
+                    // without it, the resulting selection change looked like
+                    // a click-away and committed/cancelled the rename that
+                    // had JUST started (caught by UI test evidence).
+                    let selectionBeforeInsert = store.selectedItemIDs
+                    _ = insertPendingItem(text, at: oldValue)
+                    store.selectedItemIDs = selectionBeforeInsert
+                }
+            }
             // Task-deferred for the same reason as above: nil→value always
             // fires (cancelAdding/dismissPendingAdd nil the placement before
             // any re-add), and the continuation flow's .below(a)→.below(b)
@@ -707,8 +758,14 @@ struct OutlineEditorView: View {
     }
 
     private func cancelAdding() {
-        store.cancelAdding()
+        // Clear the draft BEFORE nilling `addPlacement` (CODEX2 2026-07-26
+        // review finding 1b precondition): the addPlacement onChange above
+        // treats any old-nonnil→nil transition as a possible external end
+        // and inserts a stranded draft as a final item. This is an
+        // INTERNAL end path — the draft must already be empty by the time
+        // that handler runs, or it would double-insert.
         addDraft.text = ""
+        store.cancelAdding()
     }
 
     private func cancelEdit() {
@@ -732,10 +789,15 @@ struct OutlineEditorView: View {
             return
         }
         let newID = insertPendingItem(text, at: placement)
+        // Clear the draft BEFORE re-arming `addPlacement` for the same
+        // precondition reason as `cancelAdding` above — this is a
+        // continuation (non-nil → non-nil), which the addPlacement onChange
+        // never treats as an external end regardless of ordering, but
+        // clearing first keeps every internal end path consistent.
+        addDraft.text = ""
         // Keep the flow going: the next entry lands below the item just added.
         selectionFromAddFlow = [newID]
         store.beginAdding(.below(newID))
-        addDraft.text = ""
     }
 
     /// Dismiss the add flow on click-away: commit typed text as a final

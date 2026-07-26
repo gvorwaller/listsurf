@@ -158,6 +158,7 @@ private struct ItemTitleField: View {
 
     @State private var draft: String
     @State private var lastCommitted: String
+    @FocusState private var isFocused: Bool
 
     init(item: OutlineItem, onCommit: @escaping (String) -> Void) {
         self.item = item
@@ -169,8 +170,12 @@ private struct ItemTitleField: View {
     var body: some View {
         TextField("Title", text: $draft)
             .accessibilityIdentifier("inspector.itemTitle")
+            .focused($isFocused)
             .onSubmit { commitIfNeeded() }
             .onDisappear { commitIfNeeded() }
+            .onChange(of: item.title) { _, newValue in
+                reseedIfSafe(newValue)
+            }
     }
 
     private func commitIfNeeded() {
@@ -178,6 +183,25 @@ private struct ItemTitleField: View {
         guard !trimmed.isEmpty, trimmed != lastCommitted else { return }
         lastCommitted = trimmed
         onCommit(trimmed)
+    }
+
+    /// External change to the SAME item's title (e.g. undo/redo landing
+    /// while the Details sheet is open) — the call site's `.id(item.id)`
+    /// only tears this view down and reseeds via `init` when the ITEM
+    /// changes, so a same-item title change (undo/redo) left `draft` and
+    /// `lastCommitted` stale, and the next commit re-wrote the undone value
+    /// right back (CODEX2 2026-07-26 review finding 3). Refresh unless the
+    /// user has live, uncommitted work: focused (mid-typing, cursor in the
+    /// field) or a dirty draft (`draft != lastCommitted`) must both block
+    /// the reseed, since `commitIfNeeded` only runs on submit/disappear and
+    /// an external value landing in between must never clobber unsaved
+    /// typing. With neither guard tripped nothing is being edited, and the
+    /// stale display MUST refresh — an undo the user can't see is worse
+    /// than a reseed they don't notice.
+    private func reseedIfSafe(_ newValue: String) {
+        guard !isFocused, draft == lastCommitted else { return }
+        draft = newValue
+        lastCommitted = newValue
     }
 }
 #endif
@@ -228,6 +252,9 @@ private struct NotesEditor: View {
         .onChange(of: focused.wrappedValue) { _, isFocused in
             if !isFocused { commitIfNeeded() }
         }
+        .onChange(of: item.notes) { _, newValue in
+            reseedIfSafe(newValue ?? "")
+        }
         .onDisappear { commitIfNeeded() }
     }
 
@@ -235,6 +262,22 @@ private struct NotesEditor: View {
         guard draft != lastCommitted else { return }
         lastCommitted = draft
         onCommit(draft)
+    }
+
+    /// External change to the SAME item's notes (e.g. undo/redo landing
+    /// while the inspector is open) — mirrors `ItemTitleField.reseedIfSafe`
+    /// above (CODEX2 2026-07-26 review finding 3): the call site's
+    /// `.id(item.id)` only reseeds via `init` when the ITEM changes, so a
+    /// same-item notes change (undo/redo) left `draft`/`lastCommitted` stale
+    /// and the next focus-loss/disappear commit re-wrote the undone value
+    /// right back. Refresh unless the user has live, uncommitted work:
+    /// focused or a dirty draft must both block the reseed; with neither
+    /// tripped, the field isn't in active use and the stale display MUST
+    /// refresh.
+    private func reseedIfSafe(_ newValue: String) {
+        guard !focused.wrappedValue, draft == lastCommitted else { return }
+        draft = newValue
+        lastCommitted = newValue
     }
 }
 

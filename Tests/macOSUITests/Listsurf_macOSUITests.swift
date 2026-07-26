@@ -959,4 +959,211 @@ final class Listsurf_macOSUITests: XCTestCase {
     @MainActor private func firstExisting(_ elements: XCUIElement...) -> XCUIElement {
         elements.first(where: \.exists) ?? elements[0]
     }
+
+    // MARK: - CODEX2 2026-07-26 review: stranded add/rename drafts (finding 1)
+
+    /// Finding 1b: `store.beginEditing` (invoked here via the row-ellipsis
+    /// menu's Rename action on a DIFFERENT row) nils `addPlacement` directly
+    /// to enforce add/rename exclusivity, bypassing this view's own
+    /// `cancelAdding`/`dismissPendingAdd` — the only paths that used to
+    /// commit or discard the typed draft. Before the fix, the typed text
+    /// was silently lost.
+    @MainActor func testStrandedAddDraftCommitsWhenAnotherRowIsRenamedViaMenu() {
+        continueAfterFailure = false
+        let app = launchApp(store: "mac-stranded-add-draft", reset: true)
+        createList(named: "Stranded Add List", in: app)
+        addItem(named: "Alpha", in: app)
+        addItem(named: "Bravo", in: app)
+        app.typeKey(.escape, modifierFlags: [])
+
+        let alpha = app.staticTexts["Alpha"]
+        XCTAssertTrue(alpha.waitForExistence(timeout: 5))
+        alpha.click()
+        app.typeKey(.return, modifierFlags: [])
+
+        let addField = app.textFields["editor.newItem"]
+        XCTAssertTrue(addField.waitForExistence(timeout: 5))
+        app.typeText("Draft Text")
+        XCTAssertTrue(waitUntil(timeout: 5) { (addField.value as? String) == "Draft Text" },
+                      "Precondition: the add field owns focus and has the typed draft")
+
+        let bravoRow = app.outlineRows.containing(.staticText, identifier: "Bravo").firstMatch
+        XCTAssertTrue(bravoRow.waitForExistence(timeout: 5))
+        bravoRow.menuButtons["editor.rowActions"].firstMatch.click()
+        // "Rename" by TITLE is ambiguous — the app's main menu bar exposes
+        // the identically-titled Command-E command too (ListsurfCommands),
+        // and XCUITest's click() traversal for a MenuItem it resolves to
+        // the menu bar tries to open that top-level menu, colliding with
+        // the popup already open ("open menu during menu traversal"
+        // failure). The popup's item carries a distinct IDENTIFIER derived
+        // from its systemImage ("pencil"; see CommandCatalog.rename) that
+        // the menu-bar equivalent does not, so identifier lookup is
+        // unambiguous.
+        app.menuItems["pencil"].firstMatch.click()
+
+        XCTAssertTrue(
+            app.staticTexts["Draft Text"].waitForExistence(timeout: 5),
+            "The typed add draft must be committed as a final item, not silently lost, when Rename (from another row's menu) ends the add flow externally"
+        )
+        let renameField = app.textFields["editor.renameField"]
+        XCTAssertTrue(renameField.waitForExistence(timeout: 5))
+        XCTAssertTrue(
+            waitUntil(timeout: 5) { ((renameField.value as? String) ?? "").contains("Bravo") },
+            "Bravo must now be the row being renamed"
+        )
+    }
+
+    /// Finding 1a: the same `store.beginEditing` exclusivity switch also
+    /// applies when a RENAME is already in progress and Rename is picked on
+    /// another row — `editingItemID` transitions old-item→new-item directly,
+    /// so the outgoing draft must be committed before the field reseeds for
+    /// the new target, or it is silently overwritten.
+    @MainActor func testOutgoingRenameDraftCommitsWhenAnotherRowIsRenamedViaMenu() {
+        continueAfterFailure = false
+        let app = launchApp(store: "mac-stranded-rename-draft", reset: true)
+        createList(named: "Stranded Rename List", in: app)
+        addItem(named: "Alpha", in: app)
+        addItem(named: "Bravo", in: app)
+        app.typeKey(.escape, modifierFlags: [])
+
+        let alpha = app.staticTexts["Alpha"]
+        XCTAssertTrue(alpha.waitForExistence(timeout: 5))
+        alpha.click()
+        app.typeKey("e", modifierFlags: .command)
+
+        let renameFieldA = app.textFields["editor.renameField"]
+        XCTAssertTrue(renameFieldA.waitForExistence(timeout: 5))
+        // Replace the seeded "Alpha" rather than appending, so the resulting
+        // title is deterministic regardless of default cursor placement.
+        app.typeKey("a", modifierFlags: .command)
+        app.typeText("Alpha Renamed")
+        XCTAssertTrue(waitUntil(timeout: 5) { (renameFieldA.value as? String) == "Alpha Renamed" },
+                      "Precondition: Alpha's rename field owns focus and has the typed draft")
+
+        let bravoRow = app.outlineRows.containing(.staticText, identifier: "Bravo").firstMatch
+        XCTAssertTrue(bravoRow.waitForExistence(timeout: 5))
+        bravoRow.menuButtons["editor.rowActions"].firstMatch.click()
+        // "Rename" by TITLE is ambiguous — the app's main menu bar exposes
+        // the identically-titled Command-E command too (ListsurfCommands),
+        // and XCUITest's click() traversal for a MenuItem it resolves to
+        // the menu bar tries to open that top-level menu, colliding with
+        // the popup already open ("open menu during menu traversal"
+        // failure). The popup's item carries a distinct IDENTIFIER derived
+        // from its systemImage ("pencil"; see CommandCatalog.rename) that
+        // the menu-bar equivalent does not, so identifier lookup is
+        // unambiguous.
+        app.menuItems["pencil"].firstMatch.click()
+
+        XCTAssertTrue(
+            app.staticTexts["Alpha Renamed"].waitForExistence(timeout: 5),
+            "The outgoing rename draft must be committed, not overwritten, when Rename starts on another row"
+        )
+        let renameFieldB = app.textFields["editor.renameField"]
+        XCTAssertTrue(renameFieldB.waitForExistence(timeout: 5))
+        XCTAssertTrue(
+            waitUntil(timeout: 5) { ((renameFieldB.value as? String) ?? "").contains("Bravo") },
+            "Bravo must now be the row being renamed"
+        )
+    }
+
+    /// Finding 1c (mirror image of 1a/1b): starting an add elsewhere while a
+    /// rename is in progress drives `editingItemID` old→nil directly via
+    /// `store.beginAdding` — this lands in the PRE-EXISTING stranded-rename-
+    /// commit branch (unchanged by the 1a/1b fix). Confirms that branch
+    /// still fires correctly.
+    @MainActor func testBeginningAddElsewhereCommitsStrandedRenameDraft() {
+        continueAfterFailure = false
+        let app = launchApp(store: "mac-mirror-stranded-rename", reset: true)
+        createList(named: "Mirror Stranded Rename List", in: app)
+        addItem(named: "Alpha", in: app)
+        addItem(named: "Bravo", in: app)
+        app.typeKey(.escape, modifierFlags: [])
+
+        let alpha = app.staticTexts["Alpha"]
+        XCTAssertTrue(alpha.waitForExistence(timeout: 5))
+        alpha.click()
+        app.typeKey("e", modifierFlags: .command)
+
+        let renameFieldA = app.textFields["editor.renameField"]
+        XCTAssertTrue(renameFieldA.waitForExistence(timeout: 5))
+        app.typeKey("a", modifierFlags: .command)
+        app.typeText("Alpha Renamed")
+        XCTAssertTrue(waitUntil(timeout: 5) { (renameFieldA.value as? String) == "Alpha Renamed" },
+                      "Precondition: Alpha's rename field owns focus and has the typed draft")
+
+        let bravoRow = app.outlineRows.containing(.staticText, identifier: "Bravo").firstMatch
+        XCTAssertTrue(bravoRow.waitForExistence(timeout: 5))
+        bravoRow.menuButtons["editor.rowActions"].firstMatch.click()
+        // Same menu-bar-collision reasoning as the Rename lookups above:
+        // identifier "plus" (CommandCatalog.newItem's systemImage) is
+        // unique to the popup's "New Item" entry.
+        app.menuItems["plus"].firstMatch.click()
+
+        XCTAssertTrue(
+            app.staticTexts["Alpha Renamed"].waitForExistence(timeout: 5),
+            "Starting an add elsewhere must still commit the stranded rename draft via the pre-existing branch"
+        )
+        XCTAssertTrue(
+            app.textFields["editor.newItem"].waitForExistence(timeout: 5),
+            "The add field must now be armed below Bravo"
+        )
+    }
+
+    // MARK: - CODEX2 2026-07-26 review: inspector stale draft on external change (finding 3)
+
+    /// Finding 3: `NotesEditor` only seeds `draft`/`lastCommitted` in
+    /// `init`, which does not re-run for a same-item external change (the
+    /// call site's `.id(item.id)` only tears the view down when the ITEM
+    /// changes). An undo landing while the inspector is open on the SAME
+    /// item used to leave the displayed notes stale, and the next commit
+    /// would silently re-write the undone value right back.
+    @MainActor func testInspectorNotesReseedsOnUndoAndDoesNotResurrectOverwrittenValue() {
+        continueAfterFailure = false
+        let app = launchApp(store: "mac-notes-undo-reseed", reset: true)
+        createList(named: "Notes Undo Reseed List", in: app)
+        addItem(named: "Alpha", in: app)
+        app.typeKey(.escape, modifierFlags: [])
+
+        // Scoped to the outline row: once the inspector is open it ALSO
+        // shows "Alpha" as the Title LabeledContent's value, so an
+        // unscoped `app.staticTexts["Alpha"]` becomes ambiguous.
+        let alpha = app.outlineRows.staticTexts["Alpha"]
+        XCTAssertTrue(alpha.waitForExistence(timeout: 5))
+        alpha.click()
+        app.typeKey("o", modifierFlags: .command)
+
+        let notes = app.textViews["inspector.itemNotes"]
+        XCTAssertTrue(notes.waitForExistence(timeout: 5))
+        notes.typeText("Original Notes")
+        XCTAssertTrue(waitUntil(timeout: 5) { ((notes.value as? String) ?? "").contains("Original Notes") },
+                      "Precondition: the notes editor owns focus and has the typed draft")
+
+        // Click away to commit (focus loss), Finder-style — mirrors
+        // OutlineEditorView's click-away rename commit.
+        alpha.click()
+        XCTAssertTrue(
+            waitUntil(timeout: 5) { (notes.value as? String) == "Original Notes" },
+            "Precondition: the notes commit landed"
+        )
+
+        app.typeKey("z", modifierFlags: .command)
+        XCTAssertTrue(
+            waitUntil(timeout: 5) { ((notes.value as? String) ?? "").isEmpty || (notes.value as? String) == "Add notes..." },
+            "Undo (landing while the inspector is open, not focused) must refresh the stale draft — the field must show the undone (empty) value, not the stale committed text"
+        )
+
+        app.typeKey("o", modifierFlags: .command)
+        XCTAssertTrue(notes.waitForExistence(timeout: 5))
+        notes.typeText("New Notes After Undo")
+        alpha.click()
+
+        XCTAssertTrue(
+            waitUntil(timeout: 5) { (notes.value as? String) == "New Notes After Undo" },
+            "Typing fresh notes after the undo-reseed must commit the NEW text"
+        )
+        XCTAssertFalse(
+            (notes.value as? String)?.contains("Original Notes") ?? false,
+            "The pre-undo overwritten value must never resurface"
+        )
+    }
 }

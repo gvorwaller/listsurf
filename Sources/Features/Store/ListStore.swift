@@ -364,7 +364,6 @@ public final class ListStore {
         guard !ids.isEmpty else { return }
         let oldItems = items
         let oldFilteredRows = filteredRows
-        let deletionHitSelection = !ids.isDisjoint(with: selectedItemIDs)
 
         var remaining = items
         for id in ids {
@@ -372,6 +371,16 @@ public final class ListStore {
             remaining = r
         }
         let remainingIDs = Set(remaining.map(\.id))
+        // `ids` names only the deletion ROOTS (e.g. a row trash on a
+        // collapsed parent) — a selected DESCENDANT removed only as
+        // collateral of its ancestor's subtree deletion never appears in
+        // `ids` at all. Testing `ids` against the selection misses that case
+        // entirely (CODEX2 2026-07-26 review finding 2). `removedIDs` is
+        // every id that actually left the tree, roots and descendants alike,
+        // and is the correct set for both the hit test and the advance
+        // anchor below.
+        let removedIDs = Set(oldItems.map(\.id)).subtracting(remainingIDs)
+        let deletionHitSelection = !removedIDs.isDisjoint(with: selectedItemIDs)
 
         // Undo must snapshot the selection BEFORE it's emptied below —
         // registering after (the old order) made ⌘Z restore the deleted
@@ -389,7 +398,7 @@ public final class ListStore {
         // the survivor intersection above) — a checkbox-style side effect
         // must never relocate a selection it didn't affect.
         guard deletionHitSelection else { return }
-        guard let removedIndex = oldFilteredRows.firstIndex(where: { ids.contains($0.id) }) else { return }
+        guard let removedIndex = oldFilteredRows.firstIndex(where: { removedIDs.contains($0.id) }) else { return }
         let newRows = filteredRows
         selectedItemIDs = newRows.isEmpty ? [] : [newRows[min(removedIndex, newRows.count - 1)].id]
     }
@@ -451,17 +460,33 @@ public final class ListStore {
         }
     }
 
-    /// Orders the ancestor-filtered ids by their CURRENT `flatRows` position
-    /// (top-to-bottom, or reversed) — indent/moveUp must process top-to-
-    /// bottom and outdent/moveDown bottom-to-top to preserve the selection's
-    /// relative order (proven against TreeEngine's insertion semantics in
-    /// the plan). Any id `flatRows` doesn't (yet) contain — a stale flatRows
-    /// snapshot, e.g. in tests that assign `items` directly — still gets
-    /// included, just ordered after every id `flatRows` does resolve.
+    /// Orders the ancestor-filtered ids by their position in a FULLY
+    /// EXPANDED flatten (top-to-bottom, or reversed) — indent/moveUp must
+    /// process top-to-bottom and outdent/moveDown bottom-to-top to preserve
+    /// the selection's relative order (proven against TreeEngine's insertion
+    /// semantics in the plan).
+    ///
+    /// `flatRows` only contains currently-VISIBLE rows: a selected id hidden
+    /// by a collapsed ancestor (or a search/check filter) isn't in it at all,
+    /// so it used to fall back to `Int.max` — and with two or more hidden
+    /// ids sharing that same fallback, `.sorted`'s tie-break fell through to
+    /// `itemIDs`'s Set-iteration order, which is hash-seed-dependent, not
+    /// document order (CODEX2 2026-07-26 review finding 4: nondeterministic
+    /// batch order for multi-select structure ops on hidden rows). A flatten
+    /// against every id expanded — the same pattern `resolvedRow(for:)` uses
+    /// above to resolve a collapsed row's derived state — gives every
+    /// existing id a real, deterministic document-order position instead.
+    /// Lists are small, so always paying for the full flatten here (rather
+    /// than only when a target is missing from `flatRows`) keeps this simple
+    /// and correct without a measurable cost.
     private func orderedForStructureOp(_ itemIDs: Set<UUID>, order: StructureOpOrder) -> [UUID] {
         let filtered = ancestorFiltered(itemIDs)
         guard !filtered.isEmpty else { return [] }
-        let indexByID = Dictionary(uniqueKeysWithValues: flatRows.enumerated().map { ($0.element.id, $0.offset) })
+        let fullyExpandedRows = engine.flatten(items: items, expandedIDs: Set(items.map(\.id)))
+        let indexByID = Dictionary(uniqueKeysWithValues: fullyExpandedRows.enumerated().map { ($0.element.id, $0.offset) })
+        // An id absent even from the full flatten (e.g. a stale id in tests
+        // that assign `items` directly without it) still gets included,
+        // just ordered after every id that does resolve.
         let sorted = filtered.sorted { (indexByID[$0] ?? Int.max) < (indexByID[$1] ?? Int.max) }
         return order == .topToBottom ? sorted : sorted.reversed()
     }

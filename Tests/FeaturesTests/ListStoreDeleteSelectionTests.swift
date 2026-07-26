@@ -119,6 +119,50 @@ final class ListStoreDeleteSelectionTests: XCTestCase {
         XCTAssertEqual(store.selectedItemIDs, [a.id], "A delete disjoint from the selection must not touch it")
     }
 
+    // MARK: - Selected descendant removed via collapsed ancestor (CODEX2 2026-07-26 finding 2)
+
+    @MainActor
+    func testDeleteCollapsedParentAdvancesSelectionWhenHiddenChildWasSelected() {
+        let list = ListItem(title: "Test")
+        let p = OutlineItem(listID: list.id, title: "P", position: 1)
+        let child = OutlineItem(listID: list.id, parentID: p.id, title: "Child", position: 1)
+        let next = OutlineItem(listID: list.id, title: "Next", position: 2)
+        let store = makeStore(items: [p, child, next], list: list)
+        // Collapse P: Child is hidden from filteredRows/oldFilteredRows, but
+        // trashing P (a row-trash on the parent) deletes the whole subtree,
+        // including the hidden, selected Child. `collapseAll()` (not a
+        // direct `expandedIDs` assignment) also rebuilds `flatRows`, which
+        // `filteredRows` is derived from.
+        store.collapseAll()
+        XCTAssertEqual(store.filteredRows.map { $0.item.id }, [p.id, next.id], "Precondition: Child is hidden under collapsed P")
+        store.selectedItemIDs = [child.id]
+
+        store.deleteItems(ids: [p.id])
+
+        XCTAssertEqual(
+            store.selectedItemIDs, [next.id],
+            "A selected descendant removed only as collateral of its collapsed ancestor's deletion must still advance selection"
+        )
+    }
+
+    @MainActor
+    func testDeleteCollapsedParentLeavesUnrelatedSelectionUntouched() {
+        let list = ListItem(title: "Test")
+        let p = OutlineItem(listID: list.id, title: "P", position: 1)
+        let child = OutlineItem(listID: list.id, parentID: p.id, title: "Child", position: 1)
+        let other = OutlineItem(listID: list.id, title: "Other", position: 2)
+        let store = makeStore(items: [p, child, other], list: list)
+        store.collapseAll()
+        store.selectedItemIDs = [other.id]
+
+        store.deleteItems(ids: [p.id])
+
+        XCTAssertEqual(
+            store.selectedItemIDs, [other.id],
+            "Deleting a collapsed parent (and its hidden child) must not move a selection disjoint from both"
+        )
+    }
+
     @MainActor
     func testUndoRestoresItemsAndPreDeleteSelection() async {
         let list = ListItem(title: "Test")
