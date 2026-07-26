@@ -7,8 +7,14 @@ struct OutlineEditorView: View {
     @Binding var showInspector: Bool
     let notePreviewLineCount: Int
     @Environment(\.undoManager) private var undoManager
-    @State private var editingText = ""
-    @State private var newItemText = ""
+    // td-e7c609: reference types, not `@State String` — mutated per
+    // keystroke only inside the field subviews' own bodies (RenameFieldView,
+    // AddItemFieldView), so typing invalidates just the active field, not
+    // the whole outline List. This view reads/clears `.text` only inside
+    // its own imperative handlers (commit, cancel, iOS keyboard-accessory
+    // Done/Cancel) — never inside `body`.
+    @State private var renameDraft = EditorDraftText()
+    @State private var addDraft = EditorDraftText()
     @State private var selectionFromAddFlow: Set<UUID> = []
     @FocusState private var focus: EditorFocus?
     // td-ff531e: when arming restructures the outline (⌘Return's .child
@@ -78,8 +84,7 @@ struct OutlineEditorView: View {
                     return .handled
                 }
                 if store.editingItemID != nil {
-                    editingText = ""
-                    store.cancelEditing()
+                    cancelEdit()
                     CommandInvocation.post(CommandCatalog.escape)
                     return .handled
                 }
@@ -119,12 +124,12 @@ struct OutlineEditorView: View {
             // the draft buffer from the item.
             if let editingID = store.editingItemID,
                let item = store.items.first(where: { $0.id == editingID }) {
-                editingText = item.title
+                renameDraft.text = item.title
             }
         }
         .onChange(of: store.editingItemID) { oldValue, newValue in
             if let newValue, let item = store.items.first(where: { $0.id == newValue }) {
-                editingText = item.title
+                renameDraft.text = item.title
                 // Task-deferred: the assignment must land after the rename
                 // field mounts (one runloop hop), not inside the transaction
                 // that flips editingItemID (spec §2, B2/B4 fix).
@@ -135,8 +140,8 @@ struct OutlineEditorView: View {
                 // commit/cancel (both consume the draft first) — e.g. the
                 // store enforcing add/rename exclusivity. Commit the
                 // stranded draft rather than silently discarding it.
-                let text = editingText.trimmingCharacters(in: .whitespaces)
-                editingText = ""
+                let text = renameDraft.text.trimmingCharacters(in: .whitespaces)
+                renameDraft.text = ""
                 if !text.isEmpty {
                     store.updateItemTitle(id: oldValue, title: text, undoManager: undoManager)
                 }
@@ -177,11 +182,6 @@ struct OutlineEditorView: View {
             Task { @MainActor in focus = pending }
         }
         #endif
-        .onChange(of: newItemText) { _, newValue in
-            // First typed character proves focus landed — stop guarding, so a
-            // later deliberate focus move (sidebar search, ⌥⌘I) isn't rebuffed.
-            if !newValue.isEmpty, pendingFocus == .addField { pendingFocus = nil }
-        }
         .onChange(of: store.selectedItemIDs) { _, newValue in
             // Click-away commits an in-progress rename, Finder-style.
             if let editingID = store.editingItemID, !newValue.contains(editingID) {
@@ -289,7 +289,11 @@ struct OutlineEditorView: View {
             }
         }
         .listStyle(.sidebar)
-        .animation(.default, value: store.filteredRows.map(\.id))
+        // td-e7c609: `store.rowsVersion` is an Int bumped only when
+        // `filteredRows`' composition can actually change (rebuild, filter,
+        // search) — animating on it avoids remapping the filtered array to
+        // `[UUID]` (and recomputing the filter itself) on every body pass.
+        .animation(.default, value: store.rowsVersion)
         .modifier(OutlineContextMenuModifier(
             store: store,
             onShowDetails: showDetails(itemID:)
@@ -317,7 +321,7 @@ struct OutlineEditorView: View {
                 row: row,
                 isEditing: store.editingItemID == row.id,
                 notePreviewLineCount: notePreviewLineCount,
-                editingText: store.editingItemID == row.id ? $editingText : .constant(""),
+                renameDraft: renameDraft,
                 focus: $focus,
                 onToggleExpand: { store.toggleExpanded(row.id) },
                 onToggleCheck: {
@@ -326,8 +330,7 @@ struct OutlineEditorView: View {
                 },
                 onCommitEdit: { commitEdit(row.id) },
                 onCancelEdit: {
-                    editingText = ""
-                    store.cancelEditing()
+                    cancelEdit()
                     CommandInvocation.post(CommandCatalog.escape)
                 }
             )
@@ -445,44 +448,45 @@ struct OutlineEditorView: View {
     #endif
 
     private func addItemField(depth: Int) -> some View {
-        HStack {
-            Image(systemName: "plus.circle.fill")
-                .foregroundStyle(.green)
-            TextField(addPlaceholder, text: $newItemText)
-                .accessibilityIdentifier("editor.newItem")
-                .focused($focus, equals: .addField)
-                .onAppear {
-                    #if os(macOS)
-                    // td-ff531e: when arming restructures the outline (.child
-                    // expands the parent), the field mounts AFTER every
-                    // deferred assignment already ran — FocusState holds
-                    // .addField but no live view ever claimed it, so the List
-                    // keeps first responder and typing goes nowhere. The
-                    // field itself is the only place guaranteed to exist
-                    // after registration: cycle the binding from here.
-                    if pendingFocus == .addField, !Self.textEditorIsFirstResponder() {
-                        Task { @MainActor in
-                            await Task.yield()
-                            guard pendingFocus == .addField, !Self.textEditorIsFirstResponder() else { return }
-                            Self.focusAddFieldDirectly()
-                        }
-                    }
-                    #endif
-                }
-                .onSubmit { commitNewItem() }
-                .onKeyPress(.escape) {
-                    cancelAdding()
-                    CommandInvocation.post(CommandCatalog.escape)
-                    return .handled
-                }
-        }
-        .listRowInsets(EdgeInsets(
-            top: 4,
-            leading: 16 + Double(depth) * 20,
-            bottom: 4,
-            trailing: 16
-        ))
+        AddItemFieldView(
+            placeholder: addPlaceholder,
+            depth: depth,
+            draft: addDraft,
+            focus: $focus,
+            onAppearCheckFocus: checkAddFieldFocusEscalation,
+            onCommit: commitNewItem,
+            onCancel: {
+                cancelAdding()
+                CommandInvocation.post(CommandCatalog.escape)
+            },
+            onFirstKeystroke: {
+                // First typed character proves focus landed — stop
+                // guarding, so a later deliberate focus move (sidebar
+                // search, ⌥⌘I) isn't rebuffed.
+                if pendingFocus == .addField { pendingFocus = nil }
+            }
+        )
     }
+
+    #if os(macOS)
+    private func checkAddFieldFocusEscalation() {
+        // td-ff531e: when arming restructures the outline (.child expands
+        // the parent), the field mounts AFTER every deferred assignment
+        // already ran — FocusState holds .addField but no live view ever
+        // claimed it, so the List keeps first responder and typing goes
+        // nowhere. The field itself is the only place guaranteed to exist
+        // after registration: cycle the binding from here.
+        if pendingFocus == .addField, !Self.textEditorIsFirstResponder() {
+            Task { @MainActor in
+                await Task.yield()
+                guard pendingFocus == .addField, !Self.textEditorIsFirstResponder() else { return }
+                Self.focusAddFieldDirectly()
+            }
+        }
+    }
+    #else
+    private func checkAddFieldFocusEscalation() {}
+    #endif
 
     private func addFieldPlacement(after row: FlatRow) -> Int? {
         switch store.addPlacement {
@@ -511,12 +515,17 @@ struct OutlineEditorView: View {
 
     private func cancelAdding() {
         store.cancelAdding()
-        newItemText = ""
+        addDraft.text = ""
+    }
+
+    private func cancelEdit() {
+        renameDraft.text = ""
+        store.cancelEditing()
     }
 
     private func commitEdit(_ id: UUID) {
-        let text = editingText.trimmingCharacters(in: .whitespaces)
-        editingText = ""
+        let text = renameDraft.text.trimmingCharacters(in: .whitespaces)
+        renameDraft.text = ""
         store.cancelEditing()
         guard !text.isEmpty else { return }
         store.updateItemTitle(id: id, title: text, undoManager: undoManager)
@@ -524,7 +533,7 @@ struct OutlineEditorView: View {
 
     private func commitNewItem() {
         guard let placement = store.addPlacement else { return }
-        let text = newItemText.trimmingCharacters(in: .whitespaces)
+        let text = addDraft.text.trimmingCharacters(in: .whitespaces)
         guard !text.isEmpty else {
             cancelAdding()
             return
@@ -533,14 +542,14 @@ struct OutlineEditorView: View {
         // Keep the flow going: the next entry lands below the item just added.
         selectionFromAddFlow = [newID]
         store.beginAdding(.below(newID))
-        newItemText = ""
+        addDraft.text = ""
     }
 
     /// Dismiss the add flow on click-away: commit typed text as a final
     /// item, or cancel an empty field — never leave a dangling entry field.
     private func dismissPendingAdd() {
         guard let placement = store.addPlacement else { return }
-        let text = newItemText.trimmingCharacters(in: .whitespaces)
+        let text = addDraft.text.trimmingCharacters(in: .whitespaces)
         if !text.isEmpty {
             _ = insertPendingItem(text, at: placement)
         }
@@ -733,8 +742,7 @@ struct OutlineEditorView: View {
             cancelAdding()
         }
         if store.editingItemID != nil {
-            editingText = ""
-            store.cancelEditing()
+            cancelEdit()
         }
     }
 
@@ -890,6 +898,54 @@ private struct KeyboardAccessoryModifier: ViewModifier {
         #else
         content
         #endif
+    }
+}
+
+/// Add-item field, extracted from `OutlineEditorView.addItemField` (td-e7c609):
+/// a small dedicated leaf view whose OWN body reads/writes `draft.text`, so
+/// per-keystroke SwiftUI invalidation stops here rather than propagating up
+/// through the outline `List`. `OutlineEditorView` keeps the full commit
+/// contract (insert, re-arm the continuation placement, the stranded-draft
+/// fallback on external session end) and the td-ff531e focus escalation;
+/// this view forwards session-end signals (submit/escape) and a one-shot
+/// first-keystroke signal that clears the pending-focus guard.
+private struct AddItemFieldView: View {
+    let placeholder: String
+    let depth: Int
+    @Bindable var draft: EditorDraftText
+    let focus: FocusState<EditorFocus?>.Binding
+    let onAppearCheckFocus: () -> Void
+    let onCommit: () -> Void
+    let onCancel: () -> Void
+    let onFirstKeystroke: () -> Void
+
+    @State private var firstKeystrokeSignaled = false
+
+    var body: some View {
+        HStack {
+            Image(systemName: "plus.circle.fill")
+                .foregroundStyle(.green)
+            TextField(placeholder, text: $draft.text)
+                .accessibilityIdentifier("editor.newItem")
+                .focused(focus, equals: .addField)
+                .onAppear(perform: onAppearCheckFocus)
+                .onChange(of: draft.text) { _, newValue in
+                    guard !firstKeystrokeSignaled, !newValue.isEmpty else { return }
+                    firstKeystrokeSignaled = true
+                    onFirstKeystroke()
+                }
+                .onSubmit(onCommit)
+                .onKeyPress(.escape) {
+                    onCancel()
+                    return .handled
+                }
+        }
+        .listRowInsets(EdgeInsets(
+            top: 4,
+            leading: 16 + Double(depth) * 20,
+            bottom: 4,
+            trailing: 16
+        ))
     }
 }
 

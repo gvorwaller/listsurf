@@ -9,6 +9,17 @@ enum EditorFocus: Hashable {
     case rename(UUID)
 }
 
+/// Reference-type text buffer for one rename/add session (td-e7c609). A
+/// class, not `@State String`, so the field that renders it can take the
+/// per-keystroke render hit in its OWN body — the editor holds the instance
+/// and reads/clears `.text` only inside its own imperative handlers (commit,
+/// cancel, iOS keyboard-accessory Done/Cancel), never inside a `body` — so
+/// typing invalidates just the one field, not the row or the outline List.
+@Observable
+final class EditorDraftText {
+    var text = ""
+}
+
 
 /// Applies the drag gate at the row's content root — the ONLY place List
 /// honors the move trait (a `.moveDisabled` on a nested child is silently
@@ -36,7 +47,7 @@ struct OutlineRowView: View {
     let row: FlatRow
     let isEditing: Bool
     let notePreviewLineCount: Int
-    @Binding var editingText: String
+    let renameDraft: EditorDraftText
     let focus: FocusState<EditorFocus?>.Binding
     let onToggleExpand: () -> Void
     let onToggleCheck: () -> Void
@@ -108,14 +119,13 @@ struct OutlineRowView: View {
     private var titleAndNotes: some View {
         Group {
             if isEditing {
-                TextField("Title", text: $editingText)
-                    .focused(focus, equals: .rename(row.id))
-                    .onSubmit { onCommitEdit() }
-                    .onKeyPress(.escape) {
-                        onCancelEdit()
-                        return .handled
-                    }
-                    .accessibilityIdentifier("editor.renameField")
+                RenameFieldView(
+                    rowID: row.id,
+                    draft: renameDraft,
+                    focus: focus,
+                    onCommit: onCommitEdit,
+                    onCancel: onCancelEdit
+                )
             } else {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(row.item.title.isEmpty ? "Untitled" : row.item.title)
@@ -175,5 +185,32 @@ struct OutlineRowView: View {
                 .foregroundStyle(.tertiary)
                 .monospacedDigit()
         }
+    }
+}
+
+/// Rename field, extracted from `OutlineRowView.titleAndNotes` (td-e7c609):
+/// a small dedicated leaf view whose OWN body reads/writes `draft.text`, so
+/// per-keystroke SwiftUI invalidation stops here — `OutlineRowView` never
+/// touches `.text` and re-renders only when `row`/`isEditing` actually
+/// change. `OutlineEditorView` keeps the full commit/cancel contract (title
+/// trimming, `store.updateItemTitle`, the stranded-draft fallback on
+/// external session end); this view only forwards the two session-end
+/// signals it alone can observe: Return (submit) and Escape.
+private struct RenameFieldView: View {
+    let rowID: UUID
+    @Bindable var draft: EditorDraftText
+    let focus: FocusState<EditorFocus?>.Binding
+    let onCommit: () -> Void
+    let onCancel: () -> Void
+
+    var body: some View {
+        TextField("Title", text: $draft.text)
+            .focused(focus, equals: .rename(rowID))
+            .onSubmit(onCommit)
+            .onKeyPress(.escape) {
+                onCancel()
+                return .handled
+            }
+            .accessibilityIdentifier("editor.renameField")
     }
 }

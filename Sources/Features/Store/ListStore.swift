@@ -16,8 +16,19 @@ public final class ListStore {
     public var flatRows: [FlatRow] = []
     public var expandedIDs: Set<UUID> = []
     public var selectedItemIDs: Set<UUID> = []
-    public var checkFilter: CheckFilter = .all
-    public var searchText = ""
+    public var checkFilter: CheckFilter = .all {
+        didSet { if oldValue != checkFilter { rowsVersion += 1 } }
+    }
+    public var searchText = "" {
+        didSet { if oldValue != searchText { rowsVersion += 1 } }
+    }
+
+    /// Cheap change token for `filteredRows`' composition (td-e7c609): bumped
+    /// whenever `flatRows` is rebuilt or a filter/search term actually
+    /// changes. Lets the editor drive its List's `.animation(value:)` off an
+    /// Int instead of remapping `filteredRows` to `[UUID]` on every body pass
+    /// just to diff it.
+    public private(set) var rowsVersion = 0
 
     // Per-list presentation state, owned here so every surface
     // (editor, toolbar, menu bar, context menus) reads one source of truth.
@@ -128,6 +139,7 @@ public final class ListStore {
 
     private func rebuildRows() {
         flatRows = engine.flatten(items: items, expandedIDs: expandedIDs)
+        rowsVersion += 1
     }
 
     private func applyChanges(to newItems: [OutlineItem]) {
