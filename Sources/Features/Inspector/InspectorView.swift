@@ -22,11 +22,21 @@ struct InspectorView: View {
     private func itemInspector(_ item: OutlineItem) -> some View {
         Form {
             Section("Title") {
+                #if os(iOS)
+                // iOS: the sheet sits in front of the row, so the inline
+                // rename field behind it (armed by the old Rename button)
+                // was invisible. Edit the title in place instead.
+                ItemTitleField(item: item) { newTitle in
+                    store.updateItemTitle(id: item.id, title: newTitle, undoManager: undoManager)
+                }
+                .id(item.id)
+                #else
                 LabeledContent("Title", value: item.title)
                 Button("Rename") {
                     store.beginEditing(itemID: item.id)
                 }
                 .accessibilityIdentifier("inspector.renameItem")
+                #endif
             }
 
             Section("Notes") {
@@ -105,6 +115,41 @@ struct InspectorView: View {
         )
     }
 }
+
+#if os(iOS)
+/// Owns a local title draft so the Details sheet can rename an item without
+/// per-keystroke store writes. Committed once per edit session (on submit,
+/// and again defensively on disappear) — matches the editor's
+/// trim-and-ignore-empty commit semantics (OutlineEditorView.commitEdit).
+private struct ItemTitleField: View {
+    let item: OutlineItem
+    let onCommit: (String) -> Void
+
+    @State private var draft: String
+    @State private var lastCommitted: String
+
+    init(item: OutlineItem, onCommit: @escaping (String) -> Void) {
+        self.item = item
+        self.onCommit = onCommit
+        _draft = State(initialValue: item.title)
+        _lastCommitted = State(initialValue: item.title)
+    }
+
+    var body: some View {
+        TextField("Title", text: $draft)
+            .accessibilityIdentifier("inspector.itemTitle")
+            .onSubmit { commitIfNeeded() }
+            .onDisappear { commitIfNeeded() }
+    }
+
+    private func commitIfNeeded() {
+        let trimmed = draft.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty, trimmed != lastCommitted else { return }
+        lastCommitted = trimmed
+        onCommit(trimmed)
+    }
+}
+#endif
 
 private struct NotesEditor: View {
     @Binding var text: String

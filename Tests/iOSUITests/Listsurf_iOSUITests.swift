@@ -48,9 +48,48 @@ final class Listsurf_iOSUITests: XCTestCase {
         passport.tap()
         XCTAssertTrue(app.buttons["editor.ios.details"].waitForExistence(timeout: 1.5))
 
-        // Double tap: opens Details directly.
+        // Double tap: opens Details directly. iOS shows an editable title
+        // field in place of macOS's Rename button (td-9537dc).
         passport.doubleTap()
-        XCTAssertTrue(app.buttons["inspector.renameItem"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.textFields["inspector.itemTitle"].waitForExistence(timeout: 5))
+    }
+
+    /// td-9537dc (Gate I1a, plan item 4): the old Rename button armed the
+    /// inline row rename BEHIND the Details sheet, so nothing visibly
+    /// happened. The sheet's title field must rename the row directly.
+    @MainActor func testDetailsSheetTitleFieldRenamesRow() {
+        continueAfterFailure = false
+        let app = launchApp(store: "ios-details-rename", reset: true)
+        createList(named: "Details Rename List", in: app)
+        addItem(named: "Passport", in: app)
+
+        let passport = app.staticTexts["Passport"]
+        XCTAssertTrue(passport.waitForExistence(timeout: 5))
+        passport.doubleTap()
+
+        let titleField = app.textFields["inspector.itemTitle"]
+        XCTAssertTrue(titleField.waitForExistence(timeout: 5))
+        titleField.tap()
+
+        // Clear the existing text, then type the new title.
+        if let currentValue = titleField.value as? String, !currentValue.isEmpty {
+            let deleteAll = String(repeating: XCUIKeyboardKey.delete.rawValue, count: currentValue.count)
+            titleField.typeText(deleteAll)
+        }
+        titleField.typeText("Boarding Pass")
+
+        // The sheet auto-expands to its large detent while the keyboard is
+        // up (no dimmed backdrop remains to tap), so dismiss it with a drag
+        // from the grabber instead — this exercises the onDisappear commit
+        // path (as opposed to onSubmit).
+        let grabber = app.buttons["Sheet Grabber"]
+        XCTAssertTrue(grabber.waitForExistence(timeout: 5))
+        let grabberStart = grabber.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        let dismissTarget = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.98))
+        grabberStart.press(forDuration: 0.05, thenDragTo: dismissTarget)
+
+        XCTAssertFalse(app.staticTexts["Passport"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts["Boarding Pass"].waitForExistence(timeout: 5))
     }
 
     @MainActor func testListPersistsAcrossRelaunch() {
