@@ -5,6 +5,7 @@ import Platform
 enum ListsurfSettingsKey {
     static let notesPreviewLineLimit = "notesPreviewLineLimit"
     static let lastExportAt = "diagnostics.lastExportAt"
+    static let lastSelectedListID = "lastSelectedListID"
 }
 
 public struct ListsurfSettingsView: View {

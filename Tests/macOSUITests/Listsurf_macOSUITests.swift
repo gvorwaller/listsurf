@@ -89,6 +89,14 @@ final class Listsurf_macOSUITests: XCTestCase {
         relaunch(app, reset: false)
 
         XCTAssertTrue(app.staticTexts["Persistent Mac List"].waitForExistence(timeout: 5))
+        // td-03f6d1 part b (plan item 12b/E5): the list must not just be
+        // visible in the sidebar — it must be the SELECTED/displayed list.
+        // Without the restore, the detail pane shows "Select a List" and
+        // neither add-item button exists.
+        XCTAssertTrue(
+            firstExisting(app.buttons["editor.addFirstItem"], app.buttons["editor.addItem"]).waitForExistence(timeout: 5),
+            "The previously-selected list must be restored and shown after relaunch, not just listed in the sidebar"
+        )
     }
 
     @MainActor func testCoreActionsAreVisible() {

@@ -7,13 +7,19 @@ import os
 public final class AppStore {
     public var lists: [ListItem] = []
     public var archivedLists: [ListItem] = []
-    public var selectedListID: UUID?
+    public var selectedListID: UUID? {
+        didSet {
+            guard oldValue != selectedListID else { return }
+            persistSelectedListID()
+        }
+    }
 
     public let errorStore: AppErrorStore
 
     private let listRepo: any ListRepository
     private let outlineRepo: any OutlineRepository
     private let diagnostics: (any DiagnosticsReading)?
+    private let userDefaults: UserDefaults
     private let logger = Logger(subsystem: "net.vorwaller.listsurf", category: "ui")
     private let exportService = ExportService()
     private let opmlCodec = OPMLCodec()
@@ -22,17 +28,25 @@ public final class AppStore {
     // Weak registry of issued ListStores so library-wide operations
     // (export, delete) can drain their queued item writes first.
     private var issuedStores: [WeakListStore] = []
+    // One-shot (plan item 12b/E5): the stored list is only ever offered as a
+    // restore candidate on this store's FIRST successful load. Without this,
+    // a later loadLists() call (after a delete/archive that nils out
+    // selectedListID on purpose) would resurrect the stale ID and fight the
+    // user's explicit deselection.
+    private var hasAttemptedSelectionRestore = false
 
     public init(
         listRepository: any ListRepository,
         outlineRepository: any OutlineRepository,
         errorStore: AppErrorStore = AppErrorStore(),
-        diagnostics: (any DiagnosticsReading)? = nil
+        diagnostics: (any DiagnosticsReading)? = nil,
+        userDefaults: UserDefaults = .standard
     ) {
         self.listRepo = listRepository
         self.outlineRepo = outlineRepository
         self.errorStore = errorStore
         self.diagnostics = diagnostics
+        self.userDefaults = userDefaults
     }
 
     public func loadLists() async {
@@ -44,8 +58,33 @@ public final class AppStore {
             let archived = try await listRepo.fetchArchived()
             lists = active
             archivedLists = archived
+            restoreLastSelectedListIfNeeded()
         } catch {
             presentLoadError(error, operation: "load lists")
+        }
+    }
+
+    /// Restores the last-selected list from a prior session (plan item
+    /// 12b/E5), but only on the first load, only if nothing has already
+    /// selected a list, and only if that list still exists and is ACTIVE
+    /// (archived lists are excluded — an archived list's detail view is not
+    /// reachable via `lists`, so restoring into it would select a list the
+    /// sidebar cannot show).
+    private func restoreLastSelectedListIfNeeded() {
+        guard !hasAttemptedSelectionRestore else { return }
+        hasAttemptedSelectionRestore = true
+        guard selectedListID == nil else { return }
+        guard let stored = userDefaults.string(forKey: ListsurfSettingsKey.lastSelectedListID),
+              let storedID = UUID(uuidString: stored),
+              lists.contains(where: { $0.id == storedID }) else { return }
+        selectedListID = storedID
+    }
+
+    private func persistSelectedListID() {
+        if let selectedListID {
+            userDefaults.set(selectedListID.uuidString, forKey: ListsurfSettingsKey.lastSelectedListID)
+        } else {
+            userDefaults.removeObject(forKey: ListsurfSettingsKey.lastSelectedListID)
         }
     }
 
