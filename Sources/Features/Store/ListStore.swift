@@ -294,22 +294,44 @@ public final class ListStore {
         deleteItems(ids: [id], undoManager: undoManager)
     }
 
+    /// Selection-advance on delete (spec M5 gate M2): if the deletion hit the
+    /// current selection, the row that took its place (or the previous row,
+    /// clamped, if the deleted rows were last) becomes selected — staying in
+    /// the editor instead of falling back to the sidebar. Pre-delete state
+    /// (`oldFilteredRows`, whether the ids overlap selection) must be
+    /// captured before any mutation.
     public func deleteItems(ids: Set<UUID>, undoManager: UndoManager? = nil) {
         guard !ids.isEmpty else { return }
         let oldItems = items
+        let oldFilteredRows = filteredRows
+        let deletionHitSelection = !ids.isDisjoint(with: selectedItemIDs)
+
         var remaining = items
         for id in ids {
             let (r, _) = engine.deleteSubtree(itemID: id, in: remaining)
             remaining = r
         }
         let remainingIDs = Set(remaining.map(\.id))
+
+        // Undo must snapshot the selection BEFORE it's emptied below —
+        // registering after (the old order) made ⌘Z restore the deleted
+        // items into an already-emptied selection (M2 gate: latent bug).
+        registerUndo(undoManager: undoManager, oldItems: oldItems)
+
         selectedItemIDs = selectedItemIDs.intersection(remainingIDs)
         if let editingItemID, !remainingIDs.contains(editingItemID) {
             self.editingItemID = nil
         }
-        registerUndo(undoManager: undoManager, oldItems: oldItems)
         applyChanges(to: remaining)
         persistInBackground(from: oldItems, to: remaining)
+
+        // Deletion that never touched the selection leaves it alone (minus
+        // the survivor intersection above) — a checkbox-style side effect
+        // must never relocate a selection it didn't affect.
+        guard deletionHitSelection else { return }
+        guard let removedIndex = oldFilteredRows.firstIndex(where: { ids.contains($0.id) }) else { return }
+        let newRows = filteredRows
+        selectedItemIDs = newRows.isEmpty ? [] : [newRows[min(removedIndex, newRows.count - 1)].id]
     }
 
     public func moveUp(itemID: UUID, undoManager: UndoManager? = nil) {

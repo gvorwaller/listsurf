@@ -41,6 +41,46 @@ final class Listsurf_macOSUITests: XCTestCase {
         XCTAssertFalse(item.waitForExistence(timeout: 2))
     }
 
+    /// td-688730 (Gate M2, plan item 6): deleting the selected row used to
+    /// drop focus to the sidebar list name instead of advancing selection
+    /// within the editor. Proof: after ⌘⌫ + Return (confirm), selection must
+    /// have already advanced to the row that took the deleted row's place,
+    /// and Down must move that EDITOR selection to a DIFFERENT row — if
+    /// focus had actually left for the sidebar, Down would never reach the
+    /// outline's own selection.
+    @MainActor func testDeleteAdvancesSelectionAndStaysInEditor() {
+        continueAfterFailure = false
+        let app = launchApp(store: "mac-delete-selection-advance", reset: true)
+        createList(named: "Delete Selection Advance List", in: app)
+        addItem(named: "Alpha", in: app)
+        addItem(named: "Bravo", in: app)
+        addItem(named: "Charlie", in: app)
+        app.typeKey(.escape, modifierFlags: [])
+
+        let alpha = app.staticTexts["Alpha"]
+        XCTAssertTrue(alpha.waitForExistence(timeout: 5))
+        alpha.click()
+        let bravoRow = app.outlineRows.containing(.staticText, identifier: "Bravo").firstMatch
+        let charlieRow = app.outlineRows.containing(.staticText, identifier: "Charlie").firstMatch
+
+        app.typeKey(.delete, modifierFlags: [.command])
+        let deleteButton = app.sheets.buttons["Delete Item"].firstMatch
+        XCTAssertTrue(deleteButton.waitForExistence(timeout: 5))
+        app.typeKey(.return, modifierFlags: [])
+
+        XCTAssertFalse(alpha.waitForExistence(timeout: 2))
+        XCTAssertTrue(
+            waitUntil(timeout: 5) { bravoRow.isSelected },
+            "Deleting Alpha must select the row that took its place, staying in the editor"
+        )
+
+        app.typeKey(.downArrow, modifierFlags: [])
+        XCTAssertTrue(
+            waitUntil(timeout: 5) { charlieRow.isSelected && !bravoRow.isSelected },
+            "Down after the delete-confirm must move the EDITOR's selection to a different row — proves focus stayed in the editor, not the sidebar"
+        )
+    }
+
     @MainActor func testListPersistsAcrossRelaunch() {
         continueAfterFailure = false
         let app = launchApp(store: "mac-persistence", reset: true)
