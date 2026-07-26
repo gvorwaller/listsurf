@@ -127,6 +127,56 @@ final class Listsurf_iOSUITests: XCTestCase {
         XCTAssertTrue(passport.waitForExistence(timeout: 5), "All filter must bring the item back")
     }
 
+    /// td-5d405a: per-list VIEW state (expandedIDs, checkFilter,
+    /// selectedItemIDs) must survive switching between lists in-session.
+    /// Reuses the existing `editor.ios.addChild` identifier (auto-expands
+    /// its parent) and the back-navigation switch pattern already proven by
+    /// `testUndoRedoAvailabilityAcrossMutationAndListSwitch`.
+    @MainActor func testExpandedBranchSurvivesListSwitch() {
+        continueAfterFailure = false
+        let app = launchApp(store: "ios-viewstate-switch", reset: true)
+        createList(named: "View State List A", in: app)
+        addItem(named: "Anchor", in: app)
+
+        let anchor = app.staticTexts["Anchor"]
+        XCTAssertTrue(anchor.waitForExistence(timeout: 5))
+        anchor.tap() // dismiss the continuation add field, select Anchor
+
+        XCTAssertTrue(app.buttons["editor.ios.addChild"].waitForExistence(timeout: 5))
+        app.buttons["editor.ios.addChild"].tap()
+        let childField = app.textFields["editor.newItem"]
+        XCTAssertTrue(childField.waitForExistence(timeout: 5))
+        childField.typeText("Nested Child\n")
+
+        let nestedChild = app.staticTexts["Nested Child"]
+        XCTAssertTrue(nestedChild.waitForExistence(timeout: 5), "Precondition: addChild auto-expands its parent")
+        anchor.tap() // dismiss the child add flow's continuation field
+
+        let back = firstExisting(
+            app.navigationBars.buttons["Listsurf"],
+            app.navigationBars.buttons["Back"],
+            app.navigationBars.buttons.firstMatch
+        )
+        XCTAssertTrue(back.waitForExistence(timeout: 5))
+        back.tap()
+
+        createList(named: "View State List B", in: app)
+        let back2 = firstExisting(
+            app.navigationBars.buttons["Listsurf"],
+            app.navigationBars.buttons["Back"],
+            app.navigationBars.buttons.firstMatch
+        )
+        XCTAssertTrue(back2.waitForExistence(timeout: 5))
+        back2.tap()
+
+        app.staticTexts["View State List A"].tap()
+
+        XCTAssertTrue(
+            app.staticTexts["Nested Child"].waitForExistence(timeout: 5),
+            "The nested branch must still be expanded after switching lists and back — no re-expand tap happened above"
+        )
+    }
+
     @MainActor func testListPersistsAcrossRelaunch() {
         continueAfterFailure = false
         let app = launchApp(store: "ios-persistence", reset: true)

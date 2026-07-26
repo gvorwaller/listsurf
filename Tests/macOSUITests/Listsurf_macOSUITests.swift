@@ -99,6 +99,88 @@ final class Listsurf_macOSUITests: XCTestCase {
         )
     }
 
+    /// td-5d405a: per-list VIEW state (expandedIDs, checkFilter,
+    /// selectedItemIDs) must survive switching between lists in-session —
+    /// this was the reported bug (switching lists and back re-collapsed
+    /// everything). Proof: expand a nested branch (via addChild, which
+    /// auto-expands its parent), switch to a second list (hiding the
+    /// child), switch back, and assert the child is visible WITHOUT any
+    /// click on a disclosure control in between.
+    @MainActor func testExpandedBranchSurvivesListSwitch() {
+        continueAfterFailure = false
+        let app = launchApp(store: "mac-viewstate-switch", reset: true)
+        createList(named: "View State List A", in: app)
+        addItem(named: "Anchor", in: app)
+        app.typeKey(.escape, modifierFlags: [])
+
+        let anchor = app.staticTexts["Anchor"]
+        XCTAssertTrue(anchor.waitForExistence(timeout: 5))
+        anchor.click()
+        addChildItem(named: "Nested Child", in: app)
+        app.typeKey(.escape, modifierFlags: [])
+
+        let nestedChild = app.staticTexts["Nested Child"]
+        XCTAssertTrue(nestedChild.waitForExistence(timeout: 5), "Precondition: addChild auto-expands its parent")
+
+        // Switching creates a list — this also switches selection to it.
+        createList(named: "View State List B", in: app)
+        XCTAssertFalse(nestedChild.waitForExistence(timeout: 2), "Precondition: List B's editor must not show List A's rows")
+
+        // Switch back by clicking List A's sidebar row (existing pattern —
+        // rows are plain Text(list.title), no dedicated identifier).
+        app.staticTexts["View State List A"].click()
+
+        XCTAssertTrue(
+            nestedChild.waitForExistence(timeout: 5),
+            "The nested branch must still be expanded after switching lists and back — no re-expand click happened above"
+        )
+    }
+
+    /// td-5d405a: extends the relaunch coverage above — an expanded branch
+    /// AND the Remaining filter must both survive a full relaunch, not just
+    /// list selection. Loose Item is checked then hidden by Remaining; if
+    /// the filter didn't persist, it would reappear after relaunch since a
+    /// fresh ListStore defaults to `.all`.
+    @MainActor func testExpandedBranchAndRemainingFilterSurviveRelaunch() {
+        continueAfterFailure = false
+        let app = launchApp(store: "mac-viewstate-relaunch", reset: true)
+        createList(named: "View State Relaunch List", in: app)
+        addItem(named: "Anchor", in: app)
+        app.typeKey(.escape, modifierFlags: [])
+
+        let anchor = app.staticTexts["Anchor"]
+        XCTAssertTrue(anchor.waitForExistence(timeout: 5))
+        anchor.click()
+        addChildItem(named: "Nested Child", in: app)
+        app.typeKey(.escape, modifierFlags: [])
+
+        let nestedChild = app.staticTexts["Nested Child"]
+        XCTAssertTrue(nestedChild.waitForExistence(timeout: 5), "Precondition: addChild auto-expands its parent")
+
+        addItem(named: "Loose Item", in: app)
+        app.typeKey(.escape, modifierFlags: [])
+        let checkLoose = app.buttons["Check Loose Item"]
+        XCTAssertTrue(checkLoose.waitForExistence(timeout: 5))
+        checkLoose.click()
+
+        app.typeKey("2", modifierFlags: [.command, .option]) // Remaining filter
+        let looseItem = app.staticTexts["Loose Item"]
+        XCTAssertFalse(looseItem.waitForExistence(timeout: 2), "Precondition: Remaining hides the now-checked Loose Item")
+
+        app.terminate()
+        relaunch(app, reset: false)
+
+        XCTAssertTrue(anchor.waitForExistence(timeout: 5), "The restored list must be selected and shown after relaunch")
+        XCTAssertTrue(
+            nestedChild.waitForExistence(timeout: 5),
+            "The expanded branch must survive relaunch, not just an in-session list switch"
+        )
+        XCTAssertFalse(
+            looseItem.waitForExistence(timeout: 2),
+            "The Remaining filter must survive relaunch — a fresh ListStore defaulting to .all would show Loose Item again"
+        )
+    }
+
     @MainActor func testCoreActionsAreVisible() {
         continueAfterFailure = false
         let app = launchApp(store: "mac-visible-actions", reset: true)
@@ -828,6 +910,17 @@ final class Listsurf_macOSUITests: XCTestCase {
         XCTAssertTrue(itemField.waitForExistence(timeout: 5))
         itemField.click()
         itemField.typeText("\(title)\n")
+    }
+
+    /// No existing helper armed a child-add field (td-5d405a needed one):
+    /// macOS has no dedicated "Add Child" button — ⌘Return (`CommandCatalog
+    /// .addChild`) arms the field, mirroring `testCommandReturnArmsEditableChildField`.
+    /// Requires the intended parent row to already be selected/clicked.
+    @MainActor private func addChildItem(named title: String, in app: XCUIApplication) {
+        app.typeKey(.return, modifierFlags: .command)
+        let addField = app.textFields["editor.newItem"]
+        XCTAssertTrue(addField.waitForExistence(timeout: 5))
+        addField.typeText("\(title)\n")
     }
 
     @MainActor private func fillNewListSheet(named title: String, in app: XCUIApplication) {

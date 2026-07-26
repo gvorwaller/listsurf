@@ -14,15 +14,29 @@ public final class ListStore {
     public internal(set) var list: ListItem?
     public var items: [OutlineItem] = []
     public var flatRows: [FlatRow] = []
-    public var expandedIDs: Set<UUID> = []
+    // expandedIDs/selectedItemIDs/checkFilter are per-list VIEW state
+    // (td-5d405a): persisted to UserDefaults via `persistViewState()` on
+    // every change (didSet, not per-call-site calls — these three are
+    // mutated from many places across ListStore and its views) and seeded
+    // back in `load()`. Scroll position is intentionally excluded.
+    public var expandedIDs: Set<UUID> = [] {
+        didSet { if oldValue != expandedIDs { persistViewState() } }
+    }
     /// Row IDs whose note preview is expanded past the Settings line-limit
     /// (td-50f035, plan item 11) — transient UI state, never persisted, and
     /// cleared on `load()` so a note left expanded in one list doesn't leak
     /// into the next.
     public var expandedNoteIDs: Set<UUID> = []
-    public var selectedItemIDs: Set<UUID> = []
+    public var selectedItemIDs: Set<UUID> = [] {
+        didSet { if oldValue != selectedItemIDs { persistViewState() } }
+    }
     public var checkFilter: CheckFilter = .all {
-        didSet { if oldValue != checkFilter { rowsVersion += 1 } }
+        didSet {
+            if oldValue != checkFilter {
+                rowsVersion += 1
+                persistViewState()
+            }
+        }
     }
     public var searchText = "" {
         didSet { if oldValue != searchText { rowsVersion += 1 } }
@@ -50,6 +64,7 @@ public final class ListStore {
     private let outlineRepo: any OutlineRepository
     private let listRepo: any ListRepository
     private let errorStore: AppErrorStore
+    private let userDefaults: UserDefaults
     private let engine = TreeEngine()
     private let logger = Logger(subsystem: "net.vorwaller.listsurf", category: "tree")
     @ObservationIgnored private var persistenceTail: Task<Void, Never>?
@@ -64,12 +79,14 @@ public final class ListStore {
         listID: UUID,
         outlineRepo: any OutlineRepository,
         listRepo: any ListRepository,
-        errorStore: AppErrorStore = AppErrorStore()
+        errorStore: AppErrorStore = AppErrorStore(),
+        userDefaults: UserDefaults = .standard
     ) {
         self.listID = listID
         self.outlineRepo = outlineRepo
         self.listRepo = listRepo
         self.errorStore = errorStore
+        self.userDefaults = userDefaults
     }
 
     public var progress: (checked: Int, total: Int) {
@@ -119,6 +136,7 @@ public final class ListStore {
             let repair = engine.repairInvalidParents(in: fetchedItems)
             let repairedCount = repair.orphanCount + repair.cycleCount
             items = repair.repaired
+            seedViewState()
             rebuildRows()
             if repairedCount > 0 {
                 try await persistRepair(originalItems: fetchedItems, repairedItems: repair.repaired)
@@ -151,6 +169,37 @@ public final class ListStore {
     private func rebuildRows() {
         flatRows = engine.flatten(items: items, expandedIDs: expandedIDs)
         rowsVersion += 1
+    }
+
+    /// Restores persisted view state (td-5d405a) for this list, if any.
+    /// Must run AFTER `items` is assigned (stale ids from deleted rows are
+    /// pruned against the just-loaded items) and BEFORE `rebuildRows()` —
+    /// synchronous back-to-back assignments here let `@Observable` batch
+    /// them into one render pass, so there's no visible collapse-then-
+    /// expand flash. Missing/undecodable state leaves the current
+    /// defaults untouched.
+    private func seedViewState() {
+        guard let data = userDefaults.data(forKey: ListViewState.viewStateKey(for: listID)),
+              let stored = try? JSONDecoder().decode(ListViewState.self, from: data) else { return }
+        let itemIDs = Set(items.map(\.id))
+        expandedIDs = stored.expandedIDs.intersection(itemIDs)
+        selectedItemIDs = stored.selectedItemIDs.intersection(itemIDs)
+        checkFilter = CheckFilter(rawValue: stored.checkFilterRawValue) ?? .all
+    }
+
+    /// Single write path for per-list view-state persistence (td-5d405a),
+    /// called from `expandedIDs`/`selectedItemIDs`/`checkFilter`'s `didSet`
+    /// observers so every mutation site — inside `ListStore` and from views
+    /// binding directly to these properties — persists without needing its
+    /// own call.
+    private func persistViewState() {
+        let state = ListViewState(
+            expandedIDs: expandedIDs,
+            checkFilterRawValue: checkFilter.rawValue,
+            selectedItemIDs: selectedItemIDs
+        )
+        guard let data = try? JSONEncoder().encode(state) else { return }
+        userDefaults.set(data, forKey: ListViewState.viewStateKey(for: listID))
     }
 
     private func applyChanges(to newItems: [OutlineItem]) {

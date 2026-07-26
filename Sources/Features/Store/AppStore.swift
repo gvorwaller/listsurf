@@ -133,6 +133,10 @@ public final class AppStore {
             // to save items for a deleted list, as defense in depth).
             await drainPendingItemWrites()
             try await listRepo.deleteListAndItems(id: id)
+            // td-5d405a: an archived list keeps its view-state key (archiving
+            // is explicitly not a cleanup trigger) — only an actual delete
+            // removes it.
+            userDefaults.removeObject(forKey: ListViewState.viewStateKey(for: id))
             if selectedListID == id { selectedListID = nil }
             await loadLists()
         } catch {
@@ -501,7 +505,8 @@ public final class AppStore {
             listID: listID,
             outlineRepo: outlineRepo,
             listRepo: listRepo,
-            errorStore: errorStore
+            errorStore: errorStore,
+            userDefaults: userDefaults
         )
         issuedStores.removeAll { $0.store == nil }
         issuedStores.append(WeakListStore(store: store))
