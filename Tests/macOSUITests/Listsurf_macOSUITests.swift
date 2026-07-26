@@ -621,6 +621,83 @@ final class Listsurf_macOSUITests: XCTestCase {
                       "Command-K must read and toggle the Shift-extended selection at invocation")
     }
 
+    /// td-0a4af9 (Gate M1, plan item 5): the second Opt-Cmd-L used to hide
+    /// the whole app window instead of closing the legend (a parallel
+    /// `@State` bool desynced from the legend's actual `NSWindow`
+    /// visibility), Esc didn't close it, and focus never returned to the
+    /// row that was selected when the legend opened. Proof: toggle
+    /// open/close twice — once while the legend itself is key, via a direct
+    /// click into it, which is the exact repro for the "hides the whole
+    /// app" bug — then reopen and close with Esc, confirming the main
+    /// window/editor never disappears and Down still moves the EDITOR's
+    /// selection afterward.
+    ///
+    /// PENDING: cannot run tonight — the macOS UI test runner is
+    /// auth-blocked (LocalAuthentication Code -4; Mac idle/locked) per the
+    /// td-0a4af9 session log. Verified to compile via
+    /// `xcodebuild build-for-testing` for `Listsurf_macOSUITests`; not yet
+    /// executed.
+    @MainActor func testKeyboardLegendToggleEscapeAndFocus() {
+        continueAfterFailure = false
+        let app = launchApp(store: "mac-keyboard-legend", reset: true)
+        createList(named: "Keyboard Legend List", in: app)
+        addItem(named: "Alpha", in: app)
+        addItem(named: "Bravo", in: app)
+        app.typeKey(.escape, modifierFlags: [])
+
+        let alpha = app.staticTexts["Alpha"]
+        XCTAssertTrue(alpha.waitForExistence(timeout: 5))
+        alpha.click()
+
+        let legendWindow = app.windows["Keyboard Legend"]
+
+        // Open.
+        app.typeKey("l", modifierFlags: [.command, .option])
+        XCTAssertTrue(legendWindow.waitForExistence(timeout: 5))
+
+        // Close — legend is NOT key here (opening never steals key status).
+        app.typeKey("l", modifierFlags: [.command, .option])
+        XCTAssertFalse(legendWindow.waitForExistence(timeout: 2))
+        XCTAssertTrue(alpha.waitForExistence(timeout: 5),
+                      "The main window/editor must still exist and be visible")
+
+        // Reopen, then click INTO the legend to make it the key window.
+        app.typeKey("l", modifierFlags: [.command, .option])
+        XCTAssertTrue(legendWindow.waitForExistence(timeout: 5))
+        var legendRow = legendWindow.staticTexts["New Item"]
+        XCTAssertTrue(legendRow.waitForExistence(timeout: 5))
+        legendRow.click()
+
+        // Close while the legend IS key — the exact repro for the
+        // "second Opt-Cmd-L hides the whole app" bug.
+        app.typeKey("l", modifierFlags: [.command, .option])
+        XCTAssertFalse(legendWindow.waitForExistence(timeout: 2))
+        XCTAssertTrue(alpha.waitForExistence(timeout: 5),
+                      "The app window must never hide when closing a key legend")
+
+        // Reopen, make it key again, close via Esc this time.
+        app.typeKey("l", modifierFlags: [.command, .option])
+        XCTAssertTrue(legendWindow.waitForExistence(timeout: 5))
+        legendRow = legendWindow.staticTexts["New Item"]
+        XCTAssertTrue(legendRow.waitForExistence(timeout: 5))
+        legendRow.click()
+        app.typeKey(.escape, modifierFlags: [])
+        XCTAssertFalse(legendWindow.waitForExistence(timeout: 2), "Esc must close the legend")
+
+        // Focus restore: Down must move the EDITOR's selection, proving key
+        // window/focus returned to the row selected before the legend
+        // opened (Alpha) — not stranded on a closed window or the sidebar.
+        let alphaRow = app.outlineRows.containing(.staticText, identifier: "Alpha").firstMatch
+        XCTAssertTrue(waitUntil(timeout: 5) { alphaRow.isSelected },
+                      "Precondition: Alpha must still be selected after the legend closes")
+        app.typeKey(.downArrow, modifierFlags: [])
+        let bravoRow = app.outlineRows.containing(.staticText, identifier: "Bravo").firstMatch
+        XCTAssertTrue(
+            waitUntil(timeout: 5) { bravoRow.isSelected && !alphaRow.isSelected },
+            "Down after the legend closes must move the editor's selection — proves focus returned to the editor"
+        )
+    }
+
     @MainActor func testInspectorNotesEditorIsBounded() {
         continueAfterFailure = false
         let app = launchApp(store: "mac-bounded-notes", reset: true)

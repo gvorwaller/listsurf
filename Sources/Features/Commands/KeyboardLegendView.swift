@@ -7,24 +7,33 @@ import AppKit
 enum KeyboardLegendFocus {
     private static weak var previousWindow: NSWindow?
 
+    /// Records the window that was key right before the legend opens.
     static func capture() {
         previousWindow = NSApp.keyWindow
     }
 
+    /// Makes the captured window key again WITHOUT forgetting it. Called on
+    /// the legend's `onAppear` so opening the legend never steals key-window
+    /// status from the row the user was working in.
     static func restore() {
         previousWindow?.makeKey()
+    }
+
+    /// Clears the captured reference. Called once the legend's lifetime is
+    /// over (`onDisappear`, after a final `restore()`), so a later legend
+    /// open starts from a fresh capture.
+    static func release() {
         previousWindow = nil
     }
 }
 
 public struct KeyboardLegendView: View {
-    private let onVisibilityChanged: (Bool) -> Void
+    @Environment(\.dismiss) private var dismiss
     @State private var highlightedCommandID: String?
     @State private var highlightTask: Task<Void, Never>?
+    @FocusState private var containerFocused: Bool
 
-    public init(onVisibilityChanged: @escaping (Bool) -> Void) {
-        self.onVisibilityChanged = onVisibilityChanged
-    }
+    public init() {}
 
     public var body: some View {
         ScrollView {
@@ -58,8 +67,21 @@ public struct KeyboardLegendView: View {
             .padding(12)
         }
         .frame(minWidth: 460, idealWidth: 520, minHeight: 420, idealHeight: 620)
+        // Belt-and-suspenders Esc handling (td-0a4af9): onExitCommand is the
+        // normal SwiftUI path, but the row content is .focusable(false), so
+        // if nothing in the hierarchy is in the focus/responder chain when
+        // the legend IS key, onExitCommand may not fire. The focusable
+        // container + onKeyPress fallback catches Esc in that case too.
+        .focusable()
+        .focusEffectDisabled()
+        .focused($containerFocused)
+        .onExitCommand { dismiss() }
+        .onKeyPress(.escape) {
+            dismiss()
+            return .handled
+        }
         .onAppear {
-            onVisibilityChanged(true)
+            containerFocused = true
             Task { @MainActor in
                 await Task.yield()
                 KeyboardLegendFocus.restore()
@@ -67,7 +89,8 @@ public struct KeyboardLegendView: View {
         }
         .onDisappear {
             highlightTask?.cancel()
-            onVisibilityChanged(false)
+            KeyboardLegendFocus.restore()
+            KeyboardLegendFocus.release()
         }
         .onReceive(NotificationCenter.default.publisher(for: .listsurfCommandDidInvoke)) { notification in
             guard let commandID = notification.userInfo?["commandID"] as? String else { return }

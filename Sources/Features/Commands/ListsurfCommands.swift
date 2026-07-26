@@ -12,16 +12,9 @@ public struct ListsurfCommands: Commands {
     #if os(macOS)
     @Environment(\.openWindow) private var openWindow
     @Environment(\.dismissWindow) private var dismissWindow
-    @Binding private var isKeyboardLegendPresented: Bool
     #endif
 
-    #if os(macOS)
-    public init(isKeyboardLegendPresented: Binding<Bool>) {
-        _isKeyboardLegendPresented = isKeyboardLegendPresented
-    }
-    #else
     public init() {}
-    #endif
 
     public var body: some Commands {
         CommandGroup(replacing: .newItem) {
@@ -94,13 +87,12 @@ public struct ListsurfCommands: Commands {
             #if os(macOS)
             Divider()
             catalogButton(CommandCatalog.keyboardLegend) {
-                if isKeyboardLegendPresented {
+                if let window = legendWindow(), window.isVisible {
                     dismissWindow(id: "keyboard-legend")
                 } else {
                     KeyboardLegendFocus.capture()
                     openWindow(id: "keyboard-legend")
                 }
-                isKeyboardLegendPresented.toggle()
                 CommandInvocation.post(CommandCatalog.keyboardLegend)
             }
             #endif
@@ -128,6 +120,25 @@ public struct ListsurfCommands: Commands {
         catalogButton(command) { listCommands?.setFilter?(filter) }
             .disabled(listCommands?.setFilter == nil)
     }
+
+    #if os(macOS)
+    /// Finds the live Keyboard Legend `NSWindow`, if one exists, so the
+    /// toggle can read actual window state instead of a parallel `@State`
+    /// bool (which desynced from `dismissWindow`/close-button dismissal and
+    /// caused the second Opt-Cmd-L to hide the whole app — td-0a4af9).
+    /// SwiftUI derives `NSWindow.identifier` from the `Window(id:)` scene
+    /// identifier, but may suffix it (extra windows, restoration); match by
+    /// prefix with a title-match fallback.
+    private func legendWindow() -> NSWindow? {
+        NSApp.windows.first { window in
+            if let identifier = window.identifier?.rawValue,
+               identifier.hasPrefix("keyboard-legend") {
+                return true
+            }
+            return window.title == "Keyboard Legend"
+        }
+    }
+    #endif
 }
 
 private extension View {
