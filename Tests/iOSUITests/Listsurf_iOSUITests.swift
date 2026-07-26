@@ -361,6 +361,74 @@ final class Listsurf_iOSUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Child Item"].waitForExistence(timeout: 5))
     }
 
+    /// td-1ef423 (Gate I3+I1b, plan item 3): with a long list, the armed
+    /// child-add field and the inline rename field for the LAST row land at
+    /// the very bottom of the outline — exactly where the software keyboard
+    /// would otherwise occlude them without the new ScrollViewReader
+    /// scrollTo triggers. `isHittable` fails if a field exists in the
+    /// hierarchy but is actually covered by the keyboard.
+    @MainActor func testKeyboardOcclusionScrollsFieldsIntoView() {
+        continueAfterFailure = false
+        let app = launchApp(store: "ios-keyboard-occlusion", reset: true)
+        createList(named: "Long Occlusion List", in: app)
+
+        let addItem = firstExisting(
+            app.buttons["editor.addFirstItem"],
+            app.buttons["editor.addItem"]
+        )
+        XCTAssertTrue(addItem.waitForExistence(timeout: 5))
+        addItem.tap()
+
+        var lastTitle = ""
+        for index in 1...25 {
+            lastTitle = "Item \(index)"
+            let itemField = app.textFields["editor.newItem"]
+            XCTAssertTrue(itemField.waitForExistence(timeout: 5))
+            itemField.typeText("\(lastTitle)\n")
+        }
+
+        let lastRow = app.staticTexts[lastTitle]
+        XCTAssertTrue(lastRow.waitForExistence(timeout: 5))
+        lastRow.tap() // dismiss the still-armed continuation field, select the last row
+
+        // Arm a child add on the selected (last) row via the bottom action
+        // bar — the same path testCoreActionsAreVisible and
+        // testDragAcrossParentBoundaryDoesNotReparent already use.
+        XCTAssertTrue(app.buttons["editor.ios.addChild"].waitForExistence(timeout: 5))
+        app.buttons["editor.ios.addChild"].tap()
+
+        let childField = app.textFields["editor.newItem"]
+        XCTAssertTrue(childField.waitForExistence(timeout: 5))
+        XCTAssertTrue(
+            waitUntil(timeout: 5) { childField.isHittable },
+            "Armed child-add field on the last row must scroll clear of the keyboard"
+        )
+
+        // Cancel cleanly (existing keyboard-accessory path) rather than
+        // committing, so the last row is still Item 25 for the rename step.
+        let cancel = app.buttons["editor.keyboard.cancel"]
+        XCTAssertTrue(cancel.waitForExistence(timeout: 5))
+        cancel.tap()
+        XCTAssertFalse(app.textFields["editor.newItem"].waitForExistence(timeout: 2))
+
+        // Rename the last row via its row-actions menu (same menu content
+        // as the context menu; identifier "editor.rowActions" is shared
+        // across rows, so the row's accessibility LABEL disambiguates).
+        let rowActions = app.buttons["Actions for \(lastTitle)"]
+        XCTAssertTrue(rowActions.waitForExistence(timeout: 5))
+        rowActions.tap()
+        let renameButton = app.buttons["Rename"]
+        XCTAssertTrue(renameButton.waitForExistence(timeout: 5))
+        renameButton.tap()
+
+        let renameField = app.textFields["editor.renameField"]
+        XCTAssertTrue(renameField.waitForExistence(timeout: 5))
+        XCTAssertTrue(
+            waitUntil(timeout: 5) { renameField.isHittable },
+            "Inline rename field on the last row must scroll clear of the keyboard"
+        )
+    }
+
     @MainActor func testHelpOpensFromLibrary() {
         continueAfterFailure = false
         let app = launchApp(store: "ios-help", reset: true)

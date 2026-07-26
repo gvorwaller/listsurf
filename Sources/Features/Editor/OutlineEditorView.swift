@@ -1,6 +1,12 @@
 import SwiftUI
 import Domain
 import Platform
+#if os(iOS)
+import UIKit
+#endif
+#if DEBUG
+import os
+#endif
 
 struct OutlineEditorView: View {
     @Bindable var store: ListStore
@@ -28,6 +34,26 @@ struct OutlineEditorView: View {
     // the responder chain is verified after assignment and the NSTextField
     // is focused directly when the bridge didn't do it.
     @State private var pendingFocus: EditorFocus?
+    #if os(iOS)
+    // td-1ef423: List's automatic keyboard-avoidance safe-area inset does
+    // NOT apply in this hierarchy — measured on-device (screenshot
+    // evidence): with the add/rename keyboard accessory toolbar visible,
+    // the List still laid out its content all the way to the physical
+    // screen bottom, so `ScrollViewReader.scrollTo(anchor: .bottom)` was
+    // landing the target row exactly where the toolbar/keyboard covers it.
+    // Likely cause: the pre-existing `.safeAreaInset(edge: .bottom) {
+    // selectedItemActionBar }` on this same view redefines the bottom
+    // safe area for its subtree, and the keyboard toolbar's own automatic
+    // contribution doesn't compose with that. Tracking the real keyboard
+    // frame and reserving it explicitly is the fix that doesn't depend on
+    // that automatic (and here, non-functional) propagation.
+    @State private var keyboardOverlap: CGFloat = 0
+    /// Conservative floor covering a standard iPhone keyboard (~271-346pt
+    /// across current models) plus the keyboard accessory toolbar
+    /// (~44-50pt) — see `keyboardOverlap`'s doc comment for why the
+    /// notification-derived value can't be trusted alone.
+    private static let minimumKeyboardClearance: CGFloat = 350
+    #endif
 
     var body: some View {
         #if os(iOS)
@@ -93,7 +119,15 @@ struct OutlineEditorView: View {
                     CommandInvocation.post(CommandCatalog.escape)
                     return .handled
                 }
-                return .ignored
+                // td-c85e4b (Gate M3): with nothing left to back out of,
+                // this used to return `.ignored` and let AppKit's responder
+                // chain carry the Esc up to the sidebar (spec says a second
+                // Esc does nothing). Consuming it here is a deliberate
+                // tradeoff: Esc can no longer exit full-screen while the
+                // editor is focused with an empty selection. Accepted per
+                // the M5 gate fix plan (item 7) — the editor owning Esc end
+                // to end beats the escape reaching the sidebar unannounced.
+                return .handled
             }
             // ⇧Tab arrives as a DIFFERENT key (backtab, U+0019) on macOS —
             // `.onKeyPress(.tab)` never fires for it, so focus traversal used
@@ -252,6 +286,59 @@ struct OutlineEditorView: View {
     }
 
     private var outlineList: some View {
+        #if os(iOS)
+        // td-1ef423: the List's default keyboard avoidance doesn't reach a
+        // freshly-armed add field or rename field reliably (Gate I3/I1b) —
+        // a ScrollViewReader lets us drive scrollTo explicitly once the
+        // keyboard/field has actually appeared. macOS has no software
+        // keyboard, so this whole wrapper is iOS-only; the plain `List`
+        // below is byte-for-byte what macOS renders.
+        ScrollViewReader { proxy in
+            outlineListContent
+                // td-1ef423: reserve the real keyboard/accessory height as
+                // extra bottom clearance on the List itself — see the
+                // `keyboardOverlap` doc comment for why this can't be left
+                // to automatic keyboard-avoidance here. Without this,
+                // `scrollTo(anchor: .bottom)` positions the row against the
+                // List's own (unshrunk) bottom edge, which is exactly where
+                // the keyboard/toolbar covers it. `max` with a conservative
+                // floor: the notification's reported frame was empirically
+                // unreliable in the iOS Simulator's UI-test runner (the
+                // keyboard never visually presents there even though the
+                // `.toolbar(placement: .keyboard)` accessory still docks to
+                // the screen bottom) — a real device's keyboard is expected
+                // to report correctly and simply exceed this floor.
+                .safeAreaPadding(
+                    .bottom,
+                    store.isTextInputActive ? max(keyboardOverlap, Self.minimumKeyboardClearance) : 0
+                )
+                .onChange(of: store.addPlacement) { _, newValue in
+                    guard newValue != nil else { return }
+                    scrollToActiveField(proxy)
+                }
+                .onChange(of: store.editingItemID) { _, newValue in
+                    guard newValue != nil else { return }
+                    scrollToActiveField(proxy)
+                }
+                .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillChangeFrameNotification)) { note in
+                    updateKeyboardOverlap(note)
+                }
+                .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidShowNotification)) { _ in
+                    // Re-assert: the keyboard's final height isn't known at
+                    // the moment addPlacement/editingItemID flips, so the
+                    // first scrollTo above can undershoot. keyboardDidShow
+                    // fires once the keyboard has actually finished
+                    // presenting, giving a second, better-informed attempt.
+                    guard store.isTextInputActive else { return }
+                    scrollToActiveField(proxy)
+                }
+        }
+        #else
+        outlineListContent
+        #endif
+    }
+
+    private var outlineListContent: some View {
         List(selection: $store.selectedItemIDs) {
             ForEach(store.filteredRows) { row in
                 outlineRow(row)
@@ -299,6 +386,51 @@ struct OutlineEditorView: View {
             onShowDetails: showDetails(itemID:)
         ))
     }
+
+    #if os(iOS)
+    /// td-1ef423: reads live store state rather than the `onChange` payload
+    /// so all three triggers (add armed, rename armed, keyboard re-assert)
+    /// share one implementation — add and rename are mutually exclusive
+    /// (see `dismissPendingAdd`/`onChange(of: store.selectedItemIDs)`), so
+    /// exactly one branch below is ever live at a time.
+    ///
+    /// The real fix for landing ABOVE the keyboard is the
+    /// `keyboardOverlap`/`safeAreaPadding` in `outlineList` above — that
+    /// gives `anchor: .bottom` a List frame that actually excludes the
+    /// keyboard. This retry loop covers a separate, softer timing issue:
+    /// `keyboardOverlap` itself updates asynchronously off a notification,
+    /// so the very first scrollTo attempt (250ms after arming) can still
+    /// fire before that value has caught up to a keyboard that's still
+    /// animating in. Retrying a few times over ~1s re-scrolls once it has.
+    private func scrollToActiveField(_ proxy: ScrollViewProxy) {
+        Task { @MainActor in
+            for delayMS in [250, 150, 150, 150, 150] {
+                try? await Task.sleep(for: .milliseconds(delayMS))
+                if store.addPlacement != nil {
+                    proxy.scrollTo(EditorScrollAnchor.addField, anchor: .bottom)
+                } else if let editingItemID = store.editingItemID {
+                    proxy.scrollTo(editingItemID, anchor: .center)
+                } else {
+                    return
+                }
+            }
+        }
+    }
+
+    /// td-1ef423: derives how much of the screen's bottom the keyboard (plus
+    /// its `.toolbar(placement: .keyboard)` accessory, which reports as part
+    /// of the same frame) currently occupies, from the one notification
+    /// UIKit posts for every keyboard frame change — show, hide, and height
+    /// changes (e.g. rotation, QuickType bar, a hardware-keyboard toggle).
+    /// `frame.origin.y` is in screen coordinates, so `screenHeight -
+    /// origin.y` is exactly the overlap; clamped to 0 for a fully-dismissed
+    /// keyboard, where `origin.y` lands at or past the screen's bottom edge.
+    private func updateKeyboardOverlap(_ note: Notification) {
+        guard let frame = note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else { return }
+        let screenHeight = UIScreen.main.bounds.height
+        keyboardOverlap = max(0, screenHeight - frame.origin.y)
+    }
+    #endif
 
     /// B6 fix (spec §2): the drag gate terms, all editor-computed so trait
     /// changes re-diff correctly (Rev 2.4). Phase 2 adds the filter term
@@ -443,8 +575,29 @@ struct OutlineEditorView: View {
             .overlay(alignment: .top) { Divider() }
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier("editor.ios.actionBar")
+            // td-03f6d1(d) / Gate I4: no repro, defensive only. A residual
+            // keyboard-avoidance offset left over from the add/rename flow
+            // could otherwise float this bar mid-screen instead of pinning
+            // it to the bottom safe area.
+            .ignoresSafeArea(.keyboard, edges: .bottom)
+            #if DEBUG
+            .onGeometryChange(for: CGRect.self) { proxy in
+                proxy.frame(in: .global)
+            } action: { frame in
+                let screenHeight = UIScreen.main.bounds.height
+                let offset = screenHeight - frame.maxY
+                guard offset > 100 else { return }
+                Self.actionBarLogger.error(
+                    "selectedItemActionBar floating: frame=\(frame.debugDescription, privacy: .public) screenBounds=\(UIScreen.main.bounds.debugDescription, privacy: .public) offsetFromBottom=\(offset, privacy: .public)"
+                )
+            }
+            #endif
         }
     }
+    #endif
+
+    #if DEBUG
+    private static let actionBarLogger = Logger(subsystem: "net.vorwaller.listsurf", category: "ui")
     #endif
 
     private func addItemField(depth: Int) -> some View {
@@ -466,6 +619,23 @@ struct OutlineEditorView: View {
                 if pendingFocus == .addField { pendingFocus = nil }
             }
         )
+        #if os(iOS)
+        .background(
+            // td-1ef423: a SEPARATE, non-interactive marker carries the
+            // scrollTo identity. Applying `.id()` directly to the add field
+            // itself regressed testAddFieldPlacementAndKeyboardDismissal —
+            // with an explicit `.id()` on the focused row, SwiftUI/UIKit
+            // tore down and rebuilt its backing text-field view on List
+            // body recomputes that had nothing to do with the add field
+            // (e.g. every keystroke committed elsewhere), dropping first
+            // responder. This untouched, unfocusable sibling gives
+            // scrollTo the same on-screen position without ever touching
+            // the focused field's own identity.
+            Color.clear
+                .id(EditorScrollAnchor.addField)
+                .accessibilityHidden(true)
+        )
+        #endif
     }
 
     #if os(macOS)
@@ -900,6 +1070,15 @@ private struct KeyboardAccessoryModifier: ViewModifier {
         #endif
     }
 }
+
+#if os(iOS)
+/// td-1ef423: `ScrollViewReader.scrollTo` identity for the add field. A
+/// dedicated enum rather than a sentinel UUID/string — it can never
+/// alias an item's `UUID` no matter what value that happens to take.
+private enum EditorScrollAnchor: Hashable {
+    case addField
+}
+#endif
 
 /// Add-item field, extracted from `OutlineEditorView.addItemField` (td-e7c609):
 /// a small dedicated leaf view whose OWN body reads/writes `draft.text`, so

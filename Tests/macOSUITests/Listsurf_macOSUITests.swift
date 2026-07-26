@@ -398,6 +398,38 @@ final class Listsurf_macOSUITests: XCTestCase {
         XCTAssertTrue(title.waitForExistence(timeout: 5), "Escape must cancel the rename without changing the title")
     }
 
+    /// td-c85e4b (Gate M3, plan item 7): with the selection already empty,
+    /// a second Esc used to fall through the editor's `.onKeyPress` (return
+    /// `.ignored`) and let AppKit's responder chain carry it up to the
+    /// sidebar. Proof: after two Escapes, Down must still move the
+    /// EDITOR's selection — if focus had actually left for the sidebar,
+    /// this outline row would never become selected.
+    @MainActor func testSecondEscapeStaysInEditor() {
+        continueAfterFailure = false
+        let app = launchApp(store: "mac-second-escape", reset: true)
+        createList(named: "Second Escape List", in: app)
+        addItem(named: "Alpha", in: app)
+        addItem(named: "Bravo", in: app)
+        app.typeKey(.escape, modifierFlags: []) // dismiss the still-armed add flow
+
+        let alpha = app.staticTexts["Alpha"]
+        XCTAssertTrue(alpha.waitForExistence(timeout: 5))
+        alpha.click()
+        let alphaRow = app.outlineRows.containing(.staticText, identifier: "Alpha").firstMatch
+        XCTAssertTrue(waitUntil(timeout: 5) { alphaRow.isSelected }, "Precondition: Alpha must be selected")
+
+        app.typeKey(.escape, modifierFlags: []) // first Esc: clears the selection
+        XCTAssertTrue(waitUntil(timeout: 5) { !alphaRow.isSelected }, "First Esc must clear the selection")
+
+        app.typeKey(.escape, modifierFlags: []) // second Esc: selection already empty — must be consumed here
+
+        app.typeKey(.downArrow, modifierFlags: [])
+        XCTAssertTrue(
+            waitUntil(timeout: 5) { alphaRow.isSelected },
+            "Down arrow after the second Esc must move the editor's selection — proves focus stayed in the editor, not the sidebar"
+        )
+    }
+
     /// Also serves as the Phase 3 Space-delivery gate: bare Space reaches
     /// the focused native List and advances selection under Remaining.
     @MainActor func testSpaceTogglesCheckAndAdvances() {
