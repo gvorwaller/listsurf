@@ -76,7 +76,12 @@ public final class ListStore {
 
         if !searchText.isEmpty {
             let query = searchText.lowercased()
-            let matchingIDs = Set(items.filter { $0.title.lowercased().contains(query) }.map(\.id))
+            // Plan item 12e (E1a): a note-only match must surface the row
+            // too, not just a title match — the ancestor-expansion below
+            // treats both the same way.
+            let matchingIDs = Set(items.filter {
+                $0.title.lowercased().contains(query) || ($0.notes?.lowercased().contains(query) ?? false)
+            }.map(\.id))
             var visibleIDs = matchingIDs
             for id in matchingIDs {
                 let ancestors = engine.ancestorIDs(of: id, in: items)
