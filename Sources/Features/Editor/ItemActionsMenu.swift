@@ -117,6 +117,38 @@ struct ItemActionsMenu: View {
 
             Divider()
         } else if itemIDs.count > 1 {
+            // Structure ops act on the whole selection set (plan item 10 —
+            // parity with Check/Uncheck, which already does).
+            Button {
+                selectTargetIfNeeded()
+                store.indent(itemIDs: itemIDs, undoManager: undoManager)
+            } label: {
+                Label(hinted(CommandCatalog.indent.title, CommandCatalog.indent.binding), systemImage: CommandCatalog.indent.systemImage)
+            }
+
+            Button {
+                selectTargetIfNeeded()
+                store.outdent(itemIDs: itemIDs, undoManager: undoManager)
+            } label: {
+                Label(hinted(CommandCatalog.outdent.title, CommandCatalog.outdent.binding), systemImage: CommandCatalog.outdent.systemImage)
+            }
+
+            Button {
+                selectTargetIfNeeded()
+                store.moveUp(itemIDs: itemIDs, undoManager: undoManager)
+            } label: {
+                Label(hinted(CommandCatalog.moveUp.title, CommandCatalog.moveUp.binding), systemImage: CommandCatalog.moveUp.systemImage)
+            }
+
+            Button {
+                selectTargetIfNeeded()
+                store.moveDown(itemIDs: itemIDs, undoManager: undoManager)
+            } label: {
+                Label(hinted(CommandCatalog.moveDown.title, CommandCatalog.moveDown.binding), systemImage: CommandCatalog.moveDown.systemImage)
+            }
+
+            Divider()
+
             Button {
                 selectTargetIfNeeded()
                 store.toggleChecked(ids: itemIDs, undoManager: undoManager)

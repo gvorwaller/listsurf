@@ -376,26 +376,6 @@ struct ListDetailView: View {
                 store.beginAdding(.child(liveID))
                 CommandInvocation.post(CommandCatalog.addChild)
             }
-            actions.indent = {
-                guard !store.isTextInputActive, let liveID = singleSelectedItemID(in: store) else { return }
-                store.indent(itemID: liveID, undoManager: undoManager)
-                CommandInvocation.post(CommandCatalog.indent)
-            }
-            actions.outdent = {
-                guard !store.isTextInputActive, let liveID = singleSelectedItemID(in: store) else { return }
-                store.outdent(itemID: liveID, undoManager: undoManager)
-                CommandInvocation.post(CommandCatalog.outdent)
-            }
-            actions.moveUp = {
-                guard !store.isTextInputActive, let liveID = singleSelectedItemID(in: store) else { return }
-                store.moveUp(itemID: liveID, undoManager: undoManager)
-                CommandInvocation.post(CommandCatalog.moveUp)
-            }
-            actions.moveDown = {
-                guard !store.isTextInputActive, let liveID = singleSelectedItemID(in: store) else { return }
-                store.moveDown(itemID: liveID, undoManager: undoManager)
-                CommandInvocation.post(CommandCatalog.moveDown)
-            }
             actions.rename = {
                 guard !store.isTextInputActive, let liveID = singleSelectedItemID(in: store) else { return }
                 store.beginEditing(itemID: liveID)
@@ -403,6 +383,30 @@ struct ListDetailView: View {
             }
         }
         if !store.selectedItemIDs.isEmpty {
+            // Structure ops act on the whole selection set (plan item 10 —
+            // parity with ⌘K, which already does). Read the selection LIVE
+            // at invocation, same B3 rationale as the single-selection
+            // actions above.
+            actions.indent = {
+                guard !store.isTextInputActive, !store.selectedItemIDs.isEmpty else { return }
+                store.indent(itemIDs: store.selectedItemIDs, undoManager: undoManager)
+                CommandInvocation.post(CommandCatalog.indent)
+            }
+            actions.outdent = {
+                guard !store.isTextInputActive, !store.selectedItemIDs.isEmpty else { return }
+                store.outdent(itemIDs: store.selectedItemIDs, undoManager: undoManager)
+                CommandInvocation.post(CommandCatalog.outdent)
+            }
+            actions.moveUp = {
+                guard !store.isTextInputActive, !store.selectedItemIDs.isEmpty else { return }
+                store.moveUp(itemIDs: store.selectedItemIDs, undoManager: undoManager)
+                CommandInvocation.post(CommandCatalog.moveUp)
+            }
+            actions.moveDown = {
+                guard !store.isTextInputActive, !store.selectedItemIDs.isEmpty else { return }
+                store.moveDown(itemIDs: store.selectedItemIDs, undoManager: undoManager)
+                CommandInvocation.post(CommandCatalog.moveDown)
+            }
             actions.toggleChecked = {
                 guard !store.isTextInputActive, !store.selectedItemIDs.isEmpty else { return }
                 store.toggleChecked(ids: store.selectedItemIDs, undoManager: undoManager)

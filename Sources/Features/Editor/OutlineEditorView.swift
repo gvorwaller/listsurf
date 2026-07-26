@@ -884,14 +884,14 @@ struct OutlineEditorView: View {
 
     private func handleTabKey(isShiftPressed: Bool) -> KeyPress.Result {
         guard store.editingItemID == nil, store.addPlacement == nil,
-              let row = selectedRow else {
+              !store.selectedItemIDs.isEmpty else {
             return .ignored
         }
         if isShiftPressed {
-            store.outdent(itemID: row.id, undoManager: undoManager)
+            store.outdent(itemIDs: store.selectedItemIDs, undoManager: undoManager)
             CommandInvocation.post(CommandCatalog.outdent)
         } else {
-            store.indent(itemID: row.id, undoManager: undoManager)
+            store.indent(itemIDs: store.selectedItemIDs, undoManager: undoManager)
             CommandInvocation.post(CommandCatalog.indent)
         }
         return .handled

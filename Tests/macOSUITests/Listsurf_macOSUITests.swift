@@ -223,6 +223,49 @@ final class Listsurf_macOSUITests: XCTestCase {
         )
     }
 
+    /// td-2735d9 (Gate E2, plan item 10): structure ops must act on the
+    /// whole selection set, not just a single row. Proof: Shift-click
+    /// selects Bravo AND Charlie, ⌘] indents BOTH under Alpha in one step,
+    /// and ⌘Z restores both to root level in one undo.
+    @MainActor func testCommandBracketIndentsMultiSelection() {
+        continueAfterFailure = false
+        let app = launchApp(store: "mac-command-bracket-multi-indent", reset: true)
+        createList(named: "Mac Command Bracket Multi List", in: app)
+
+        addItem(named: "Alpha", in: app)
+        addItem(named: "Bravo", in: app)
+        addItem(named: "Charlie", in: app)
+        app.typeKey(.escape, modifierFlags: [])
+
+        let alpha = app.staticTexts["Alpha"]
+        let bravo = app.staticTexts["Bravo"]
+        let charlie = app.staticTexts["Charlie"]
+        XCTAssertTrue(charlie.waitForExistence(timeout: 5))
+
+        let bravoOriginalMinX = bravo.frame.minX
+        let charlieOriginalMinX = charlie.frame.minX
+
+        bravo.click()
+        XCUIElement.perform(withKeyModifiers: .shift) { charlie.click() }
+
+        app.typeKey("]", modifierFlags: .command)
+
+        XCTAssertTrue(waitUntil(timeout: 5) { bravo.frame.minX > bravoOriginalMinX + 15 })
+        XCTAssertGreaterThan(bravo.frame.minX, bravoOriginalMinX + 15, "⌘] must indent Bravo")
+        XCTAssertGreaterThan(charlie.frame.minX, charlieOriginalMinX + 15, "⌘] must indent Charlie too — the whole selection")
+        XCTAssertEqual(bravo.frame.minX, charlie.frame.minX, accuracy: 2,
+                       "Bravo and Charlie must land at the same depth (both children of Alpha)")
+        XCTAssertEqual(alpha.frame.minX, bravoOriginalMinX, accuracy: 2, "Alpha must be untouched")
+
+        app.typeKey("z", modifierFlags: .command)
+
+        XCTAssertTrue(waitUntil(timeout: 5) { abs(bravo.frame.minX - bravoOriginalMinX) < 5 })
+        XCTAssertEqual(bravo.frame.minX, bravoOriginalMinX, accuracy: 5,
+                       "One undo must restore Bravo to root level")
+        XCTAssertEqual(charlie.frame.minX, charlieOriginalMinX, accuracy: 5,
+                       "The SAME undo must restore Charlie to root level too")
+    }
+
     /// Gate M1 failure repro (2026-07-14): a multi-selected row must never
     /// lift into a drag — the pre-fix nested `.moveDisabled` was inert, so
     /// the drag lifted with a "2" badge and snapped back.

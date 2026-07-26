@@ -335,19 +335,11 @@ public final class ListStore {
     }
 
     public func moveUp(itemID: UUID, undoManager: UndoManager? = nil) {
-        guard let moved = engine.moveUp(itemID: itemID, in: items) else { return }
-        let oldItems = items
-        registerUndo(undoManager: undoManager, oldItems: oldItems)
-        applyChanges(to: moved)
-        persistInBackground(from: oldItems, to: moved)
+        moveUp(itemIDs: [itemID], undoManager: undoManager)
     }
 
     public func moveDown(itemID: UUID, undoManager: UndoManager? = nil) {
-        guard let moved = engine.moveDown(itemID: itemID, in: items) else { return }
-        let oldItems = items
-        registerUndo(undoManager: undoManager, oldItems: oldItems)
-        applyChanges(to: moved)
-        persistInBackground(from: oldItems, to: moved)
+        moveDown(itemIDs: [itemID], undoManager: undoManager)
     }
 
     /// Handles a flat-list drag from `.onMove`. Same-parent clamp semantics
@@ -375,38 +367,135 @@ public final class ListStore {
     }
 
     public func indent(itemID: UUID, undoManager: UndoManager? = nil) {
-        do {
-            let oldItems = items
-            let indented = try engine.indent(itemID: itemID, in: items)
-            // Boundary no-op: nothing to undo, nothing to persist. An undo
-            // entry here would make the next ⌘Z consume a do-nothing step.
-            guard indented != oldItems else { return }
-            // The engine reparents itemID under its previous sibling. Without
-            // this, the new parent stays collapsed (expandedIDs starts
-            // empty) and the just-indented row silently vanishes — mirrors
-            // addChild's expandedIDs.insert(parentID) above.
-            if let newParentID = indented.first(where: { $0.id == itemID })?.parentID {
-                expandedIDs.insert(newParentID)
-            }
-            registerUndo(undoManager: undoManager, oldItems: oldItems)
-            applyChanges(to: indented)
-            persistInBackground(from: oldItems, to: indented)
-        } catch {
-            logger.warning("Cannot indent: \(error.localizedDescription)")
-        }
+        indent(itemIDs: [itemID], undoManager: undoManager)
     }
 
     public func outdent(itemID: UUID, undoManager: UndoManager? = nil) {
-        do {
-            let oldItems = items
-            let outdented = try engine.outdent(itemID: itemID, in: items)
-            guard outdented != oldItems else { return }
-            registerUndo(undoManager: undoManager, oldItems: oldItems)
-            applyChanges(to: outdented)
-            persistInBackground(from: oldItems, to: outdented)
-        } catch {
-            logger.warning("Cannot outdent: \(error.localizedDescription)")
+        outdent(itemIDs: [itemID], undoManager: undoManager)
+    }
+
+    // MARK: - Multi-select structure ops (plan item 10)
+
+    private enum StructureOpOrder {
+        case topToBottom
+        case bottomToTop
+    }
+
+    /// Drops any id whose ancestor is ALSO in the set — an indent/outdent/
+    /// move on a child is redundant (and order-fragile) when its parent is
+    /// being processed in the same batch; the child rides along with its
+    /// parent's mutation instead of being applied twice.
+    private func ancestorFiltered(_ itemIDs: Set<UUID>) -> Set<UUID> {
+        itemIDs.filter { id in
+            Set(engine.ancestorIDs(of: id, in: items)).isDisjoint(with: itemIDs)
         }
+    }
+
+    /// Orders the ancestor-filtered ids by their CURRENT `flatRows` position
+    /// (top-to-bottom, or reversed) — indent/moveUp must process top-to-
+    /// bottom and outdent/moveDown bottom-to-top to preserve the selection's
+    /// relative order (proven against TreeEngine's insertion semantics in
+    /// the plan). Any id `flatRows` doesn't (yet) contain — a stale flatRows
+    /// snapshot, e.g. in tests that assign `items` directly — still gets
+    /// included, just ordered after every id `flatRows` does resolve.
+    private func orderedForStructureOp(_ itemIDs: Set<UUID>, order: StructureOpOrder) -> [UUID] {
+        let filtered = ancestorFiltered(itemIDs)
+        guard !filtered.isEmpty else { return [] }
+        let indexByID = Dictionary(uniqueKeysWithValues: flatRows.enumerated().map { ($0.element.id, $0.offset) })
+        let sorted = filtered.sorted { (indexByID[$0] ?? Int.max) < (indexByID[$1] ?? Int.max) }
+        return order == .topToBottom ? sorted : sorted.reversed()
+    }
+
+    /// Multi-select indent (spec item 10): one undo/persist for the whole
+    /// batch, all-or-nothing — if ANY member's step is a boundary no-op (or
+    /// throws), the entire batch aborts with NO mutation and NO undo entry,
+    /// since a partial application could restructure the selection into a
+    /// different shape than the one the user picked.
+    public func indent(itemIDs: Set<UUID>, undoManager: UndoManager? = nil) {
+        let ids = orderedForStructureOp(itemIDs, order: .topToBottom)
+        guard !ids.isEmpty else { return }
+        let oldItems = items
+        var working = items
+        var newParentIDs: Set<UUID> = []
+        for id in ids {
+            do {
+                let result = try engine.indent(itemID: id, in: working)
+                guard result != working else {
+                    logger.warning("Multi-indent aborted: boundary no-op for \(id)")
+                    return
+                }
+                if let newParentID = result.first(where: { $0.id == id })?.parentID {
+                    newParentIDs.insert(newParentID)
+                }
+                working = result
+            } catch {
+                logger.warning("Multi-indent aborted: \(error.localizedDescription)")
+                return
+            }
+        }
+        // Every new parent must be expanded — mirrors the single-item
+        // indent's expandedIDs.insert(newParentID) above.
+        expandedIDs.formUnion(newParentIDs)
+        registerUndo(undoManager: undoManager, oldItems: oldItems)
+        applyChanges(to: working)
+        persistInBackground(from: oldItems, to: working)
+    }
+
+    public func outdent(itemIDs: Set<UUID>, undoManager: UndoManager? = nil) {
+        let ids = orderedForStructureOp(itemIDs, order: .bottomToTop)
+        guard !ids.isEmpty else { return }
+        let oldItems = items
+        var working = items
+        for id in ids {
+            do {
+                let result = try engine.outdent(itemID: id, in: working)
+                guard result != working else {
+                    logger.warning("Multi-outdent aborted: boundary no-op for \(id)")
+                    return
+                }
+                working = result
+            } catch {
+                logger.warning("Multi-outdent aborted: \(error.localizedDescription)")
+                return
+            }
+        }
+        registerUndo(undoManager: undoManager, oldItems: oldItems)
+        applyChanges(to: working)
+        persistInBackground(from: oldItems, to: working)
+    }
+
+    public func moveUp(itemIDs: Set<UUID>, undoManager: UndoManager? = nil) {
+        let ids = orderedForStructureOp(itemIDs, order: .topToBottom)
+        guard !ids.isEmpty else { return }
+        let oldItems = items
+        var working = items
+        for id in ids {
+            guard let result = engine.moveUp(itemID: id, in: working) else {
+                logger.warning("Multi-moveUp aborted: boundary no-op for \(id)")
+                return
+            }
+            working = result
+        }
+        registerUndo(undoManager: undoManager, oldItems: oldItems)
+        applyChanges(to: working)
+        persistInBackground(from: oldItems, to: working)
+    }
+
+    public func moveDown(itemIDs: Set<UUID>, undoManager: UndoManager? = nil) {
+        let ids = orderedForStructureOp(itemIDs, order: .bottomToTop)
+        guard !ids.isEmpty else { return }
+        let oldItems = items
+        var working = items
+        for id in ids {
+            guard let result = engine.moveDown(itemID: id, in: working) else {
+                logger.warning("Multi-moveDown aborted: boundary no-op for \(id)")
+                return
+            }
+            working = result
+        }
+        registerUndo(undoManager: undoManager, oldItems: oldItems)
+        applyChanges(to: working)
+        persistInBackground(from: oldItems, to: working)
     }
 
     public func updateItemTitle(id: UUID, title: String, undoManager: UndoManager? = nil) {
