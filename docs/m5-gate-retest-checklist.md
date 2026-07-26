@@ -31,6 +31,10 @@ dialog needs a human). Everything below assumes fresh builds of current main.
    collapse works. Settings picker now offers up to 10 lines.
 7. ☐ **Restore last list (td-03f6d1b)**: select list B → quit → relaunch →
    list B is shown.
+7b. ☐ **Per-list view state (td-5d405a — THE checkoff-workflow fix)**: expand
+   a nested branch + set Remaining filter → switch to another list → switch
+   back → branch still expanded, filter still Remaining, selection intact.
+   Then quit → relaunch → same. Delete a list → its saved state is gone too.
 8. ☐ **Search notes (td-03f6d1e)**: in-list search for a word that appears
    only in a note → row (and its parents) appear.
 9. ☐ **Rename lag spot-check (td-e7c609, macOS half)**: ⌘E, type a fast

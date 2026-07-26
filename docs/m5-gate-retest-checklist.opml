@@ -14,6 +14,7 @@
         <outline text="Multi-select Tab/Shift-Tab/Cmd-Opt-arrows" type="task" _status="unchecked" _note="3 siblings: indent/outdent/move preserve order, ONE Cmd-Z per op restores all. Include first sibling + Tab → nothing moves (all-or-nothing)."/>
         <outline text="Note preview more/less chevron" type="task" _status="unchecked" _note="5-line note, 2-line setting → chevron expands in place, collapses; Settings max now 10."/>
         <outline text="Relaunch restores last list" type="task" _status="unchecked"/>
+        <outline text="Per-list view state survives switch AND relaunch (td-5d405a)" type="task" _status="unchecked" _note="Expand nested branch + Remaining filter → switch lists → back: expanded, filtered, selection intact. Quit → relaunch: same. THE checkoff-workflow fix."/>
         <outline text="In-list search matches notes" type="task" _status="unchecked" _note="Word only in a note → row + parents appear."/>
         <outline text="Mac rename lag spot-check" type="task" _status="unchecked" _note="Cmd-E, fast sentence — instant keystrokes."/>
       </outline>
