@@ -27,7 +27,7 @@ struct ItemActionsMenu: View {
                 selectTargetIfNeeded()
                 store.beginAdding(.below(id))
             } label: {
-                Label(CommandCatalog.newItem.title, systemImage: CommandCatalog.newItem.systemImage)
+                Label(hinted(CommandCatalog.newItem.title, CommandCatalog.newItem.binding), systemImage: CommandCatalog.newItem.systemImage)
             }
 
             Button {
@@ -35,7 +35,7 @@ struct ItemActionsMenu: View {
                 let newID = store.insertAbove(referenceID: id, title: "New Item", undoManager: undoManager)
                 store.beginEditing(itemID: newID)
             } label: {
-                Label(CommandCatalog.addAbove.title, systemImage: CommandCatalog.addAbove.systemImage)
+                Label(hinted(CommandCatalog.addAbove.title, CommandCatalog.addAbove.binding), systemImage: CommandCatalog.addAbove.systemImage)
             }
 
             Button {
