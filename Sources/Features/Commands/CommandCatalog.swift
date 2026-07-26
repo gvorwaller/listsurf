@@ -70,6 +70,15 @@ enum CommandCatalog {
     static let help = command("help", "Listsurf Help", "questionmark.circle", binding: .init(key: "?", modifiers: [.command], display: "⌘?"), helpText: "Opens Listsurf Help.", surfaces: keyboardSurfaces)
     static let navigate = command("navigate", "Navigate Selection", "arrow.up.arrow.down", editorOwnedKey: "↑ / ↓", helpText: "Moves the selection through the outline; Command-click or Shift-click selects multiple items.", surfaces: keyboardSurfaces)
     static let escape = command("escape", "Cancel or Clear Selection", "escape", editorOwnedKey: "Esc", helpText: "Cancels text entry, or clears the current selection.", surfaces: keyboardSurfaces)
+    /// Documented-only (M5 gate E6/audit FAIL, plan item 9): the system Edit
+    /// menu already provides the live ⌘Z binding — wiring this into
+    /// `ListsurfCommands` would double-bind ⌘Z. This entry exists so Help
+    /// and the Keyboard Legend can show the shortcut; it must never gain an
+    /// `action` in `ListsurfCommands.swift` or any menu/context-menu wiring.
+    static let undo = command("undo", "Undo", "arrow.uturn.backward", binding: .init(key: "z", modifiers: [.command], display: "⌘Z"), helpText: "Undoes the last change.", surfaces: keyboardSurfaces)
+    /// Same rationale as `undo` above — the system Edit menu provides the
+    /// live ⇧⌘Z binding.
+    static let redo = command("redo", "Redo", "arrow.uturn.forward", binding: .init(key: "z", modifiers: [.command, .shift], display: "⇧⌘Z"), helpText: "Redoes the last undone change.", surfaces: keyboardSurfaces)
     static let settings = command("settings", "Settings", "gearshape", binding: .init(key: ",", modifiers: [.command], display: "⌘,"), helpText: "Opens Settings.", surfaces: keyboardSurfaces)
     static let keyboardLegend = command("keyboardLegend", "Keyboard Legend", "keyboard", binding: .init(key: "l", modifiers: [.command, .option], display: "⌥⌘L"), helpText: "Shows or hides the Keyboard Legend window.", surfaces: [.viewMenu, .help, .keyboardLegend])
 
@@ -77,15 +86,15 @@ enum CommandCatalog {
         newItem, addAbove, addChild, rename, toggleChecked, indent, outdent,
         moveUp, moveDown, delete, resetAllChecks, resetBranch,
         filterAll, filterRemaining, filterCompleted, toggleInspector,
-        expandAll, collapseAll, newList, help, navigate, escape, settings,
-        keyboardLegend
+        expandAll, collapseAll, newList, help, navigate, escape, undo, redo,
+        settings, keyboardLegend
     ]
 
     static let macKeyboardHelp: [Command] = [
         navigate, rename, newItem, addAbove, newList, addChild, toggleChecked,
         indent, outdent, moveUp, moveDown, filterAll, filterRemaining,
-        filterCompleted, escape, delete, toggleInspector, keyboardLegend,
-        help, settings
+        filterCompleted, escape, undo, redo, delete, toggleInspector,
+        keyboardLegend, help, settings
     ]
 
     static let expectedIDs: Set<String> = [
@@ -93,7 +102,8 @@ enum CommandCatalog {
         "indent", "outdent", "moveUp", "moveDown", "delete",
         "resetAllChecks", "resetBranch", "filterAll", "filterRemaining",
         "filterCompleted", "toggleInspector", "expandAll", "collapseAll",
-        "newList", "help", "navigate", "escape", "settings", "keyboardLegend"
+        "newList", "help", "navigate", "escape", "undo", "redo", "settings",
+        "keyboardLegend"
     ]
 }
 

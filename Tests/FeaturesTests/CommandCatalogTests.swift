@@ -91,6 +91,8 @@ final class CommandCatalogTests: XCTestCase {
             "help": [.help, .keyboardLegend],
             "navigate": [.help, .keyboardLegend],
             "escape": [.help, .keyboardLegend],
+            "undo": [.help, .keyboardLegend],
+            "redo": [.help, .keyboardLegend],
             "settings": [.help, .keyboardLegend],
             "keyboardLegend": [.viewMenu, .help, .keyboardLegend]
         ]
