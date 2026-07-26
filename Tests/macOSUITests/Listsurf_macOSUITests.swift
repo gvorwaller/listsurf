@@ -721,6 +721,54 @@ final class Listsurf_macOSUITests: XCTestCase {
                        "Long notes must scroll internally instead of expanding the inspector")
     }
 
+    /// td-2bc3a8 (Gate M4/E3, plan item 8): ⌘O (Edit Notes) must open the
+    /// inspector AND land keyboard focus in the Notes editor in one step —
+    /// no manual click required — and closing the inspector via ⌥⌘I must
+    /// return focus to the outline, not the sidebar. Proof for the close
+    /// half uses the same idiom as `testDeleteAdvancesSelectionAndStaysInEditor`
+    /// and `testSecondEscapeStaysInEditor`: Down must still move the
+    /// EDITOR's selection afterward.
+    ///
+    /// PENDING: cannot run tonight — the macOS UI test runner is
+    /// auth-blocked (LocalAuthentication Code -4; Mac idle/locked).
+    /// Verified to compile via `xcodebuild build-for-testing` for
+    /// `Listsurf_macOSUITests`; not yet executed.
+    @MainActor func testEditNotesFocusesInspectorAndClosingRestoresEditorFocus() {
+        continueAfterFailure = false
+        let app = launchApp(store: "mac-edit-notes", reset: true)
+        createList(named: "Edit Notes List", in: app)
+        addItem(named: "Alpha", in: app)
+        addItem(named: "Bravo", in: app)
+        app.typeKey(.escape, modifierFlags: [])
+
+        let alpha = app.staticTexts["Alpha"]
+        XCTAssertTrue(alpha.waitForExistence(timeout: 5))
+        alpha.click()
+
+        app.typeKey("o", modifierFlags: .command)
+
+        let notes = app.textViews["inspector.itemNotes"]
+        XCTAssertTrue(notes.waitForExistence(timeout: 5))
+        app.typeText("Edit Notes Focus Proof")
+        XCTAssertTrue(
+            waitUntil(timeout: 5) { ((notes.value as? String) ?? "").contains("Edit Notes Focus Proof") },
+            "⌘O must land keyboard focus directly in the Notes editor — no manual click required"
+        )
+
+        app.typeKey("i", modifierFlags: [.command, .option])
+        XCTAssertFalse(notes.waitForExistence(timeout: 2), "⌥⌘I must close the inspector")
+
+        let alphaRow = app.outlineRows.containing(.staticText, identifier: "Alpha").firstMatch
+        XCTAssertTrue(waitUntil(timeout: 5) { alphaRow.isSelected },
+                      "Alpha must still be the selected row after the inspector closes")
+        app.typeKey(.downArrow, modifierFlags: [])
+        let bravoRow = app.outlineRows.containing(.staticText, identifier: "Bravo").firstMatch
+        XCTAssertTrue(
+            waitUntil(timeout: 5) { bravoRow.isSelected && !alphaRow.isSelected },
+            "Down after the inspector closes must move the editor's selection — proves focus returned to the outline, not the sidebar"
+        )
+    }
+
     /// Polls `condition` until it's true or `timeout` elapses. Row-reorder
     /// geometry only settles after SwiftUI's drop/undo animation completes,
     /// so a single frame read right after the gesture can race the layout.

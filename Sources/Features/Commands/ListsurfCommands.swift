@@ -73,6 +73,8 @@ public struct ListsurfCommands: Commands {
         CommandMenu("View") {
             catalogButton(CommandCatalog.toggleInspector, action: listCommands?.toggleInspector)
                 .disabled(listCommands?.toggleInspector == nil)
+            catalogButton(CommandCatalog.editNotes, action: listCommands?.editNotes)
+                .disabled(listCommands?.editNotes == nil)
             Divider()
             Menu("Filter") {
                 filterButton(CommandCatalog.filterAll, filter: .all)

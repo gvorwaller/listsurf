@@ -1,5 +1,8 @@
 import SwiftUI
 import Domain
+#if os(macOS)
+import AppKit
+#endif
 
 struct InspectorView: View {
     @Bindable var store: ListStore
@@ -7,7 +10,12 @@ struct InspectorView: View {
     /// List metadata comes from AppStore (the single owner), not from a
     /// ListStore-cached copy that could go stale.
     let list: ListItem?
+    /// Bumped by ListDetailView's Edit Notes action (td-2bc3a8, plan item 8)
+    /// each time the user wants the cursor back in Notes — even if the
+    /// inspector is already open, so ⌘O always refocuses.
+    let focusNotesToken: Int
     @Environment(\.undoManager) private var undoManager
+    @FocusState private var notesFocused: Bool
 
     var body: some View {
         Group {
@@ -15,6 +23,29 @@ struct InspectorView: View {
                 itemInspector(item)
             } else {
                 listInspector
+            }
+        }
+        .onChange(of: focusNotesToken) { _, newValue in
+            guard newValue > 0 else { return }
+            requestNotesFocus()
+        }
+    }
+
+    /// Deferred one runloop hop, mirroring the shape of
+    /// `OutlineEditorView.assignFocus` (td-ff531e): the token can arrive
+    /// while the inspector is still mid-mount (just-presented panel/sheet),
+    /// so re-assert once if the first assignment didn't stick. This is the
+    /// plain FocusState binding only — OutlineEditorView's full AppKit
+    /// escalation (`focusAddFieldDirectly`/`findAddTextField`, needed there
+    /// because arming an add field can race an outline restructure) isn't
+    /// reused here; add it only if a test proves this plain binding
+    /// unreliable for the Notes editor.
+    private func requestNotesFocus() {
+        Task { @MainActor in
+            notesFocused = true
+            await Task.yield()
+            if !notesFocused {
+                notesFocused = true
             }
         }
     }
@@ -40,7 +71,7 @@ struct InspectorView: View {
             }
 
             Section("Notes") {
-                NotesEditor(text: notesBinding(item))
+                NotesEditor(text: notesBinding(item), focused: $notesFocused)
                     // Prototype parity: notes stay compact in both the macOS
                     // inspector and iOS Details sheet, scrolling internally
                     // instead of expanding the surrounding Form without bound.
@@ -153,12 +184,14 @@ private struct ItemTitleField: View {
 
 private struct NotesEditor: View {
     @Binding var text: String
+    var focused: FocusState<Bool>.Binding
 
     var body: some View {
         ZStack(alignment: .topLeading) {
             TextEditor(text: $text)
                 .scrollContentBackground(.hidden)
                 .accessibilityIdentifier("inspector.itemNotes")
+                .focused(focused)
 
             if text.isEmpty {
                 Text("Add notes...")
@@ -170,3 +203,33 @@ private struct NotesEditor: View {
         }
     }
 }
+
+#if os(macOS)
+/// Mirrors `KeyboardLegendFocus` (KeyboardLegendView.swift): the AppKit
+/// responder chain is the ground truth for "what had focus before a
+/// covering UI appeared," so capture/restore it directly rather than
+/// guessing which of several on-screen `NSTableView`s (sidebar vs. outline)
+/// is "the" one to refocus. Capture right before the inspector opens
+/// (ListDetailView.handleInspectorPresentationChange); restore right after
+/// it closes — this returns focus to whatever the outline's row selection
+/// had claimed, not a heuristically-matched view.
+@MainActor
+enum InspectorFocusRestore {
+    private static weak var window: NSWindow?
+    private static weak var responder: NSResponder?
+
+    static func capture() {
+        window = NSApp.keyWindow
+        responder = window?.firstResponder
+    }
+
+    static func restore() {
+        defer {
+            window = nil
+            responder = nil
+        }
+        guard let window, let responder else { return }
+        _ = window.makeFirstResponder(responder)
+    }
+}
+#endif

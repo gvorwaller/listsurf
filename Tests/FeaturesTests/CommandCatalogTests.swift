@@ -85,6 +85,7 @@ final class CommandCatalogTests: XCTestCase {
             "filterRemaining": [.viewMenu, .toolbarActions, .help, .keyboardLegend],
             "filterCompleted": [.viewMenu, .toolbarActions, .help, .keyboardLegend],
             "toggleInspector": [.viewMenu, .toolbarActions, .help, .keyboardLegend],
+            "editNotes": [.viewMenu, .help, .keyboardLegend],
             "expandAll": [.viewMenu, .toolbarActions, .emptyAreaContextMenu],
             "collapseAll": [.viewMenu, .toolbarActions, .emptyAreaContextMenu],
             "newList": [.help, .keyboardLegend],

@@ -7,6 +7,12 @@ struct ListDetailView: View {
     @Environment(AppStore.self) private var appStore
     @State private var listStore: ListStore?
     @State private var showInspector = false
+    /// Bumped by the Edit Notes action (td-2bc3a8, plan item 8) to ask the
+    /// inspector to (re)focus the Notes editor, even if it's already open.
+    @State private var focusNotesToken = 0
+    /// The item the inspector was opened for, captured so a close can
+    /// restore selection to it if the selection was cleared in the interim.
+    @State private var inspectedItemID: UUID?
     @State private var showingResetAllChecksConfirmation = false
     @State private var listBeingEdited: ListItem?
     @State private var canUndo = false
@@ -32,11 +38,15 @@ struct ListDetailView: View {
                 InspectorView(
                     store: store,
                     itemID: singleSelectedItemID(in: store),
-                    list: currentList
+                    list: currentList,
+                    focusNotesToken: focusNotesToken
                 )
                 .inspectorColumnWidth(min: 250, ideal: 300, max: 400)
                 .presentationDetents([.medium, .large])
             }
+        }
+        .onChange(of: showInspector) { _, isPresented in
+            handleInspectorPresentationChange(isPresented: isPresented)
         }
         .navigationTitle(currentList?.title ?? "")
         #if os(iOS)
@@ -289,6 +299,33 @@ struct ListDetailView: View {
         )
     }
 
+    /// td-2bc3a8 (Gate M4, plan item 8): several paths flip `showInspector`
+    /// directly (this view's toolbar button, the ⌥⌘I/Edit Notes catalog
+    /// actions below, OutlineEditorView.showDetails, ItemActionsMenu's
+    /// onShowDetails) — reacting to the single owned Bool here, instead of
+    /// duplicating capture/restore in each call site, is the one place
+    /// guaranteed to see every transition.
+    private func handleInspectorPresentationChange(isPresented: Bool) {
+        guard let store = listStore else { return }
+        if isPresented {
+            inspectedItemID = singleSelectedItemID(in: store)
+            #if os(macOS)
+            InspectorFocusRestore.capture()
+            #endif
+        } else {
+            let restoreID = inspectedItemID
+            inspectedItemID = nil
+            if store.selectedItemIDs.isEmpty,
+               let restoreID,
+               store.items.contains(where: { $0.id == restoreID }) {
+                store.selectedItemIDs = [restoreID]
+            }
+            #if os(macOS)
+            InspectorFocusRestore.restore()
+            #endif
+        }
+    }
+
     private func refreshUndoAvailability(from notification: Notification? = nil) {
         if let notification,
            let notificationManager = notification.object as? UndoManager,
@@ -380,6 +417,12 @@ struct ListDetailView: View {
                 guard !store.isTextInputActive, let liveID = singleSelectedItemID(in: store) else { return }
                 store.beginEditing(itemID: liveID)
                 CommandInvocation.post(CommandCatalog.rename)
+            }
+            actions.editNotes = {
+                guard !store.isTextInputActive, singleSelectedItemID(in: store) != nil else { return }
+                if !showInspector { showInspector = true }
+                focusNotesToken += 1
+                CommandInvocation.post(CommandCatalog.editNotes)
             }
         }
         if !store.selectedItemIDs.isEmpty {

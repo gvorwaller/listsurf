@@ -64,6 +64,11 @@ enum CommandCatalog {
     static let filterRemaining = command("filterRemaining", "Remaining", "circle", binding: .init(key: "2", modifiers: [.command, .option], display: "⌥⌘2"), helpText: "Shows unchecked items.", surfaces: [.viewMenu, .toolbarActions, .help, .keyboardLegend])
     static let filterCompleted = command("filterCompleted", "Completed", "checkmark.circle", binding: .init(key: "3", modifiers: [.command, .option], display: "⌥⌘3"), helpText: "Shows checked items.", surfaces: [.viewMenu, .toolbarActions, .help, .keyboardLegend])
     static let toggleInspector = command("toggleInspector", "Toggle Inspector", "info.circle", binding: .init(key: "i", modifiers: [.command, .option], display: "⌥⌘I"), helpText: "Shows or hides the inspector.", surfaces: [.viewMenu, .toolbarActions, .help, .keyboardLegend])
+    /// ⌘O is unclaimed today (no File▸Open command exists). ⌘O is the
+    /// platform-conventional "Open" shortcut, so if a document-open command
+    /// is ever added, THAT command must move to a different binding — this
+    /// entry should not be silently displaced or double-bound.
+    static let editNotes = command("editNotes", "Edit Notes", "note.text", binding: .init(key: "o", modifiers: [.command], display: "⌘O"), helpText: "Opens the inspector with the cursor in the selected item's notes.", surfaces: [.viewMenu, .help, .keyboardLegend])
     static let expandAll = command("expandAll", "Expand All", "arrow.up.left.and.arrow.down.right", helpText: "Expands every branch.", surfaces: [.viewMenu, .toolbarActions, .emptyAreaContextMenu])
     static let collapseAll = command("collapseAll", "Collapse All", "arrow.down.right.and.arrow.up.left", helpText: "Collapses every branch.", surfaces: [.viewMenu, .toolbarActions, .emptyAreaContextMenu])
     static let newList = command("newList", "New List", "plus.rectangle.on.folder", binding: .init(key: "n", modifiers: [.command, .shift], display: "⇧⌘N"), helpText: "Creates a new list.", surfaces: keyboardSurfaces)
@@ -86,24 +91,24 @@ enum CommandCatalog {
         newItem, addAbove, addChild, rename, toggleChecked, indent, outdent,
         moveUp, moveDown, delete, resetAllChecks, resetBranch,
         filterAll, filterRemaining, filterCompleted, toggleInspector,
-        expandAll, collapseAll, newList, help, navigate, escape, undo, redo,
-        settings, keyboardLegend
+        editNotes, expandAll, collapseAll, newList, help, navigate, escape,
+        undo, redo, settings, keyboardLegend
     ]
 
     static let macKeyboardHelp: [Command] = [
         navigate, rename, newItem, addAbove, newList, addChild, toggleChecked,
         indent, outdent, moveUp, moveDown, filterAll, filterRemaining,
         filterCompleted, escape, undo, redo, delete, toggleInspector,
-        keyboardLegend, help, settings
+        editNotes, keyboardLegend, help, settings
     ]
 
     static let expectedIDs: Set<String> = [
         "newItem", "addAbove", "addChild", "rename", "toggleChecked",
         "indent", "outdent", "moveUp", "moveDown", "delete",
         "resetAllChecks", "resetBranch", "filterAll", "filterRemaining",
-        "filterCompleted", "toggleInspector", "expandAll", "collapseAll",
-        "newList", "help", "navigate", "escape", "undo", "redo", "settings",
-        "keyboardLegend"
+        "filterCompleted", "toggleInspector", "editNotes", "expandAll",
+        "collapseAll", "newList", "help", "navigate", "escape", "undo",
+        "redo", "settings", "keyboardLegend"
     ]
 }
 
