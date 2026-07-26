@@ -71,11 +71,20 @@ struct InspectorView: View {
             }
 
             Section("Notes") {
-                NotesEditor(text: notesBinding(item), focused: $notesFocused)
-                    // Prototype parity: notes stay compact in both the macOS
-                    // inspector and iOS Details sheet, scrolling internally
-                    // instead of expanding the surrounding Form without bound.
-                    .frame(minHeight: 56, idealHeight: 88, maxHeight: 120)
+                NotesEditor(item: item, focused: $notesFocused) { newValue in
+                    store.updateItemNotes(id: item.id, notes: newValue.isEmpty ? nil : newValue, undoManager: undoManager)
+                }
+                // Reseed the draft when the selected item changes — same
+                // shape as ItemTitleField's `.id(item.id)` above. Tearing
+                // down the old instance also fires its `onDisappear`
+                // commit, so switching items while the inspector stays
+                // open (macOS) still commits the outgoing item's draft
+                // before the new one mounts.
+                .id(item.id)
+                // Prototype parity: notes stay compact in both the macOS
+                // inspector and iOS Details sheet, scrolling internally
+                // instead of expanding the surrounding Form without bound.
+                .frame(minHeight: 56, idealHeight: 88, maxHeight: 120)
             }
 
             Section("Quantity") {
@@ -128,15 +137,6 @@ struct InspectorView: View {
         .formStyle(.grouped)
     }
 
-    private func notesBinding(_ item: OutlineItem) -> Binding<String> {
-        Binding(
-            get: { item.notes ?? "" },
-            set: { newValue in
-                store.updateItemNotes(id: item.id, notes: newValue.isEmpty ? nil : newValue, undoManager: undoManager)
-            }
-        )
-    }
-
     private func quantityBinding(_ item: OutlineItem) -> Binding<Int> {
         Binding(
             get: { item.quantity },
@@ -182,18 +182,42 @@ private struct ItemTitleField: View {
 }
 #endif
 
+/// Owns a local notes draft so multi-line typing never round-trips through
+/// the store per keystroke (td-204b17: `notesBinding`'s per-keystroke
+/// `store.updateItemNotes` write raced the whole-view re-render this same
+/// binding triggers, corrupting long/multi-line commits — the same race
+/// class td-e7c609 fixed for rename/add via `EditorDraftText`, and that
+/// `ItemTitleField` above already fixed for the title field). Committed
+/// once per edit session: on focus loss (the multi-line equivalent of
+/// `ItemTitleField`'s `onSubmit`, since `TextEditor` has no submit event)
+/// and again defensively on disappear, which also covers inspector/sheet
+/// dismissal and — combined with the caller's `.id(item.id)` — a same-
+/// session item switch.
 private struct NotesEditor: View {
-    @Binding var text: String
+    let item: OutlineItem
     var focused: FocusState<Bool>.Binding
+    let onCommit: (String) -> Void
+
+    @State private var draft: String
+    @State private var lastCommitted: String
+
+    init(item: OutlineItem, focused: FocusState<Bool>.Binding, onCommit: @escaping (String) -> Void) {
+        self.item = item
+        self.focused = focused
+        self.onCommit = onCommit
+        let initial = item.notes ?? ""
+        _draft = State(initialValue: initial)
+        _lastCommitted = State(initialValue: initial)
+    }
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            TextEditor(text: $text)
+            TextEditor(text: $draft)
                 .scrollContentBackground(.hidden)
                 .accessibilityIdentifier("inspector.itemNotes")
                 .focused(focused)
 
-            if text.isEmpty {
+            if draft.isEmpty {
                 Text("Add notes...")
                     .foregroundStyle(.tertiary)
                     .padding(.horizontal, 5)
@@ -201,6 +225,16 @@ private struct NotesEditor: View {
                     .allowsHitTesting(false)
             }
         }
+        .onChange(of: focused.wrappedValue) { _, isFocused in
+            if !isFocused { commitIfNeeded() }
+        }
+        .onDisappear { commitIfNeeded() }
+    }
+
+    private func commitIfNeeded() {
+        guard draft != lastCommitted else { return }
+        lastCommitted = draft
+        onCommit(draft)
     }
 }
 

@@ -430,15 +430,16 @@ final class Listsurf_iOSUITests: XCTestCase {
         let notes = app.textViews["inspector.itemNotes"]
         XCTAssertTrue(notes.waitForExistence(timeout: 5))
         notes.tap()
-        // Long enough to trip the length half of the truncation heuristic
-        // (`notes.count > lineCount * 40`) regardless of exact characters —
-        // a separate, pre-existing bug in this environment corrupts long
-        // `typeText` runs into the Notes editor (InspectorView's
-        // `notesBinding` writes to the store on every keystroke, unlike the
-        // rename/add fields td-e7c609 fixed for exactly this race), so this
-        // test deliberately does not depend on the committed text being
-        // byte-exact.
-        notes.typeText((1...30).map { "Word\($0)" }.joined(separator: " "))
+        // td-204b17 regression fixture: this is a real multi-line note
+        // (embedded newlines, 10 lines), matching the corruption evidence
+        // recorded 2026-07-26 ("Line 1\nLine 2..." committing as garbled
+        // fragments). That bug was InspectorView's `notesBinding` writing
+        // to the store on every keystroke — the same race class td-e7c609
+        // fixed for rename/add fields — now fixed by giving the Notes
+        // editor its own draft (NotesEditor), committed once per session.
+        // The exact-match assertion below is the regression check.
+        let noteText = (1...10).map { "Line \($0)" }.joined(separator: "\n")
+        notes.typeText(noteText)
 
         // Dismiss the sheet the same way testDetailsSheetTitleFieldRenamesRow
         // does — it auto-expands to its large detent while the keyboard is
@@ -453,6 +454,11 @@ final class Listsurf_iOSUITests: XCTestCase {
 
         let preview = app.staticTexts["note.preview"]
         XCTAssertTrue(preview.waitForExistence(timeout: 5))
+        XCTAssertEqual(
+            preview.label,
+            noteText,
+            "Notes editor must commit the exact typed multi-line text (td-204b17: per-keystroke store writes corrupted this)"
+        )
         let collapsedHeight = preview.frame.height
 
         let toggle = app.buttons["note.preview.toggle"]
