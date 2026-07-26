@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<opml version="2.0">
+  <head>
+    <title>M5 Gate Retest</title>
+  </head>
+  <body>
+    <outline text="M5 Gate RETEST — fixed items only (2026-07-26)" type="task" _status="unchecked">
+      <outline text="FIRST: unlock the Mac, let CC run the macOS UI suite once" type="task" _status="unchecked" _note="Runner auth-blocked since the fixes landed; needs a human at the Mac. Fresh builds of current main for both sittings."/>
+      <outline text="Sitting 1 — macOS (~10 min)" type="task" _status="unchecked">
+        <outline text="Legend: toggle, close-while-key, Esc, focus return" type="task" _status="unchecked" _note="Opt-Cmd-L opens/closes; click legend to make it key then Opt-Cmd-L closes it (app window must NOT hide); Esc closes; after every close Down moves editor selection."/>
+        <outline text="Delete advances selection" type="task" _status="unchecked" _note="Cmd-Delete + Return on middle row → row below selected, arrows stay in editor; last row → previous selected; Cmd-Z restores row AND selection."/>
+        <outline text="Second Esc does nothing" type="task" _status="unchecked" _note="Esc clears selection; second Esc: sidebar untouched."/>
+        <outline text="Cmd-O Edit Notes" type="task" _status="unchecked" _note="Select row → Cmd-O → type immediately, lands in Notes; Opt-Cmd-I close → Down moves editor selection. Cmd-O listed in View menu, Help, Legend."/>
+        <outline text="Multi-select Tab/Shift-Tab/Cmd-Opt-arrows" type="task" _status="unchecked" _note="3 siblings: indent/outdent/move preserve order, ONE Cmd-Z per op restores all. Include first sibling + Tab → nothing moves (all-or-nothing)."/>
+        <outline text="Note preview more/less chevron" type="task" _status="unchecked" _note="5-line note, 2-line setting → chevron expands in place, collapses; Settings max now 10."/>
+        <outline text="Relaunch restores last list" type="task" _status="unchecked"/>
+        <outline text="In-list search matches notes" type="task" _status="unchecked" _note="Word only in a note → row + parents appear."/>
+        <outline text="Mac rename lag spot-check" type="task" _status="unchecked" _note="Cmd-E, fast sentence — instant keystrokes."/>
+      </outline>
+      <outline text="Sitting 2 — iPhone real device (~10 min)" type="task" _status="unchecked">
+        <outline text="Rename lag VERDICT (td-e7c609)" type="task" _status="unchecked" _note="Type a quick sentence in rename. Record build type (cable vs TestFlight) + verdict: none / noticeable / bad. Was: very noticeable."/>
+        <outline text="Details-sheet title editing" type="task" _status="unchecked" _note="Double-tap → edit Title in sheet → dismiss → row renamed. Old Rename button gone on iOS."/>
+        <outline text="Filter menu always visible" type="task" _status="unchecked" _note="Top-right filter icon without opening the ••• menu; fills when a filter is active; all three states work."/>
+        <outline text="Keyboard occlusion: add + rename scroll clear" type="task" _status="unchecked" _note="Long list, bottom row: armed child add and rename both scroll above the keyboard, cursor live. Chevron-dismiss: keyboard drops, NO blank strip, flow stays armed."/>
+        <outline text="No top-of-list shake, steady inline title" type="task" _status="unchecked"/>
+        <outline text="Notes text integrity (td-204b17)" type="task" _status="unchecked" _note="Fast multi-line note in Details → close/reopen → exactly what was typed."/>
+        <outline text="Action bar stays pinned" type="task" _status="unchecked" _note="Note the time if it ever floats mid-screen (DEBUG log signature can be pulled)."/>
+        <outline text="Note preview expand on iPhone" type="task" _status="unchecked"/>
+      </outline>
+      <outline text="Wrap-up: hand CC the marked-up results" type="task" _status="unchecked" _note="All pass → td-39e584 closes; next stop TestFlight dogfood."/>
+    </outline>
+  </body>
+</opml>
